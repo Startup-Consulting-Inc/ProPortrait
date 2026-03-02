@@ -362,9 +362,12 @@ export default function PortraitGenerator() {
     <div className="max-w-6xl mx-auto px-4">
       {/* Header */}
       <div className="text-center mb-10">
-        <h1 className="text-4xl font-bold text-slate-900 mb-3 tracking-tight">
-          ProPortrait <span className="text-indigo-600">AI</span>
-        </h1>
+        <div className="flex items-center justify-center gap-3 mb-3">
+          <img src="/logo.svg" alt="ProPortrait AI" className="w-11 h-11 rounded-xl shadow-md" />
+          <h1 className="text-4xl font-bold text-slate-900 tracking-tight">
+            ProPortrait <span className="text-indigo-600">AI</span>
+          </h1>
+        </div>
         <p className="text-base text-slate-500 max-w-2xl mx-auto">
           The only AI portrait tool that actually looks like you — identity-locked, skin-tone guaranteed, platform-ready.
         </p>

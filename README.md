@@ -1,5 +1,5 @@
 <div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
+<img alt="ProPortrait AI" src="public/banner.png" />
 </div>
 
 # ProPortrait AI
@@ -15,7 +15,7 @@ Upload a photo and get studio-quality professional headshots in seconds — with
 ### Prerequisites
 
 - Node.js 18+
-- A [Google AI Studio](https://aistudio.google.com/) API key with access to `gemini-3.1-flash-image-preview`
+- A API key with access to `gemini-3.1-flash-image-preview`
 
 ### Setup
 
