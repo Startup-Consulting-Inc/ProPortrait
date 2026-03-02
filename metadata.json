@@ -1,0 +1,5 @@
+{
+  "name": "ProPortrait AI",
+  "description": "Transform casual photos into professional portfolio headshots using Gemini AI.",
+  "requestFramePermissions": []
+}

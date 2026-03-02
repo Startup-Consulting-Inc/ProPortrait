@@ -1,0 +1,16 @@
+{
+    "style": "creative",
+    "likenessStrength": 70,
+    "naturalness": 50,
+    "naturalnessPreset": "polished",
+    "expressionPreset": "confident_neutral",
+    "identityLocks": {
+      "eyeColor": true,
+      "skinTone": true,
+      "hairLength": true,
+      "hairTexture": false,
+      "glasses": false
+    },
+    "numVariations": 2,
+    "removeBlemishes": true
+  }
