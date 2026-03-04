@@ -10,11 +10,13 @@ import TermsPage from './components/TermsPage';
 import CookieConsent from './components/CookieConsent';
 import ThemeToggle from './components/ThemeToggle';
 import TestimonialsSection from './components/TestimonialsSection';
+import LandingPage from './components/LandingPage';
 
 export default function App() {
   const path = window.location.pathname;
   if (path === '/privacy') return <PrivacyPage />;
   if (path === '/terms') return <TermsPage />;
+  if (path !== '/app') return <LandingPage />;
 
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
     const stored = localStorage.getItem('pp_theme');
