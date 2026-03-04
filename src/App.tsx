@@ -9,7 +9,6 @@ import PrivacyPage from './components/PrivacyPage';
 import TermsPage from './components/TermsPage';
 import CookieConsent from './components/CookieConsent';
 import ThemeToggle from './components/ThemeToggle';
-import TestimonialsSection from './components/TestimonialsSection';
 import LandingPage from './components/LandingPage';
 
 export default function App() {
@@ -54,7 +53,6 @@ export default function App() {
         <div className="relative z-10 py-12">
           <PortraitGenerator />
         </div>
-        <TestimonialsSection />
       </div>
     </>
   );

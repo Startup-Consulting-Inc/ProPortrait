@@ -12,7 +12,6 @@ import type { IdentityLocks, ExpressionPreset, StyleOption } from '../services/a
 import { cn } from '../lib/utils';
 import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
 import ComparisonSlider from './ComparisonSlider';
-import PrivacyNotice from './PrivacyNotice';
 import GenerationProgress from './GenerationProgress';
 import PricingModal from './PricingModal';
 import EmailCapture from './EmailCapture';
@@ -89,8 +88,7 @@ export default function PortraitGenerator() {
   const [showPricingModal, setShowPricingModal] = useState(false);
   const [showEmailCapture, setShowEmailCapture] = useState(false);
 
-  // Phase 5 — Privacy & Presets
-  const [showPrivacyNotice, setShowPrivacyNotice] = useState(true);
+  // Phase 5 — Presets
   const [presetCopied, setPresetCopied] = useState(false);
 
   // Quick / Advanced mode
@@ -637,9 +635,6 @@ export default function PortraitGenerator() {
           {step === 1 && (
             <motion.div key="step1" {...slideAnim}
               className="p-10 flex flex-col items-center justify-center min-h-[580px]">
-
-              {/* Privacy Notice */}
-              {showPrivacyNotice && <PrivacyNotice onDismiss={() => setShowPrivacyNotice(false)} />}
 
               {/* Social Proof Strip */}
               <div className="flex items-center justify-center gap-5 mb-5 flex-wrap">
