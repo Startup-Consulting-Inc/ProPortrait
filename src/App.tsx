@@ -5,7 +5,6 @@
 
 import { useState, useEffect } from 'react';
 import PortraitGenerator from './components/PortraitGenerator';
-import ApiKeyGuard from './components/ApiKeyGuard';
 import PrivacyPage from './components/PrivacyPage';
 import TermsPage from './components/TermsPage';
 import CookieConsent from './components/CookieConsent';
@@ -40,7 +39,7 @@ export default function App() {
   };
 
   return (
-    <ApiKeyGuard>
+    <>
       <CookieConsent />
       <div
         data-theme={theme}
@@ -55,6 +54,6 @@ export default function App() {
         </div>
         <TestimonialsSection />
       </div>
-    </ApiKeyGuard>
+    </>
   );
 }
