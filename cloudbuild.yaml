@@ -1,0 +1,21 @@
+steps:
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - build
+      - --platform
+      - linux/amd64
+      - -f
+      - server/Dockerfile
+      - -t
+      - us-central1-docker.pkg.dev/$PROJECT_ID/proportrait/api:$COMMIT_SHA
+      - -t
+      - us-central1-docker.pkg.dev/$PROJECT_ID/proportrait/api:latest
+      - .
+
+images:
+  - us-central1-docker.pkg.dev/$PROJECT_ID/proportrait/api:$COMMIT_SHA
+  - us-central1-docker.pkg.dev/$PROJECT_ID/proportrait/api:latest
+
+options:
+  machineType: E2_MEDIUM
+  logging: CLOUD_LOGGING_ONLY

@@ -1,0 +1,2 @@
+/* Tailwind 4: configure dark: variant to respond to [data-theme="dark"] attribute */
+@custom-variant dark (&:where([data-theme=dark], [data-theme=dark] *));
