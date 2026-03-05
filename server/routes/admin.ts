@@ -5,24 +5,46 @@ import { requireAdmin } from '../middleware/authMiddleware.js';
 
 const router = Router();
 
-// GET /api/admin/users — list users (50/page, newest first)
-router.get('/users', requireAdmin, async (req: Request, res: Response) => {
+// firebase-admin v13 serializes Timestamps as { _seconds, _nanoseconds } (underscore prefix).
+// This helper normalises all variants to a plain { seconds: number } object.
+function toSecs(ts: unknown): { seconds: number } | null {
+  if (!ts || typeof ts !== 'object') return null;
+  const t = ts as Record<string, unknown>;
+  const s = typeof t._seconds === 'number' ? t._seconds
+          : typeof t.seconds  === 'number' ? t.seconds
+          : null;
+  return s !== null ? { seconds: s } : null;
+}
+
+// GET /api/admin/users — list users (50/page)
+router.get('/users', requireAdmin, async (_req: Request, res: Response) => {
   try {
-    // orderBy('createdAt') excludes docs missing that field — use a plain get instead
+    // Avoid orderBy('createdAt') — Firestore excludes docs missing that field
     const snap = await adminFirestore()
       .collection('users')
       .limit(50)
       .get();
 
     const users = snap.docs.map((doc) => {
-      const data = doc.data();
-      // Derive top style from styleUsage map
-      const styleUsage = (data.styleUsage ?? {}) as Record<string, number>;
+      const d = doc.data();
+      const styleUsage = (d.styleUsage ?? {}) as Record<string, number>;
       const topStyle = Object.entries(styleUsage).sort((a, b) => b[1] - a[1])[0]?.[0] ?? null;
       return {
-        uid: doc.id,
-        ...data,
+        uid:             doc.id,
+        email:           d.email ?? '',
+        displayName:     d.displayName ?? '',
+        isPro:           d.isPro ?? false,
+        isAdmin:         d.isAdmin ?? false,
+        generationCount: d.generationCount ?? 0,
+        editCount:       d.editCount ?? 0,
+        exportCount:     d.exportCount ?? 0,
+        loginCount:      d.loginCount ?? 0,
+        totalCostUsd:    d.totalCostUsd ?? 0,
+        styleUsage,
         topStyle,
+        createdAt:       toSecs(d.createdAt),
+        lastActiveAt:    toSecs(d.lastActiveAt),
+        lastLoginAt:     toSecs(d.lastLoginAt),
       };
     });
     res.json({ users });
