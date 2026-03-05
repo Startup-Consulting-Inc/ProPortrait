@@ -13,6 +13,7 @@ import adminRouter from './routes/admin.js';
 import { authMiddleware } from './middleware/authMiddleware.js';
 import { storePortrait } from './lib/storage.js';
 import { trackCost, getDailySpend } from './lib/costTracker.js';
+import { trackGeneration, trackEdit } from './lib/firestore.js';
 import { applyWatermark } from './lib/watermark.js';
 
 // Load API key from .env.local (Vite convention), then .env as fallback
@@ -348,6 +349,7 @@ app.post('/api/portraits/generate', async (req, res) => {
     );
 
     res.json({ images });
+    if (req.auth.uid) void trackGeneration(req.auth.uid, style as string, req.auth.isPro);
   } catch (error) {
     console.error('[server] Error generating portrait:', error);
     res.status(502).json({ error: 'Failed to generate portrait. Please try again.' });
@@ -424,6 +426,7 @@ app.post('/api/portraits/edit', async (req, res) => {
       for (const part of candidate.content?.parts ?? []) {
         if (part.inlineData?.data) {
           res.json({ image: `data:${part.inlineData.mimeType || 'image/png'};base64,${part.inlineData.data}` });
+          if (req.auth.uid) void trackEdit(req.auth.uid, req.auth.isPro);
           return;
         }
       }
