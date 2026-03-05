@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+
+const API_BASE = (import.meta.env.VITE_API_URL as string | undefined) ?? '';
 import { X, Check, Star, Loader2 } from 'lucide-react';
 import { cn } from '../lib/utils';
 
@@ -42,7 +44,7 @@ export default function PricingModal({ open, onClose, onProActivated }: PricingM
   const handleSelect = async (plan: Plan) => {
     setLoading(plan);
     try {
-      const res = await fetch('/api/payments/checkout', {
+      const res = await fetch(`${API_BASE}/api/payments/checkout`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ plan }),
