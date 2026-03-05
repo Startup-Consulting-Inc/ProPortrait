@@ -1,6 +1,8 @@
 import { Router, Request, Response } from 'express';
 import Stripe from 'stripe';
 import { getOrCreateSession, setProStatus, SESSION_COOKIE, COOKIE_OPTIONS } from '../lib/session.js';
+import { firestoreSetProStatus, getUserByStripeCustomerId, getUserDoc } from '../lib/firestore.js';
+import { requireFirebaseAuth } from '../middleware/authMiddleware.js';
 
 const router = Router();
 
@@ -15,62 +17,61 @@ router.post('/checkout', async (req: Request, res: Response) => {
     return;
   }
 
-  const cookieId = req.cookies?.[SESSION_COOKIE];
-  const [sessionId, _session] = getOrCreateSession(cookieId);
-  res.cookie(SESSION_COOKIE, sessionId, COOKIE_OPTIONS);
-
   const { plan } = req.body as { plan: 'session' | 'pro' | 'teams' };
-
   const appUrl = process.env.APP_URL || 'http://localhost:3000';
 
-  try {
-    if (plan === 'session') {
-      // One-time Session Pass ($14.99)
-      const priceId = process.env.STRIPE_SESSION_PRICE_ID;
-      if (!priceId) {
-        res.status(503).json({ error: 'Session Pass price not configured', mock: true });
-        return;
-      }
-      const checkout = await stripe.checkout.sessions.create({
-        mode: 'payment',
-        line_items: [{ price: priceId, quantity: 1 }],
-        success_url: `${appUrl}?payment=success`,
-        cancel_url: `${appUrl}?payment=cancelled`,
-        metadata: { sessionId },
-      });
-      res.json({ url: checkout.url });
-    } else if (plan === 'pro') {
-      // Pro Studio subscription ($19.99/mo)
-      const priceId = process.env.STRIPE_PRO_PRICE_ID;
-      if (!priceId) {
-        res.status(503).json({ error: 'Pro price not configured', mock: true });
-        return;
-      }
-      const checkout = await stripe.checkout.sessions.create({
-        mode: 'subscription',
-        line_items: [{ price: priceId, quantity: 1 }],
-        success_url: `${appUrl}?payment=success`,
-        cancel_url: `${appUrl}?payment=cancelled`,
-        metadata: { sessionId },
-      });
-      res.json({ url: checkout.url });
-    } else if (plan === 'teams') {
-      const priceId = process.env.STRIPE_TEAMS_PRICE_ID;
-      if (!priceId) {
-        res.status(503).json({ error: 'Teams price not configured', mock: true });
-        return;
-      }
-      const checkout = await stripe.checkout.sessions.create({
-        mode: 'subscription',
-        line_items: [{ price: priceId, quantity: 1 }],
-        success_url: `${appUrl}?payment=success`,
-        cancel_url: `${appUrl}?payment=cancelled`,
-        metadata: { sessionId },
-      });
-      res.json({ url: checkout.url });
-    } else {
-      res.status(400).json({ error: 'Invalid plan' });
+  // Build metadata to identify purchaser in webhook
+  const firebaseUid = req.auth.uid;
+  const sessionId = req.auth.sessionId;
+  const metadata: Record<string, string> = {};
+  if (firebaseUid) {
+    metadata.firebaseUid = firebaseUid;
+  } else if (sessionId) {
+    // Anonymous fallback — ensure cookie is set
+    const cookieId = req.cookies?.[SESSION_COOKIE];
+    const [newSessionId] = getOrCreateSession(cookieId);
+    if (!cookieId || cookieId !== newSessionId) {
+      res.cookie(SESSION_COOKIE, newSessionId, COOKIE_OPTIONS);
     }
+    metadata.sessionId = newSessionId;
+  }
+
+  const checkoutBase: Stripe.Checkout.SessionCreateParams = {
+    success_url: `${appUrl}/app?payment=success`,
+    cancel_url: `${appUrl}/app?payment=cancelled`,
+    metadata,
+    ...(req.auth.email ? { customer_email: req.auth.email } : {}),
+  };
+
+  let priceId: string | undefined;
+  let mode: 'payment' | 'subscription';
+
+  if (plan === 'session') {
+    priceId = process.env.STRIPE_SESSION_PRICE_ID;
+    mode = 'payment';
+  } else if (plan === 'pro') {
+    priceId = process.env.STRIPE_PRO_PRICE_ID;
+    mode = 'subscription';
+  } else if (plan === 'teams') {
+    priceId = process.env.STRIPE_TEAMS_PRICE_ID;
+    mode = 'subscription';
+  } else {
+    res.status(400).json({ error: 'Invalid plan' });
+    return;
+  }
+
+  if (!priceId) {
+    res.status(503).json({ error: `${plan} price not configured`, mock: true });
+    return;
+  }
+
+  try {
+    const checkout = await stripe.checkout.sessions.create({
+      mode,
+      line_items: [{ price: priceId, quantity: 1 }],
+      ...checkoutBase,
+    });
+    res.json({ url: checkout.url });
   } catch (err) {
     console.error('[payments/checkout]', err);
     res.status(500).json({ error: 'Failed to create checkout session' });
@@ -104,22 +105,61 @@ router.post('/webhook', async (req: Request, res: Response) => {
 
   if (event.type === 'checkout.session.completed') {
     const session = event.data.object as Stripe.Checkout.Session;
+    const uid = session.metadata?.firebaseUid;
     const sid = session.metadata?.sessionId;
-    if (sid) {
-      setProStatus(sid, true, session.customer as string | undefined);
+    const customerId = session.customer as string | undefined;
+
+    if (uid) {
+      // Firebase user → persist to Firestore
+      await firestoreSetProStatus(uid, true, customerId);
+      console.log(`[payments] Pro activated in Firestore for uid ${uid}`);
+    } else if (sid) {
+      // Anonymous session → persist to in-memory store
+      setProStatus(sid, true, customerId);
       console.log(`[payments] Pro activated for session ${sid}`);
     }
   }
 
   if (event.type === 'customer.subscription.deleted') {
     const sub = event.data.object as Stripe.Subscription;
-    // Find session by stripeCustomerId (linear scan — fine for in-memory store)
     const customerId = sub.customer as string;
-    console.log(`[payments] Subscription deleted for customer ${customerId}`);
-    // Note: in a real DB you'd look up the session by customerId and revoke pro
+
+    const result = await getUserByStripeCustomerId(customerId);
+    if (result) {
+      await firestoreSetProStatus(result.uid, false);
+      console.log(`[payments] Pro revoked in Firestore for uid ${result.uid}`);
+    } else {
+      console.log(`[payments] Subscription deleted for customer ${customerId} — no Firestore doc found`);
+    }
   }
 
   res.json({ received: true });
+});
+
+// POST /api/payments/portal — open Stripe billing portal (Firebase auth required)
+router.post('/portal', requireFirebaseAuth, async (req: Request, res: Response) => {
+  if (!stripe) {
+    res.status(503).json({ error: 'Payment not configured yet' });
+    return;
+  }
+
+  const doc = await getUserDoc(req.auth.uid!);
+  if (!doc?.stripeCustomerId) {
+    res.status(404).json({ error: 'No billing subscription found.' });
+    return;
+  }
+
+  const appUrl = process.env.APP_URL || 'http://localhost:3000';
+  try {
+    const session = await stripe.billingPortal.sessions.create({
+      customer: doc.stripeCustomerId,
+      return_url: `${appUrl}/app`,
+    });
+    res.json({ url: session.url });
+  } catch (err) {
+    console.error('[payments/portal]', err);
+    res.status(500).json({ error: 'Failed to open billing portal.' });
+  }
 });
 
 export default router;

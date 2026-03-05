@@ -117,9 +117,17 @@ function HeroSlider() {
   );
 }
 
-export default function LandingPage() {
+interface LandingPageProps {
+  onSignIn?: () => void;
+}
+
+export default function LandingPage({ onSignIn }: LandingPageProps) {
   const goToApp = () => {
-    window.location.href = '/app';
+    if (onSignIn) {
+      onSignIn();
+    } else {
+      window.location.href = '/app';
+    }
   };
 
   return (
@@ -134,7 +142,7 @@ export default function LandingPage() {
           onClick={goToApp}
           className="text-sm font-semibold text-indigo-600 hover:text-indigo-800 transition-colors"
         >
-          Try Free →
+          Sign In →
         </button>
       </header>
 

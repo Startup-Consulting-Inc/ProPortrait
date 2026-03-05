@@ -24,6 +24,14 @@ export type StyleOption =
 // In production: VITE_API_URL=https://proportrait-api-22835475779.us-central1.run.app
 const API_BASE = (import.meta.env.VITE_API_URL as string | undefined) ?? '';
 
+import { getIdToken } from './auth';
+
+async function getAuthHeaders(): Promise<Record<string, string>> {
+  const token = await getIdToken();
+  if (!token) return {};
+  return { Authorization: `Bearer ${token}` };
+}
+
 export async function generateProfessionalPortrait(
   imageBase64: string,
   mimeType: string,
@@ -36,9 +44,11 @@ export async function generateProfessionalPortrait(
   selectedPersonHint: string | null = null,
   removeBlemishes: boolean = true,
 ): Promise<string[]> {
+  const authH = await getAuthHeaders();
   const response = await fetch(`${API_BASE}/api/portraits/generate`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...authH },
+    credentials: 'include',
     body: JSON.stringify({
       imageBase64,
       mimeType,
@@ -68,9 +78,11 @@ export async function editProfessionalPortrait(
   regionOnly?: string,
 ): Promise<string> {
   const isUrl = imageData.startsWith('http');
+  const authH2 = await getAuthHeaders();
   const response = await fetch(`${API_BASE}/api/portraits/edit`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...authH2 },
+    credentials: 'include',
     body: JSON.stringify({
       ...(isUrl ? { imageUrl: imageData } : { imageBase64: imageData }),
       instruction,

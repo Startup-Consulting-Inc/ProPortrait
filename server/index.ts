@@ -8,7 +8,9 @@ import * as Sentry from '@sentry/node';
 import authRouter from './routes/auth.js';
 import paymentsRouter from './routes/payments.js';
 import emailRouter from './routes/email.js';
-import { getOrCreateSession, SESSION_COOKIE, COOKIE_OPTIONS } from './lib/session.js';
+import usersRouter from './routes/users.js';
+import adminRouter from './routes/admin.js';
+import { authMiddleware } from './middleware/authMiddleware.js';
 import { storePortrait } from './lib/storage.js';
 import { trackCost, getDailySpend } from './lib/costTracker.js';
 import { applyWatermark } from './lib/watermark.js';
@@ -192,7 +194,8 @@ const allowedOrigins = process.env.CORS_ORIGIN
 
 app.use(cors({
   origin: allowedOrigins,
-  methods: ['GET', 'POST'],
+  methods: ['GET', 'POST', 'PATCH', 'DELETE'],
+  credentials: true,
 }));
 
 const limiter = rateLimit({
@@ -204,6 +207,7 @@ const limiter = rateLimit({
 });
 
 app.use('/api/', limiter);
+app.use(authMiddleware);
 
 // ── Routes ───────────────────────────────────────────────────────────────────
 
@@ -214,6 +218,8 @@ app.get('/api/health', (_req, res) => {
 app.use('/api/auth', authRouter);
 app.use('/api/payments', paymentsRouter);
 app.use('/api/email', emailRouter);
+app.use('/api/users', usersRouter);
+app.use('/api/admin', adminRouter);
 
 app.post('/api/portraits/generate', async (req, res) => {
   const apiKey = process.env.GEMINI_API_KEY || process.env.API_KEY;
@@ -222,15 +228,9 @@ app.post('/api/portraits/generate', async (req, res) => {
     return;
   }
 
-  // Resolve session — creates one if new visitor
-  const cookieId = req.cookies?.[SESSION_COOKIE];
-  const [sessionId, session] = getOrCreateSession(cookieId);
-  if (!cookieId || cookieId !== sessionId) {
-    res.cookie(SESSION_COOKIE, sessionId, COOKIE_OPTIONS);
-  }
-
-  const imageSize = session.isPro ? '2K' : '1K';
-  trackCost(session.isPro ? 'pro_generate' : 'free_generate');
+  const imageSize = req.auth.isPro ? '2K' : '1K';
+  const userId = req.auth.uid ?? req.auth.sessionId ?? 'anon';
+  trackCost(req.auth.isPro ? 'pro_generate' : 'free_generate');
 
   const {
     imageBase64,
@@ -340,11 +340,11 @@ app.post('/api/portraits/generate', async (req, res) => {
 
     // Apply watermark for free users, then store
     const watermarkedImages = await Promise.all(
-      finalImages.map((b64) => applyWatermark(b64, session.isPro)),
+      finalImages.map((b64) => applyWatermark(b64, req.auth.isPro)),
     );
     const outputMime = 'image/png';
     const images = await Promise.all(
-      watermarkedImages.map((b64) => storePortrait(b64, sessionId, outputMime)),
+      watermarkedImages.map((b64) => storePortrait(b64, userId, outputMime)),
     );
 
     res.json({ images });
@@ -361,9 +361,7 @@ app.post('/api/portraits/edit', async (req, res) => {
     return;
   }
 
-  const cookieId = req.cookies?.[SESSION_COOKIE];
-  const [, editSession] = getOrCreateSession(cookieId);
-  const editImageSize = editSession.isPro ? '2K' : '1K';
+  const editImageSize = req.auth.isPro ? '2K' : '1K';
   trackCost('edit');
 
   const { imageBase64: rawBase64, imageUrl, instruction, regionOnly } = req.body;

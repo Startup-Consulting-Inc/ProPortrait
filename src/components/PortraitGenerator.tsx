@@ -15,7 +15,7 @@ import ComparisonSlider from './ComparisonSlider';
 import GenerationProgress from './GenerationProgress';
 import PricingModal from './PricingModal';
 import EmailCapture from './EmailCapture';
-import { getSessionInfo } from '../services/session';
+import { useAuthContext } from '../contexts/AuthContext';
 import { capture } from '../services/analytics';
 import FeatureTour from './FeatureTour';
 import { useFeatureFlag } from '../hooks/useFeatureFlag';
@@ -30,6 +30,7 @@ type NaturalnessPreset = 'natural' | 'polished' | 'studio';
 const NATURALNESS_MAP: Record<NaturalnessPreset, number> = { natural: 15, polished: 50, studio: 85 };
 
 export default function PortraitGenerator() {
+  const { isPro, refreshProfile } = useAuthContext();
   const [step, setStep] = useState<Step>(1);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [generatedImages, setGeneratedImages] = useState<string[]>([]);
@@ -82,7 +83,6 @@ export default function PortraitGenerator() {
   const [exportFormat, setExportFormat] = useState<FileFormat>('jpg');
   const [exportMode, setExportMode] = useState<'fill' | 'fit'>('fill');
   const [cropPosition, setCropPosition] = useState<{ x: number; y: number }>({ x: 50, y: 50 });
-  const [isPro, setIsPro] = useState(false);
   const [hasTransparentBackground, setHasTransparentBackground] = useState(false);
   const [downloadingPlatform, setDownloadingPlatform] = useState<string | null>(null);
   const [showPricingModal, setShowPricingModal] = useState(false);
@@ -106,11 +106,6 @@ export default function PortraitGenerator() {
   };
 
   useEffect(() => { setCropPosition({ x: 50, y: 50 }); }, [exportRatio]);
-
-  // Load session on mount to sync isPro status from server
-  useEffect(() => {
-    getSessionInfo().then((info) => setIsPro(info.isPro)).catch(() => {});
-  }, []);
 
   // Track paywall impression when reaching Step 4 as free user
   useEffect(() => {
@@ -1495,7 +1490,7 @@ export default function PortraitGenerator() {
       <PricingModal
         open={showPricingModal}
         onClose={() => setShowPricingModal(false)}
-        onProActivated={() => { setIsPro(true); setShowPricingModal(false); capture('paywall_converted', { plan: 'unknown' }); }}
+        onProActivated={() => { void refreshProfile(); setShowPricingModal(false); capture('paywall_converted', { plan: 'unknown' }); }}
       />
       <EmailCapture
         open={showEmailCapture}
