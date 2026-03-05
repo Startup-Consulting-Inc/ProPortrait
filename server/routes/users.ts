@@ -28,8 +28,13 @@ router.post('/me/first-login', requireFirebaseAuth, async (req: Request, res: Re
       createdAt: FieldValue.serverTimestamp(),
       updatedAt: FieldValue.serverTimestamp(),
     });
-  } else if (isAdmin && !existing.isAdmin) {
-    await upsertUserDoc(uid, { isAdmin: true });
+  } else {
+    // Backfill any fields that may be missing from docs created before schema was finalised
+    const patch: Record<string, unknown> = {};
+    if (!existing.email) patch.email = email;
+    if (existing.isPro === undefined) patch.isPro = false;
+    if (isAdmin && !existing.isAdmin) patch.isAdmin = true;
+    if (Object.keys(patch).length > 0) await upsertUserDoc(uid, patch as Partial<import('../lib/firestore.js').UserDoc>);
   }
 
   const doc = await getUserDoc(uid);
