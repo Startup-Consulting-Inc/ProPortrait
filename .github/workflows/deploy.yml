@@ -68,7 +68,7 @@ jobs:
             --max-instances 10 \
             --timeout 120s \
             --set-secrets "GEMINI_API_KEY=GEMINI_API_KEY:latest,R2_ACCOUNT_ID=R2_ACCOUNT_ID:latest,R2_ACCESS_KEY_ID=R2_ACCESS_KEY_ID:latest,R2_SECRET_ACCESS_KEY=R2_SECRET_ACCESS_KEY:latest,R2_BUCKET_NAME=R2_BUCKET_NAME:latest,RESEND_API_KEY=RESEND_API_KEY:latest,RESEND_FROM_EMAIL=RESEND_FROM_EMAIL:latest,ADMIN_EMAIL=ADMIN_EMAIL:latest,FIREBASE_ADMIN_JSON=FIREBASE_ADMIN_JSON:latest,STRIPE_SECRET_KEY=STRIPE_SECRET_KEY:latest,STRIPE_WEBHOOK_SECRET=STRIPE_WEBHOOK_SECRET:latest,STRIPE_SESSION_PRICE_ID=STRIPE_SESSION_PRICE_ID:latest,STRIPE_PRO_PRICE_ID=STRIPE_PRO_PRICE_ID:latest" \
-            --set-env-vars "^##^NODE_ENV=production##FIREBASE_PROJECT_ID=portrait-7b01d##CORS_ORIGIN=https://proportrait.ai,https://portrait.ai-biz.app,https://portrait-7b01d.web.app"
+            --set-env-vars "^##^NODE_ENV=production##FIREBASE_PROJECT_ID=portrait-7b01d##APP_URL=https://proportrait.ai##CORS_ORIGIN=https://proportrait.ai,https://portrait.ai-biz.app,https://portrait-7b01d.web.app"
 
   deploy-frontend:
     name: Deploy Frontend → Firebase Hosting
