@@ -206,7 +206,7 @@ const limiter = rateLimit({
   legacyHeaders: false,
 });
 
-app.use('/api/', limiter);
+app.use('/api/portraits', limiter);
 app.use(authMiddleware);
 
 // ── Routes ───────────────────────────────────────────────────────────────────

@@ -17,7 +17,7 @@ router.post('/checkout', async (req: Request, res: Response) => {
     return;
   }
 
-  const { plan } = req.body as { plan: 'session' | 'pro' | 'teams' };
+  const { plan } = req.body as { plan: 'session' | 'pro' };
   const appUrl = process.env.APP_URL || 'http://localhost:3000';
 
   // Build metadata to identify purchaser in webhook
@@ -51,9 +51,6 @@ router.post('/checkout', async (req: Request, res: Response) => {
     mode = 'payment';
   } else if (plan === 'pro') {
     priceId = process.env.STRIPE_PRO_PRICE_ID;
-    mode = 'subscription';
-  } else if (plan === 'teams') {
-    priceId = process.env.STRIPE_TEAMS_PRICE_ID;
     mode = 'subscription';
   } else {
     res.status(400).json({ error: 'Invalid plan' });

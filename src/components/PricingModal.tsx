@@ -8,7 +8,7 @@ interface PricingModalProps {
   onProActivated?: () => void;
 }
 
-type Plan = 'session' | 'pro' | 'teams';
+type Plan = 'session' | 'pro';
 
 const TIERS = [
   {
@@ -30,16 +30,6 @@ const TIERS = [
     features: ['60 generations/mo', '2K output resolution', 'Priority queue', 'PNG lossless export', 'All platform exports', 'Identity locks'],
     cta: 'Start Pro',
     highlighted: true,
-  },
-  {
-    id: 'teams' as Plan,
-    name: 'Teams',
-    price: '$99',
-    period: '/month',
-    description: '5 seats included',
-    features: ['300 generations/mo', 'All Pro features', '5 team seats', 'SSO / SAML', 'Priority support'],
-    cta: 'Get Teams',
-    highlighted: false,
   },
 ] as const;
 
