@@ -43,7 +43,11 @@ function AppContent() {
     return (
       <>
         <LandingPage onSignIn={() => setShowAuth(true)} />
-        <AuthModal open={showAuth} onClose={() => setShowAuth(false)} />
+        <AuthModal
+          open={showAuth}
+          onClose={() => setShowAuth(false)}
+          onSuccess={() => { window.location.href = '/app'; }}
+        />
       </>
     );
   }
