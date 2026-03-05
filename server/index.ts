@@ -208,6 +208,11 @@ const limiter = rateLimit({
 });
 
 app.use('/api/portraits', limiter);
+// Disable browser caching for all API responses
+app.use('/api', (_req, res, next) => {
+  res.set('Cache-Control', 'no-store');
+  next();
+});
 app.use(authMiddleware);
 
 // ── Routes ───────────────────────────────────────────────────────────────────
