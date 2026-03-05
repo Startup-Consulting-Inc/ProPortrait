@@ -3,6 +3,7 @@ import { useAuthContext } from '../contexts/AuthContext';
 import { updateUserProfile, deleteUserAccount, openBillingPortal } from '../services/user';
 import { sendPasswordReset, deleteAccount } from '../services/auth';
 import type { IdentityLocks, StyleOption, ExpressionPreset } from '../services/ai';
+import PricingModal from './PricingModal';
 
 interface UserProfileModalProps {
   open: boolean;
@@ -51,6 +52,7 @@ export default function UserProfileModal({ open, onClose, onApplyPreferences }: 
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [showPricing, setShowPricing] = useState(false);
 
   // Profile tab state
   const [displayName, setDisplayName] = useState('');
@@ -175,6 +177,7 @@ export default function UserProfileModal({ open, onClose, onApplyPreferences }: 
   ];
 
   return (
+    <>
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden max-h-[90vh] flex flex-col">
         {/* Header */}
@@ -400,16 +403,33 @@ export default function UserProfileModal({ open, onClose, onApplyPreferences }: 
               </div>
 
               {isPro ? (
-                <button
-                  onClick={handleBillingPortal}
-                  disabled={saving}
-                  className="w-full border border-slate-200 hover:bg-slate-50 disabled:opacity-50 text-slate-700 font-semibold py-3 rounded-xl transition-colors text-sm"
-                >
-                  {saving ? 'Opening…' : 'Manage Subscription'}
-                </button>
+                <div className="flex flex-col gap-2">
+                  <button
+                    onClick={handleBillingPortal}
+                    disabled={saving}
+                    className="w-full border border-slate-200 hover:bg-slate-50 disabled:opacity-50 text-slate-700 font-semibold py-3 rounded-xl transition-colors text-sm"
+                  >
+                    {saving ? 'Opening…' : 'Manage Subscription'}
+                  </button>
+                  <button
+                    onClick={handleBillingPortal}
+                    disabled={saving}
+                    className="w-full border border-red-200 hover:bg-red-50 disabled:opacity-50 text-red-600 font-semibold py-3 rounded-xl transition-colors text-sm"
+                  >
+                    {saving ? 'Opening…' : 'Downgrade / Cancel'}
+                  </button>
+                </div>
               ) : (
-                <div className="text-sm text-slate-500">
-                  Upgrade to Pro to access 2K resolution, priority generation, and persistent preferences.
+                <div className="flex flex-col gap-3">
+                  <p className="text-sm text-slate-500">
+                    Upgrade to Pro for 2K resolution, priority generation, and persistent preferences.
+                  </p>
+                  <button
+                    onClick={() => setShowPricing(true)}
+                    className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 rounded-xl transition-colors text-sm"
+                  >
+                    Upgrade to Pro Studio
+                  </button>
                 </div>
               )}
             </div>
@@ -417,5 +437,12 @@ export default function UserProfileModal({ open, onClose, onApplyPreferences }: 
         </div>
       </div>
     </div>
+
+    <PricingModal
+      open={showPricing}
+      onClose={() => setShowPricing(false)}
+      onProActivated={() => { setShowPricing(false); void refreshProfile(); }}
+    />
+    </>
   );
 }
