@@ -1417,20 +1417,20 @@ export default function PortraitGenerator() {
                   {(showAdvanced || showExportOptions) && (<>
                     {/* Share */}
                     <div className="flex gap-2">
-                      <a href={`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent((import.meta.env.VITE_APP_URL as string) || 'https://proportrait.ai')}`}
+                      <a href={`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent((import.meta.env.VITE_APP_URL as string) || 'https://portrait.ai-biz.app')}`}
                         target="_blank" rel="noopener noreferrer"
                         onClick={() => capture('share_intent', { platform: 'linkedin' })}
                         className="flex-1 py-2 bg-white border border-slate-200 rounded-lg text-xs font-medium text-slate-700 hover:bg-blue-50 hover:border-blue-300 flex items-center justify-center gap-1.5 transition-all">
                         <Linkedin className="w-3.5 h-3.5 text-blue-600" /> LinkedIn
                       </a>
-                      <a href={`https://twitter.com/intent/tweet?text=${encodeURIComponent('Just created my AI professional portrait with @ProPortraitAI')}&url=${encodeURIComponent((import.meta.env.VITE_APP_URL as string) || 'https://proportrait.ai')}`}
+                      <a href={`https://twitter.com/intent/tweet?text=${encodeURIComponent('Just created my AI professional portrait with @ProPortraitAI')}&url=${encodeURIComponent((import.meta.env.VITE_APP_URL as string) || 'https://portrait.ai-biz.app')}`}
                         target="_blank" rel="noopener noreferrer"
                         onClick={() => capture('share_intent', { platform: 'twitter' })}
                         className="flex-1 py-2 bg-white border border-slate-200 rounded-lg text-xs font-medium text-slate-700 hover:bg-sky-50 hover:border-sky-300 flex items-center justify-center gap-1.5 transition-all">
                         <Twitter className="w-3.5 h-3.5 text-sky-500" /> Twitter
                       </a>
                       <button
-                        onClick={() => { navigator.clipboard.writeText((import.meta.env.VITE_APP_URL as string) || 'https://proportrait.ai'); capture('share_intent', { platform: 'copy' }); }}
+                        onClick={() => { navigator.clipboard.writeText((import.meta.env.VITE_APP_URL as string) || 'https://portrait.ai-biz.app'); capture('share_intent', { platform: 'copy' }); }}
                         className="flex-1 py-2 bg-white border border-slate-200 rounded-lg text-xs font-medium text-slate-700 hover:bg-slate-50 hover:border-slate-300 flex items-center justify-center gap-1.5 transition-all">
                         <Copy className="w-3.5 h-3.5 text-slate-500" /> Copy
                       </button>

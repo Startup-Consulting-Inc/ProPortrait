@@ -64,7 +64,7 @@ export default function PrivacyPage() {
             ProPortrait AI processes facial geometry from your uploaded photo only to generate a portrait image.
             We do not store, sell, lease, trade, or profit from biometric identifiers or biometric information.
             Biometric data derived from your photo is not retained after the portrait generation is complete. For
-            questions about our BIPA compliance, contact us at privacy@proportrait.ai.
+            questions about our BIPA compliance, contact us at privacy@portrait.ai-biz.app.
           </p>
         </section>
 
@@ -76,7 +76,7 @@ export default function PrivacyPage() {
             the right to data portability.
           </p>
           <p className="text-slate-700 leading-relaxed">
-            To exercise these rights, contact us at privacy@proportrait.ai. We will respond within 30 days.
+            To exercise these rights, contact us at privacy@portrait.ai-biz.app. We will respond within 30 days.
           </p>
         </section>
 
@@ -93,7 +93,7 @@ export default function PrivacyPage() {
           <h2 className="text-xl font-semibold mb-3">Contact</h2>
           <p className="text-slate-700 leading-relaxed">
             For any privacy questions, data requests, or concerns, please email us at{' '}
-            <a href="mailto:privacy@proportrait.ai" className="text-indigo-600 underline">privacy@proportrait.ai</a>.
+            <a href="mailto:privacy@portrait.ai-biz.app" className="text-indigo-600 underline">privacy@portrait.ai-biz.app</a>.
           </p>
         </section>
       </div>

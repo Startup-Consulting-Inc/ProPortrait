@@ -24,10 +24,8 @@ export default function ApiKeyGuard({ children }: ApiKeyGuardProps) {
       const selected = await window.aistudio.hasSelectedApiKey();
       setHasKey(selected);
     } else {
-      // Fallback for environments where aistudio is not available (e.g. local dev outside of the platform)
-      // We assume true if GEMINI_API_KEY is present, but for the specific model we might need the paid key.
-      // However, to not block local dev entirely:
-      setHasKey(!!process.env.GEMINI_API_KEY);
+      // API key is managed server-side — no client-side key check needed
+      setHasKey(true);
     }
   };
 

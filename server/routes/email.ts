@@ -19,7 +19,7 @@ router.post('/capture', async (req: Request, res: Response) => {
   console.log(`[email] Captured: ${email} (source: ${source ?? 'unknown'})`);
 
   if (resend) {
-    const from = process.env.RESEND_FROM_EMAIL || 'hello@proportrait.ai';
+    const from = process.env.RESEND_FROM_EMAIL || 'hello@portrait.ai-biz.app';
     const admin = process.env.ADMIN_EMAIL;
 
     try {
