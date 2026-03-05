@@ -8,9 +8,9 @@ const router = Router();
 // GET /api/admin/users — list users (50/page, newest first)
 router.get('/users', requireAdmin, async (req: Request, res: Response) => {
   try {
+    // orderBy('createdAt') excludes docs missing that field — use a plain get instead
     const snap = await adminFirestore()
       .collection('users')
-      .orderBy('createdAt', 'desc')
       .limit(50)
       .get();
 

@@ -13,7 +13,7 @@ import adminRouter from './routes/admin.js';
 import { authMiddleware } from './middleware/authMiddleware.js';
 import { storePortrait } from './lib/storage.js';
 import { trackCost, getDailySpend } from './lib/costTracker.js';
-import { trackGeneration, trackEdit } from './lib/firestore.js';
+import { trackGeneration, trackEdit, trackExport } from './lib/firestore.js';
 import { applyWatermark } from './lib/watermark.js';
 
 // Load API key from .env.local (Vite convention), then .env as fallback
@@ -219,6 +219,13 @@ app.use(authMiddleware);
 
 app.get('/api/health', (_req, res) => {
   res.json({ ok: true, dailySpend: getDailySpend() });
+});
+
+// POST /api/portraits/export — track platform export (fire-and-forget, no heavy work)
+app.post('/api/portraits/export', (req, res) => {
+  const { platform } = req.body as { platform?: string };
+  if (req.auth.uid && platform) void trackExport(req.auth.uid, platform);
+  res.json({ ok: true });
 });
 
 app.use('/api/auth', authRouter);

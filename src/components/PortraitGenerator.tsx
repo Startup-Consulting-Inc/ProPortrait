@@ -17,6 +17,21 @@ import PricingModal from './PricingModal';
 import EmailCapture from './EmailCapture';
 import { useAuthContext } from '../contexts/AuthContext';
 import { capture } from '../services/analytics';
+import { getIdToken } from '../services/auth';
+
+const API_BASE = (import.meta.env.VITE_API_URL as string | undefined) ?? '';
+
+async function trackExportClient(platform: string) {
+  try {
+    const token = await getIdToken();
+    void fetch(`${API_BASE}/api/portraits/export`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+      body: JSON.stringify({ platform }),
+      credentials: 'include',
+    });
+  } catch { /* fire-and-forget */ }
+}
 import FeatureTour from './FeatureTour';
 import { useFeatureFlag } from '../hooks/useFeatureFlag';
 import { PLATFORM_PRESETS } from '../lib/platformPresets';
@@ -352,6 +367,7 @@ export default function PortraitGenerator() {
       a.click();
       document.body.removeChild(a);
       capture('portrait_downloaded', { platform: 'custom', isPro });
+      void trackExportClient('custom');
     };
   };
 
@@ -374,6 +390,7 @@ export default function PortraitGenerator() {
       document.body.removeChild(a);
       setDownloadingPlatform(null);
       capture('platform_downloaded', { platform: presetId, isPro });
+      void trackExportClient(presetId);
     };
   };
 
@@ -400,6 +417,7 @@ export default function PortraitGenerator() {
     a.click();
     URL.revokeObjectURL(url);
     setDownloadingPlatform(null);
+    void trackExportClient('all');
   };
 
   const handleCopyPreset = () => {

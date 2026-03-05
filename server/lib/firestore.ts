@@ -100,6 +100,38 @@ export async function trackEdit(uid: string, isPro: boolean): Promise<void> {
   await trackDailyStat('edit', isPro);
 }
 
+export async function trackLogin(uid: string): Promise<void> {
+  await adminFirestore().collection('users').doc(uid).set(
+    {
+      loginCount: FieldValue.increment(1),
+      lastLoginAt: FieldValue.serverTimestamp(),
+      lastActiveAt: FieldValue.serverTimestamp(),
+    },
+    { merge: true },
+  );
+  const today = new Date().toISOString().slice(0, 10);
+  await adminFirestore().collection('stats').doc('daily').collection('days').doc(today).set(
+    { date: today, loginCount: FieldValue.increment(1) },
+    { merge: true },
+  );
+}
+
+export async function trackExport(uid: string, platform: string): Promise<void> {
+  await adminFirestore().collection('users').doc(uid).set(
+    {
+      exportCount: FieldValue.increment(1),
+      lastActiveAt: FieldValue.serverTimestamp(),
+      [`exportUsage.${platform}`]: FieldValue.increment(1),
+    },
+    { merge: true },
+  );
+  const today = new Date().toISOString().slice(0, 10);
+  await adminFirestore().collection('stats').doc('daily').collection('days').doc(today).set(
+    { date: today, exportCount: FieldValue.increment(1) },
+    { merge: true },
+  );
+}
+
 export async function getDailyStats(days = 30): Promise<Record<string, unknown>[]> {
   const snap = await adminFirestore()
     .collection('stats').doc('daily').collection('days')

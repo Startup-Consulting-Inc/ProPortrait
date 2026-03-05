@@ -1,7 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { FieldValue } from 'firebase-admin/firestore';
 import { adminAuth, adminFirestore } from '../lib/firebase.js';
-import { getUserDoc, upsertUserDoc } from '../lib/firestore.js';
+import { getUserDoc, upsertUserDoc, trackLogin } from '../lib/firestore.js';
 import { requireFirebaseAuth } from '../middleware/authMiddleware.js';
 
 const router = Router();
@@ -37,6 +37,7 @@ router.post('/me/first-login', requireFirebaseAuth, async (req: Request, res: Re
     if (Object.keys(patch).length > 0) await upsertUserDoc(uid, patch as Partial<import('../lib/firestore.js').UserDoc>);
   }
 
+  void trackLogin(uid);
   const doc = await getUserDoc(uid);
   res.json({ doc });
 });

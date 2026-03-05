@@ -13,7 +13,10 @@ interface AdminUser {
   createdAt?: { seconds: number };
   generationCount?: number;
   editCount?: number;
+  exportCount?: number;
+  loginCount?: number;
   lastActiveAt?: { seconds: number };
+  lastLoginAt?: { seconds: number };
   totalCostUsd?: number;
   topStyle?: string | null;
 }
@@ -172,7 +175,10 @@ export default function AdminPage() {
                 <th className="text-left px-4 py-3 font-semibold text-slate-600">User</th>
                 <th className="text-left px-4 py-3 font-semibold text-slate-600">Email</th>
                 <th className="text-left px-4 py-3 font-semibold text-slate-600">Joined</th>
-                <th className="text-right px-4 py-3 font-semibold text-slate-600">Generations</th>
+                <th className="text-right px-4 py-3 font-semibold text-slate-600">Logins</th>
+                <th className="text-right px-4 py-3 font-semibold text-slate-600">Gen</th>
+                <th className="text-right px-4 py-3 font-semibold text-slate-600">Edits</th>
+                <th className="text-right px-4 py-3 font-semibold text-slate-600">Exports</th>
                 <th className="text-left px-4 py-3 font-semibold text-slate-600">Last Active</th>
                 <th className="text-right px-4 py-3 font-semibold text-slate-600">Est. Cost</th>
                 <th className="text-left px-4 py-3 font-semibold text-slate-600">Top Style</th>
@@ -188,9 +194,10 @@ export default function AdminPage() {
                   <td className="px-4 py-3 text-slate-400">
                     {u.createdAt ? new Date(u.createdAt.seconds * 1000).toLocaleDateString() : '—'}
                   </td>
-                  <td className="px-4 py-3 text-right text-slate-700 font-medium">
-                    {u.generationCount ?? 0}
-                  </td>
+                  <td className="px-4 py-3 text-right text-slate-500">{u.loginCount ?? 0}</td>
+                  <td className="px-4 py-3 text-right text-slate-700 font-medium">{u.generationCount ?? 0}</td>
+                  <td className="px-4 py-3 text-right text-slate-500">{u.editCount ?? 0}</td>
+                  <td className="px-4 py-3 text-right text-slate-500">{u.exportCount ?? 0}</td>
                   <td className="px-4 py-3 text-slate-400 text-xs">
                     {u.lastActiveAt ? relativeTime(u.lastActiveAt.seconds) : '—'}
                   </td>
@@ -223,7 +230,7 @@ export default function AdminPage() {
               ))}
               {!fetching && users.length === 0 && (
                 <tr>
-                  <td colSpan={9} className="px-4 py-8 text-center text-slate-400">No users yet.</td>
+                  <td colSpan={12} className="px-4 py-8 text-center text-slate-400">No users yet.</td>
                 </tr>
               )}
             </tbody>
