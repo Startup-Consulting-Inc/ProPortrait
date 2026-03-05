@@ -7,26 +7,33 @@ export async function authMiddleware(req: Request, res: Response, next: NextFunc
 
   if (authHeader?.startsWith('Bearer ')) {
     const idToken = authHeader.slice(7);
+    let uid: string | null = null;
+    let email = '';
+
     try {
       const decoded = await adminAuth().verifyIdToken(idToken);
-      const uid = decoded.uid;
-      const email = decoded.email ?? '';
-
-      // Fetch user profile from Firestore
-      const snap = await adminFirestore().collection('users').doc(uid).get();
-      const doc = snap.exists ? (snap.data() as { isPro?: boolean; isAdmin?: boolean }) : {};
-
-      req.auth = {
-        mode: 'firebase',
-        uid,
-        email,
-        isPro: doc.isPro ?? false,
-        isAdmin: doc.isAdmin ?? false,
-      };
-      next();
-      return;
+      uid = decoded.uid;
+      email = decoded.email ?? '';
     } catch {
       // Invalid token — fall through to anonymous
+    }
+
+    if (uid) {
+      // Token is valid — fetch Firestore profile (best-effort, never blocks auth)
+      let isPro = false;
+      let isAdmin = false;
+      try {
+        const snap = await adminFirestore().collection('users').doc(uid).get();
+        const doc = snap.exists ? (snap.data() as { isPro?: boolean; isAdmin?: boolean }) : {};
+        isPro = doc.isPro ?? false;
+        isAdmin = doc.isAdmin ?? false;
+      } catch {
+        // Firestore unavailable — continue with defaults
+      }
+
+      req.auth = { mode: 'firebase', uid, email, isPro, isAdmin };
+      next();
+      return;
     }
   }
 
