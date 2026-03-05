@@ -18,7 +18,7 @@ import { AuthProvider, useAuthContext } from './contexts/AuthContext';
 
 function AppContent() {
   const path = window.location.pathname;
-  const { user, loading } = useAuthContext();
+  const { user, loading, isPro, refreshProfile } = useAuthContext();
 
   // Profile modal
   const [showProfile, setShowProfile] = useState(false);
@@ -26,6 +26,34 @@ function AppContent() {
   const [showAuth, setShowAuth] = useState(false);
   // Admin nav
   const [showAdmin, setShowAdmin] = useState(false);
+  // Payment success banner
+  const [paymentPending, setPaymentPending] = useState(() =>
+    new URLSearchParams(window.location.search).get('payment') === 'success',
+  );
+  const [proActivated, setProActivated] = useState(false);
+
+  // After Stripe redirect with ?payment=success, poll until Firestore reflects isPro=true
+  useEffect(() => {
+    if (!paymentPending || loading) return;
+    if (isPro) {
+      setPaymentPending(false);
+      setProActivated(true);
+      // Clean URL
+      window.history.replaceState({}, '', '/app');
+      setTimeout(() => setProActivated(false), 6000);
+      return;
+    }
+    let attempts = 0;
+    const interval = setInterval(async () => {
+      attempts++;
+      await refreshProfile();
+      if (attempts >= 15) {
+        clearInterval(interval);
+        setPaymentPending(false);
+      }
+    }, 2000);
+    return () => clearInterval(interval);
+  }, [paymentPending, loading, isPro]);
 
   // Redirect to login if accessing protected routes while not authenticated
   useEffect(() => {
@@ -131,6 +159,20 @@ function AppContent() {
   return (
     <>
       <CookieConsent />
+      {paymentPending && (
+        <div className="fixed top-0 inset-x-0 z-50 bg-indigo-600 text-white text-sm text-center py-2.5 flex items-center justify-center gap-2">
+          <svg className="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+          </svg>
+          Activating your Pro plan…
+        </div>
+      )}
+      {proActivated && (
+        <div className="fixed top-0 inset-x-0 z-50 bg-emerald-600 text-white text-sm text-center py-2.5">
+          Pro plan activated — enjoy 2K portraits and priority generation!
+        </div>
+      )}
       <div
         data-theme={theme}
         className="min-h-screen bg-slate-50 dark:bg-slate-900 font-sans text-slate-900 dark:text-slate-100 selection:bg-indigo-100 selection:text-indigo-900 relative"
