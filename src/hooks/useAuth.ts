@@ -72,6 +72,7 @@ export function useAuth(): AuthState {
     await signOut();
     setUser(null);
     setProfile(null);
+    window.location.href = '/';
   };
 
   return {
