@@ -91,8 +91,9 @@ export default function PortraitGenerator() {
   const [clothesStyle, setClothesStyle] = useState('');
   const [clothesColor, setClothesColor] = useState('');
   const [showMoreColors, setShowMoreColors] = useState(false);
-  // BG sub-wizard
-  const [bgCategory, setBgCategory] = useState('');
+  // BG picker
+  const [showBrandColors, setShowBrandColors] = useState(false);
+  const [showCreativeBG, setShowCreativeBG] = useState(false);
 
   // Phase 4 — Export
   const [exportRatio, setExportRatio] = useState<AspectRatio>('3:4');
@@ -476,18 +477,34 @@ export default function PortraitGenerator() {
   // Reset sub-wizards when switching edit mode
   useEffect(() => {
     if (editMode !== 'clothes') { setClothesStyle(''); setClothesColor(''); setShowMoreColors(false); }
-    if (editMode !== 'background') { setBgCategory(''); }
+    if (editMode !== 'background') { setShowBrandColors(false); setShowCreativeBG(false); }
   }, [editMode]);
 
-  const BG_CATEGORIES: Array<{ name: string; emoji: string; options: string[]; pro?: boolean }> = [
-    { name: 'Solid Color',      emoji: '⬜', options: ['Pure White', 'Light Grey', 'Dark Charcoal', 'Soft Cream', 'Muted Slate', 'Jet Black'] },
-    { name: 'Soft Gradient',    emoji: '🌫️', options: ['White to Light Grey', 'Sky Blue Fade', 'Warm Peach', 'Purple Dusk', 'Neutral Beige', 'Seafoam Green'] },
-    { name: 'Modern Office',    emoji: '🏢', options: ['Open Plan', 'Executive Suite', 'Conference Room', 'Co-working Space', 'Minimalist Desk', 'Glass Walls'] },
-    { name: 'Natural Outdoors', emoji: '🌿', options: ['Park & Green Lawn', 'Autumn Forest', 'Cherry Blossoms', 'Mountain View', 'Beach & Ocean', 'Garden Path', 'Snowy Woods', 'Rocky Cliff'] },
-    { name: 'Urban & City',     emoji: '🌆', options: ['City Skyline (Day)', 'City Skyline (Night)', 'Rooftop Terrace', 'Street Café', 'Modern Architecture', 'Brick Wall Alley'] },
-    { name: 'Indoor Spaces',    emoji: '📚', options: ['Library', 'Home Study', 'Art Gallery', 'Luxury Hotel Lobby', 'Coffee Shop', 'Cozy Living Room'] },
-    { name: 'Abstract Studio',  emoji: '🎨', options: ['Abstract Blue', 'Abstract Warm', 'Dark Studio', 'Light Studio', 'Bokeh Blur', 'Geometric Pattern'] },
-    { name: 'Transparent',      emoji: '🔲', options: [], pro: true },
+  // Quick Pick — top 2026 trends (dark neutral, soft neutral, environmental)
+  const BG_QUICK = [
+    { label: 'Charcoal Dark',  hex: '#2A2A2A', desc: '#1 trend — premium editorial', prompt: 'solid dark charcoal background #2A2A2A, even studio lighting, premium editorial feel' },
+    { label: 'Warm Gray',      hex: '#8A8A8A', desc: 'Clean & universal',             prompt: 'soft warm gray background, even diffused studio lighting, clean professional look' },
+    { label: 'Soft Cream',     hex: '#F0EBE3', desc: 'Approachable & warm',           prompt: 'soft warm cream background, subtle linen texture, diffused light, editorial warmth' },
+    { label: 'Blurred Office', hex: null,      desc: 'Modern & authentic',            prompt: 'modern open-plan office background, shallow depth of field, soft bokeh, clean and contemporary' },
+  ];
+
+  // Brand Colors — industry-matched
+  const BG_BRAND = [
+    { label: 'Navy',            hex: '#1B2A4A', desc: 'Finance, law',         prompt: 'deep navy background #1B2A4A, even studio lighting, authoritative professional' },
+    { label: 'Slate Gray',      hex: '#5A6472', desc: 'Tech, SaaS',           prompt: 'slate gray background #5A6472, modern clean studio look, contemporary professional' },
+    { label: 'Sage Green',      hex: '#8FAF8A', desc: 'Wellness, health',     prompt: 'muted sage green background #8FAF8A, soft diffused natural light, calm and grounded' },
+    { label: 'Muted Teal',      hex: '#4A8C8C', desc: 'Startups, health tech', prompt: 'muted teal background #4A8C8C, clean modern studio lighting, innovative feel' },
+    { label: 'Deep Burgundy',   hex: '#5C2D3A', desc: 'Luxury, legal',        prompt: 'deep burgundy background #5C2D3A, rich editorial lighting, luxurious and authoritative' },
+    { label: 'Terracotta',      hex: '#C27B5A', desc: 'Design, hospitality',  prompt: 'warm terracotta background #C27B5A, soft warm lighting, approachable and distinctive' },
+  ];
+
+  // Creative & Environmental — blurred context backgrounds
+  const BG_CREATIVE = [
+    { label: 'Cozy Workspace',   emoji: '📚', prompt: 'warm interior workspace background, bookshelves, ambient lamp light, soft bokeh' },
+    { label: 'Urban Blur',       emoji: '🌆', prompt: 'city exterior background, glass and steel architecture, blurred urban professional setting' },
+    { label: 'Natural Outdoors', emoji: '🌿', prompt: 'soft blurred greenery background, warm afternoon daylight, outdoor bokeh' },
+    { label: 'Café',             emoji: '☕', prompt: 'warm coffee shop background, ambient light, blurred café atmosphere' },
+    { label: 'Textured Neutral', emoji: '🪨', prompt: 'matte concrete wall texture, neutral gray, subtle grain, studio lighting' },
   ];
 
   const CLOTHES_STYLES = [
@@ -1203,44 +1220,72 @@ export default function PortraitGenerator() {
                                 </div>
                               </>
                             )}
-                            {/* ── Background 2-step sub-wizard ── */}
-                            {editMode === 'background' && !bgCategory && (
+                            {/* ── Background tiered picker ── */}
+                            {editMode === 'background' && (
                               <>
-                                <p className="text-[10px] text-slate-400 font-semibold px-1 mb-0.5">Step 1 — Select category</p>
-                                <div className="grid grid-cols-2 gap-1">
-                                  {BG_CATEGORIES.map(cat => (
-                                    <button key={cat.name}
-                                      onClick={() => {
-                                        if (cat.pro && !isPro) { setShowPricingModal(true); return; }
-                                        if (cat.options.length === 0) { handleEdit('Remove the background completely and make it transparent.'); return; }
-                                        setBgCategory(cat.name);
-                                      }}
-                                      className="text-left text-xs py-1.5 px-2.5 bg-white hover:bg-indigo-50 border border-slate-200 hover:border-indigo-300 rounded-lg transition-colors flex items-center gap-1.5">
-                                      <span>{cat.emoji}</span>
-                                      <span className="font-medium text-slate-700 leading-tight">{cat.name}</span>
-                                      {cat.pro && !isPro && <span className="ml-auto flex items-center gap-0.5 text-[9px] font-bold text-amber-600 bg-amber-50 border border-amber-200 px-1 py-0.5 rounded-full leading-none shrink-0"><Lock className="w-2 h-2" /> PRO</span>}
+                                {/* Quick Pick */}
+                                <p className="text-[9px] text-indigo-400 font-bold px-1 mb-1 uppercase tracking-wide">✦ Quick Pick</p>
+                                <div className="grid grid-cols-2 gap-1.5 mb-2">
+                                  {BG_QUICK.map(bg => (
+                                    <button key={bg.label} disabled={isEditing}
+                                      onClick={() => handleEdit(`Change the background to: ${bg.prompt}`)}
+                                      className="flex items-center gap-2 py-1.5 px-2 bg-white hover:bg-indigo-50 border border-slate-200 hover:border-indigo-300 rounded-lg transition-all disabled:opacity-50 text-left">
+                                      {bg.hex
+                                        ? <span className="w-6 h-6 rounded-md border border-black/10 shadow-sm shrink-0" style={{ background: bg.hex }} />
+                                        : <span className="w-6 h-6 rounded-md border border-slate-200 bg-slate-100 flex items-center justify-center text-[11px] shrink-0">🏢</span>}
+                                      <div>
+                                        <div className="text-[10px] font-semibold text-slate-700 leading-tight">{bg.label}</div>
+                                        <div className="text-[8px] text-slate-400 leading-tight">{bg.desc}</div>
+                                      </div>
                                     </button>
                                   ))}
                                 </div>
-                              </>
-                            )}
 
-                            {editMode === 'background' && bgCategory && (
-                              <>
-                                <div className="flex items-center gap-2 px-1 mb-1">
-                                  <button onClick={() => setBgCategory('')} className="text-[10px] text-indigo-500 hover:text-indigo-700 font-medium">← Back</button>
-                                  <span className="text-[10px] text-slate-400">
-                                    {BG_CATEGORIES.find(c => c.name === bgCategory)?.emoji} <strong className="text-slate-600">{bgCategory}</strong>
-                                  </span>
-                                </div>
-                                <p className="text-[10px] text-slate-400 font-semibold px-1 mb-0.5">Step 2 — Select setting</p>
-                                {(BG_CATEGORIES.find(c => c.name === bgCategory)?.options ?? []).map(opt => (
-                                  <button key={opt} disabled={isEditing}
-                                    onClick={() => handleEdit(`Change the background to: ${opt}`)}
-                                    className="text-left text-xs py-1.5 px-2.5 bg-white hover:bg-indigo-50 border border-slate-200 hover:border-indigo-200 rounded-lg transition-colors text-slate-700 font-medium disabled:opacity-50">
-                                    {opt}
-                                  </button>
-                                ))}
+                                {/* Brand Colors */}
+                                <button onClick={() => setShowBrandColors(v => !v)}
+                                  className="text-[10px] text-indigo-500 hover:text-indigo-700 font-medium px-1 mb-1 flex items-center gap-1">
+                                  {showBrandColors ? '▴ Brand Colors' : '▾ Brand Colors'}
+                                </button>
+                                {showBrandColors && (
+                                  <div className="grid grid-cols-3 gap-1.5 px-0.5 mb-2">
+                                    {BG_BRAND.map(bg => (
+                                      <button key={bg.label} disabled={isEditing}
+                                        onClick={() => handleEdit(`Change the background to: ${bg.prompt}`)}
+                                        className="flex flex-col items-center gap-1 py-1.5 rounded-lg border border-slate-200 hover:border-indigo-300 bg-white hover:bg-indigo-50 transition-all disabled:opacity-50">
+                                        <span className="w-6 h-6 rounded-md border border-black/10 shadow-sm" style={{ background: bg.hex }} />
+                                        <span className="text-[8px] text-slate-600 font-semibold text-center leading-tight px-0.5">{bg.label}</span>
+                                        <span className="text-[7px] text-slate-400 text-center leading-tight px-0.5">{bg.desc}</span>
+                                      </button>
+                                    ))}
+                                  </div>
+                                )}
+
+                                {/* Creative & Environmental */}
+                                <button onClick={() => setShowCreativeBG(v => !v)}
+                                  className="text-[10px] text-indigo-500 hover:text-indigo-700 font-medium px-1 mb-1 flex items-center gap-1">
+                                  {showCreativeBG ? '▴ Creative & Environmental' : '▾ Creative & Environmental'}
+                                </button>
+                                {showCreativeBG && (
+                                  <div className="flex flex-col gap-1 mb-2">
+                                    {BG_CREATIVE.map(bg => (
+                                      <button key={bg.label} disabled={isEditing}
+                                        onClick={() => handleEdit(`Change the background to: ${bg.prompt}`)}
+                                        className="flex items-center gap-2 py-1.5 px-2 bg-white hover:bg-indigo-50 border border-slate-200 hover:border-indigo-300 rounded-lg transition-all text-left disabled:opacity-50">
+                                        <span className="text-sm">{bg.emoji}</span>
+                                        <span className="text-[10px] font-medium text-slate-700">{bg.label}</span>
+                                      </button>
+                                    ))}
+                                  </div>
+                                )}
+
+                                {/* Transparent — Pro */}
+                                <button
+                                  onClick={() => { if (!isPro) { setShowPricingModal(true); return; } handleEdit('Remove the background completely and make it transparent.'); }}
+                                  className="flex items-center gap-2 py-1.5 px-2 bg-white hover:bg-indigo-50 border border-slate-200 hover:border-indigo-300 rounded-lg transition-all w-full text-left">
+                                  <span className="text-sm">🔲</span>
+                                  <span className="text-[10px] font-medium text-slate-700">Transparent</span>
+                                  {!isPro && <span className="ml-auto flex items-center gap-0.5 text-[9px] font-bold text-amber-600 bg-amber-50 border border-amber-200 px-1 py-0.5 rounded-full leading-none shrink-0"><Lock className="w-2 h-2" /> PRO</span>}
+                                </button>
                               </>
                             )}
                             {editMode === 'color' && ['Black and White', 'Warm Golden Tones', 'Cool Blue Tones', 'Cinematic Teal & Orange', 'Vintage Sepia', 'Soft Pastel', 'High Contrast'].map(item => (
