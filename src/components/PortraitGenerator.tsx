@@ -53,7 +53,7 @@ export default function PortraitGenerator() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [selectedStyle, setSelectedStyle] = useState<StyleOption>('corporate');
+  const [selectedStyle, setSelectedStyle] = useState<StyleOption>('studio');
   const [editMode, setEditMode] = useState<EditMode>(null);
   const [customEditPrompt, setCustomEditPrompt] = useState('');
   const [regionTarget, setRegionTarget] = useState<string | null>(null);
@@ -460,26 +460,14 @@ export default function PortraitGenerator() {
   ];
 
   const STYLES: Array<{ id: StyleOption; icon: React.ComponentType<{ className?: string }>; label: string; desc: string; isNew?: boolean }> = [
-    { id: 'corporate', icon: Briefcase, label: 'Corporate', desc: 'Professional & Trustworthy' },
-    { id: 'creative', icon: Palette, label: 'Creative', desc: 'Modern & Artistic' },
     { id: 'studio', icon: Camera, label: 'Studio', desc: 'High-End & Dramatic' },
-    { id: 'tech', icon: Laptop, label: 'Tech', desc: 'Modern & Approachable' },
-    { id: 'outdoor', icon: Sun, label: 'Outdoor', desc: 'Natural & Bright' },
     { id: 'bw', icon: Moon, label: 'B&W', desc: 'Timeless & Classic' },
     { id: 'vintage', icon: Clock, label: 'Vintage', desc: 'Retro Film Look' },
-    { id: 'cinematic', icon: Film, label: 'Cinematic', desc: 'Movie Star Look' },
     { id: 'cartoon', icon: Smile, label: 'Cartoon', desc: '3D Pixar Style' },
-    { id: 'art_deco', icon: Hexagon, label: 'Art Deco', desc: 'Elegant & Geometric' },
-    { id: 'linkedin', icon: Linkedin, label: 'LinkedIn', desc: 'Profile Optimized', isNew: true },
-    { id: 'resume', icon: FileText, label: 'Resume', desc: 'Clean & Conservative', isNew: true },
-    { id: 'speaker', icon: Mic, label: 'Speaker', desc: 'Stage Presence', isNew: true },
-    { id: 'dating', icon: Heart, label: 'Dating', desc: 'Warm & Authentic', isNew: true },
-    { id: 'academic', icon: GraduationCap, label: 'Academic', desc: 'Scholarly Authority', isNew: true },
-    { id: 'creative_industry', icon: Paintbrush, label: 'Creative Pro', desc: 'Portfolio Style', isNew: true },
   ];
 
   // Quick mode style subset
-  const QUICK_STYLE_IDS: StyleOption[] = ['corporate', 'linkedin', 'studio', 'tech', 'creative', 'bw', 'vintage', 'cinematic'];
+  const QUICK_STYLE_IDS: StyleOption[] = ['studio', 'bw', 'vintage', 'cartoon'];
 
   // Reset sub-wizards when switching edit mode
   useEffect(() => {
@@ -588,10 +576,8 @@ export default function PortraitGenerator() {
   };
 
   const EXPRESSIONS: Array<{ id: ExpressionPreset; label: string; emoji: string; desc: string }> = [
-    { id: 'confident_neutral', label: 'Confident Neutral', emoji: '😐', desc: 'Relaxed, focused — 2026\'s #1 trend' },
+    { id: 'confident_neutral', label: 'Confident', emoji: '😐', desc: 'Relaxed, focused — 2026\'s #1 trend' },
     { id: 'warm_smile', label: 'Warm Smile', emoji: '😊', desc: 'Genuine, approachable' },
-    { id: 'serious_authority', label: 'Authority', emoji: '😤', desc: 'Executive presence' },
-    { id: 'approachable_expert', label: 'Expert', emoji: '🙂', desc: 'Competent yet warm' },
     { id: 'natural', label: 'Natural', emoji: '✨', desc: 'AI decides naturally' },
   ];
 
