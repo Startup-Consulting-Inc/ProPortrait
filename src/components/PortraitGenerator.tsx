@@ -36,7 +36,7 @@ import FeatureTour from './FeatureTour';
 import { useFeatureFlag } from '../hooks/useFeatureFlag';
 import { PLATFORM_PRESETS } from '../lib/platformPresets';
 
-type EditMode = 'clothes' | 'background' | 'color' | 'region' | null;
+type EditMode = 'clothes' | 'background' | 'region' | null;
 type Step = 1 | 2 | 3 | 4;
 type AspectRatio = '1:1' | '3:4';
 type FileFormat = 'png' | 'jpg';
@@ -1114,11 +1114,10 @@ export default function PortraitGenerator() {
                     </h3>
 
                     {/* Edit Mode Buttons */}
-                    <div className="grid grid-cols-4 gap-1.5 mb-3">
+                    <div className="grid grid-cols-3 gap-1.5 mb-3">
                       {[
                         { mode: 'clothes' as EditMode, icon: Shirt, label: 'Clothes' },
                         { mode: 'background' as EditMode, icon: ImageIcon, label: 'BG' },
-                        { mode: 'color' as EditMode, icon: PaintBucket, label: 'Color' },
                         { mode: 'region' as EditMode, icon: Target, label: 'Region' },
                       ].map(({ mode, icon: Icon, label }) => (
                         <button key={mode} onClick={() => { setEditMode(editMode === mode ? null : mode); setRegionTarget(null); }}
@@ -1288,10 +1287,6 @@ export default function PortraitGenerator() {
                                 </button>
                               </>
                             )}
-                            {editMode === 'color' && ['Black and White', 'Warm Golden Tones', 'Cool Blue Tones', 'Cinematic Teal & Orange', 'Vintage Sepia', 'Soft Pastel', 'High Contrast'].map(item => (
-                              <button key={item} onClick={() => handleEdit(`Apply ${item} color grading to the entire image`)} disabled={isEditing}
-                                className="text-left text-xs py-1.5 px-2.5 hover:bg-white rounded-lg transition-colors text-slate-700 font-medium">{item}</button>
-                            ))}
                             {editMode === 'region' && (
                               <>
                                 <p className="text-[10px] text-slate-400 px-2 mb-1">Pick an area to lock, then describe the change below:</p>
