@@ -90,7 +90,7 @@ jobs:
       - name: Build frontend
         run: npm run build
         env:
-          VITE_API_URL: https://proportrait-api-22835475779.us-central1.run.app
+          VITE_API_URL: https://proportrait-api-24wwr2opja-uc.a.run.app
           VITE_POSTHOG_KEY: ${{ secrets.VITE_POSTHOG_KEY }}
           VITE_POSTHOG_HOST: https://eu.i.posthog.com
           VITE_SENTRY_DSN: ${{ secrets.VITE_SENTRY_DSN }}
