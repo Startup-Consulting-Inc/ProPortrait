@@ -90,6 +90,7 @@ export default function PortraitGenerator() {
   // Clothes sub-wizard
   const [clothesStyle, setClothesStyle] = useState('');
   const [clothesColor, setClothesColor] = useState('');
+  const [showMoreColors, setShowMoreColors] = useState(false);
   // BG sub-wizard
   const [bgCategory, setBgCategory] = useState('');
 
@@ -474,7 +475,7 @@ export default function PortraitGenerator() {
 
   // Reset sub-wizards when switching edit mode
   useEffect(() => {
-    if (editMode !== 'clothes') { setClothesStyle(''); setClothesColor(''); }
+    if (editMode !== 'clothes') { setClothesStyle(''); setClothesColor(''); setShowMoreColors(false); }
     if (editMode !== 'background') { setBgCategory(''); }
   }, [editMode]);
 
@@ -495,19 +496,29 @@ export default function PortraitGenerator() {
     'Polo Shirt', 'Cardigan', 'Denim Jacket', 'Sweater',
   ];
 
-  const CLOTHES_COLORS = [
-    { name: 'Black',        hex: '#1c1c1c' },
-    { name: 'Charcoal',     hex: '#4a4a4a' },
-    { name: 'Navy',         hex: '#1e3a5f' },
-    { name: 'White',        hex: '#f5f5f5' },
-    { name: 'Light Blue',   hex: '#6fa8dc' },
-    { name: 'Grey',         hex: '#8a8a8a' },
-    { name: 'Burgundy',     hex: '#800020' },
-    { name: 'Brown',        hex: '#6b3a2a' },
-    { name: 'Olive',        hex: '#5a5a2a' },
-    { name: 'Forest Green', hex: '#2d5a27' },
-    { name: 'Camel',        hex: '#c19a6b' },
-    { name: 'Cream',        hex: '#f5f0dc' },
+  // Tier 1 — 2026 trending colors (Pantone SS26 + Pinterest Palette™)
+  const TRENDING_COLORS = [
+    { name: 'Persimmon',    hex: '#FF5C34', trend: 'Pinterest +150%' },
+    { name: 'Marina Blue',  hex: '#4A7DAD', trend: 'Pantone SS26' },
+    { name: 'Jade',         hex: '#AEB8A0', trend: 'Pinterest +135%' },
+    { name: 'Plum Noir',    hex: '#351E28', trend: 'Deep jewel trend' },
+    { name: 'Cloud Dancer', hex: '#F5F1E6', trend: 'Color of the Year' },
+  ];
+
+  // Tier 2 — classic & extended palette
+  const MORE_COLORS = [
+    { name: 'Black',          hex: '#1c1c1c' },
+    { name: 'Charcoal',       hex: '#4a4a4a' },
+    { name: 'White',          hex: '#f5f5f5' },
+    { name: 'Navy',           hex: '#1e3a5f' },
+    { name: 'Grey',           hex: '#8a8a8a' },
+    { name: 'Sage Green',     hex: '#8FAF89' },
+    { name: 'Alexandrite',    hex: '#2E7E7C' },
+    { name: 'Burnt Sienna',   hex: '#C04A2F' },
+    { name: 'Wasabi',         hex: '#C8CE47' },
+    { name: 'Burnished Lilac', hex: '#C4A8BB' },
+    { name: 'Caramel',        hex: '#C49A6C' },
+    { name: 'Pale Banana',    hex: '#F5E878' },
   ];
 
   const CLOTHES_PATTERNS = [
@@ -1130,16 +1141,39 @@ export default function PortraitGenerator() {
                                   <button onClick={() => setClothesStyle('')} className="text-[10px] text-indigo-500 hover:text-indigo-700 font-medium">← Back</button>
                                   <span className="text-[10px] text-slate-400">Style: <strong className="text-slate-600">{clothesStyle}</strong></span>
                                 </div>
-                                <p className="text-[10px] text-slate-400 font-semibold px-1 mb-0.5">Step 2 — Select color</p>
-                                <div className="grid grid-cols-4 gap-1.5 px-0.5">
-                                  {CLOTHES_COLORS.map(c => (
+                                <p className="text-[10px] text-slate-400 font-semibold px-1 mb-1">Step 2 — Select color</p>
+                                {/* Tier 1 — Trending */}
+                                <p className="text-[9px] text-indigo-400 font-bold px-1 mb-1 uppercase tracking-wide">✦ 2026 Trending</p>
+                                <div className="flex gap-2 px-0.5 mb-2 flex-wrap">
+                                  {TRENDING_COLORS.map(c => (
                                     <button key={c.name} onClick={() => setClothesColor(c.name)} title={c.name}
-                                      className="flex flex-col items-center gap-1 py-1.5 rounded-lg border border-slate-200 hover:border-indigo-300 bg-white hover:bg-indigo-50 transition-all">
-                                      <span className="w-5 h-5 rounded-full border border-black/10 shadow-sm" style={{ background: c.hex }} />
-                                      <span className="text-[8px] text-slate-500 font-medium text-center leading-tight px-0.5">{c.name}</span>
+                                      className="flex flex-col items-center gap-1 py-1.5 px-2 rounded-lg border border-slate-200 hover:border-indigo-300 bg-white hover:bg-indigo-50 transition-all min-w-[52px]">
+                                      <span className="w-7 h-7 rounded-full border border-black/10 shadow-sm" style={{ background: c.hex }} />
+                                      <span className="text-[8px] text-slate-700 font-semibold text-center leading-tight">{c.name}</span>
+                                      <span className="text-[7px] text-slate-400 text-center leading-tight">{c.trend}</span>
                                     </button>
                                   ))}
                                 </div>
+                                {/* More colors toggle */}
+                                <button onClick={() => setShowMoreColors(v => !v)}
+                                  className="text-[10px] text-indigo-500 hover:text-indigo-700 font-medium px-1 mb-1 flex items-center gap-1">
+                                  {showMoreColors ? '▴ Hide' : '▾ More colors'}
+                                </button>
+                                {/* Tier 2 — Classic & Extended */}
+                                {showMoreColors && (
+                                  <>
+                                    <p className="text-[9px] text-slate-400 font-bold px-1 mb-1 uppercase tracking-wide">Classic & Extended</p>
+                                    <div className="grid grid-cols-4 gap-1.5 px-0.5">
+                                      {MORE_COLORS.map(c => (
+                                        <button key={c.name} onClick={() => setClothesColor(c.name)} title={c.name}
+                                          className="flex flex-col items-center gap-1 py-1.5 rounded-lg border border-slate-200 hover:border-indigo-300 bg-white hover:bg-indigo-50 transition-all">
+                                          <span className="w-5 h-5 rounded-full border border-black/10 shadow-sm" style={{ background: c.hex }} />
+                                          <span className="text-[8px] text-slate-500 font-medium text-center leading-tight px-0.5">{c.name}</span>
+                                        </button>
+                                      ))}
+                                    </div>
+                                  </>
+                                )}
                               </>
                             )}
 
