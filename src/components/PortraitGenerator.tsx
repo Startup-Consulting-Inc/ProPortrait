@@ -53,7 +53,7 @@ export default function PortraitGenerator() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [selectedStyle, setSelectedStyle] = useState<StyleOption>('studio');
+  const [selectedStyle, setSelectedStyle] = useState<StyleOption>('editorial');
   const [editMode, setEditMode] = useState<EditMode>(null);
   const [customEditPrompt, setCustomEditPrompt] = useState('');
   const [regionTarget, setRegionTarget] = useState<string | null>(null);
@@ -75,7 +75,7 @@ export default function PortraitGenerator() {
   const [removeBlemishes, setRemoveBlemishes] = useState<boolean>(true);
 
   // Phase 2 — Styles & Expression
-  const [expressionPreset, setExpressionPreset] = useState<ExpressionPreset>('confident_neutral');
+  const [expressionPreset, setExpressionPreset] = useState<ExpressionPreset>('warm_smile');
   const [likenessStrength, setLikenessStrength] = useState<number>(70);
   const variantCountFlag = useFeatureFlag<number>('variant-count', 2);
   const [numVariations, setNumVariations] = useState<number>(variantCountFlag);
@@ -459,15 +459,18 @@ export default function PortraitGenerator() {
     { num: 4, label: 'Export' },
   ];
 
-  const STYLES: Array<{ id: StyleOption; icon: React.ComponentType<{ className?: string }>; label: string; desc: string; isNew?: boolean }> = [
-    { id: 'studio', icon: Camera, label: 'Studio', desc: 'High-End & Dramatic' },
-    { id: 'bw', icon: Moon, label: 'B&W', desc: 'Timeless & Classic' },
-    { id: 'vintage', icon: Clock, label: 'Vintage', desc: 'Retro Film Look' },
-    { id: 'cartoon', icon: Smile, label: 'Cartoon', desc: '3D Pixar Style' },
+  const STYLES: Array<{ id: StyleOption; icon: React.ComponentType<{ className?: string }>; label: string; desc: string }> = [
+    { id: 'editorial', icon: Briefcase, label: 'Editorial', desc: 'Professional & Real' },
+    { id: 'environmental', icon: Sun, label: 'Environmental', desc: 'Natural Workspace' },
+    { id: 'candid', icon: Camera, label: 'Candid', desc: 'Raw & Authentic' },
+    { id: 'vintage', icon: Clock, label: 'Vintage 35mm', desc: 'Retro Film Look' },
+    { id: 'bw', icon: Moon, label: 'Black & White', desc: 'Timeless Classic' },
+    { id: 'cyberpunk', icon: Zap, label: 'Cyberpunk', desc: 'Neon & Dramatic' },
+    { id: 'watercolor', icon: Paintbrush, label: 'Watercolor', desc: 'Artistic & Soft' },
   ];
 
-  // Quick mode style subset
-  const QUICK_STYLE_IDS: StyleOption[] = ['studio', 'bw', 'vintage', 'cartoon'];
+  // Quick mode: Tier 1 only (professional/authentic)
+  const QUICK_STYLE_IDS: StyleOption[] = ['editorial', 'environmental', 'candid'];
 
   // Reset sub-wizards when switching edit mode
   useEffect(() => {
@@ -576,9 +579,10 @@ export default function PortraitGenerator() {
   };
 
   const EXPRESSIONS: Array<{ id: ExpressionPreset; label: string; emoji: string; desc: string }> = [
-    { id: 'confident_neutral', label: 'Confident', emoji: '😐', desc: 'Relaxed, focused — 2026\'s #1 trend' },
     { id: 'warm_smile', label: 'Warm Smile', emoji: '😊', desc: 'Genuine, approachable' },
-    { id: 'natural', label: 'Natural', emoji: '✨', desc: 'AI decides naturally' },
+    { id: 'confident', label: 'Confident', emoji: '😐', desc: 'Relaxed, focused — 2026\'s #1 trend' },
+    { id: 'serious', label: 'Serious', emoji: '🎯', desc: 'Authority & gravitas' },
+    { id: 'natural', label: 'Natural', emoji: '✨', desc: 'Keep original expression' },
   ];
 
   const IDENTITY_LOCK_ITEMS: Array<{ key: keyof IdentityLocks; icon: React.ComponentType<{ className?: string }>; label: string }> = [
@@ -768,7 +772,7 @@ export default function PortraitGenerator() {
                   <button key={style.id} onClick={() => setSelectedStyle(style.id)}
                     className={cn('flex flex-col items-center p-3 rounded-xl border-2 transition-all text-center relative',
                       selectedStyle === style.id ? 'border-indigo-600 bg-indigo-50 text-indigo-900' : 'border-slate-100 bg-white text-slate-600 hover:border-indigo-200 hover:bg-slate-50')}>
-                    {style.isNew && (
+                    {false && (
                       <span className="absolute -top-1.5 -right-1.5 bg-indigo-500 text-white text-[9px] px-1.5 py-0.5 rounded-full font-bold">NEW</span>
                     )}
                     <style.icon className={cn('w-6 h-6 mb-2', selectedStyle === style.id ? 'text-indigo-600' : 'text-slate-400')} />

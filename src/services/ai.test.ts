@@ -27,7 +27,7 @@ describe('generateProfessionalPortrait', () => {
     });
 
     await expect(
-      generateProfessionalPortrait('base64data', 'image/jpeg', 'corporate', 50, 2, defaultLocks),
+      generateProfessionalPortrait('base64data', 'image/jpeg', 'editorial', 50, 2, defaultLocks),
     ).rejects.toThrow('Failed to generate portrait');
   });
 
@@ -38,7 +38,7 @@ describe('generateProfessionalPortrait', () => {
     });
 
     const result = await generateProfessionalPortrait(
-      'base64data', 'image/jpeg', 'corporate', 50, 2, defaultLocks,
+      'base64data', 'image/jpeg', 'editorial', 50, 2, defaultLocks,
     );
     expect(result).toEqual(['https://example.com/img1.png', 'https://example.com/img2.png']);
   });
@@ -49,7 +49,7 @@ describe('generateProfessionalPortrait', () => {
       json: async () => ({ images: [] }),
     });
 
-    await generateProfessionalPortrait('mybase64', 'image/png', 'linkedin', 75, 3, defaultLocks, 60, 'warm_smile');
+    await generateProfessionalPortrait('mybase64', 'image/png', 'candid', 75, 3, defaultLocks, 60, 'warm_smile');
 
     expect(mockFetch).toHaveBeenCalledOnce();
     const [url, options] = mockFetch.mock.calls[0] as [string, RequestInit];
@@ -57,7 +57,7 @@ describe('generateProfessionalPortrait', () => {
     const body = JSON.parse(options.body as string);
     expect(body.imageBase64).toBe('mybase64');
     expect(body.mimeType).toBe('image/png');
-    expect(body.style).toBe('linkedin');
+    expect(body.style).toBe('candid');
     expect(body.likenessStrength).toBe(75);
     expect(body.numImages).toBe(3);
     expect(body.naturalness).toBe(60);

@@ -39,44 +39,37 @@ type IdentityLocks = {
 
 type ExpressionPreset =
   | 'natural'
-  | 'confident_neutral'
+  | 'confident'
   | 'warm_smile'
-  | 'serious_authority'
-  | 'approachable_expert';
+  | 'serious';
 
 type StyleOption =
-  | 'corporate' | 'creative' | 'studio' | 'tech' | 'outdoor'
-  | 'bw' | 'vintage' | 'cinematic' | 'cartoon' | 'art_deco'
-  | 'linkedin' | 'resume' | 'speaker' | 'dating' | 'academic' | 'creative_industry';
+  | 'editorial'
+  | 'environmental'
+  | 'candid'
+  | 'vintage'
+  | 'bw'
+  | 'cyberpunk'
+  | 'watercolor';
 
 // ── Prompt Builders ──────────────────────────────────────────────────────────
 
 const STYLE_MAP: Record<StyleOption, string> = {
-  corporate: "Professional corporate portrait, neutral office background, subtle contrast.",
-  creative: "Modern creative portrait, tasteful color accents, bright and clean.",
-  studio: "Classic studio portrait, controlled lighting, clean neutral backdrop.",
-  tech: "Modern tech profile portrait, airy background, approachable professional look.",
-  outdoor: "Bright outdoor portrait in warm afternoon daylight, natural and clear.",
-  bw: "Black-and-white portrait with preserved midtones and facial detail (no crushed blacks).",
-  vintage: "Subtle vintage film tone, gentle warmth, bright exposure, natural skin fidelity.",
-  cinematic: "Subtle cinematic contrast and depth, but keep natural brightness and exact skin tone.",
-  cartoon: "Stylized 3D character look while preserving facial identity and expression.",
-  art_deco: "Elegant Art Deco-inspired portrait with refined geometric styling and bright face lighting.",
-  linkedin: "LinkedIn-ready professional headshot, clean background, bright even face lighting.",
-  resume: "Conservative resume headshot, neutral background, clear and formal presentation.",
-  speaker: "Conference speaker portrait, confident and polished, bright key light on face.",
-  dating: "Warm approachable portrait, natural flattering light, authentic and friendly.",
-  academic: "Academic faculty portrait, thoughtful professional tone, clean balanced lighting.",
-  creative_industry: "Editorial-style creative professional portrait, refined, modern, and bright.",
+  editorial: "Ultra-realistic, unretouched close-up portrait. High-end editorial studio lighting with a soft key light and subtle rim-lighting. Skin shows visible pores, fine micro-texture, and subtle natural imperfections. Clean, neutral background. Shot on 85mm lens, shallow depth of field (f/1.8), realistic shadows, natural facial geometry.",
+  environmental: "Ultra-realistic environmental portrait of the subject in a meaningful, modern workspace context. Soft, diffused natural window lighting. The background is slightly blurred with a shallow depth of field to keep focus on the subject. Relaxed shoulders, authentic expression, natural skin texture with realistic hydration shine.",
+  candid: "Raw, spontaneous, candid lifestyle portrait. Unposed, lived-in human energy. Natural daylight, intentional slight imperfections, subtle sensor grain, and a hint of motion blur. Hyper-detailed skin texture, zero retouching, zero beauty filters, everyday scene.",
+  vintage: "Vintage 35mm analog film portrait. Soft faded colors, warm film grain, subtle light leaks, retro 1960s Kodachrome aesthetic. Natural facial geometry and skin fidelity maintained. Emphasizes character and mood, highly emotional and intimate.",
+  bw: "Black-and-white portrait with preserved midtones and natural facial detail. No crushed blacks. Skin rendered in full tonal range — no porcelain or over-smoothed surfaces. Film-like grain preserved. Emphasizes form, light, and expression over color.",
+  cyberpunk: "Cinematic cyberpunk portrait at night. Illuminated by high-contrast, glowing neon pink and blue lights. Dark urban background, dramatic chiaroscuro shadows. Skin reflects neon tones naturally while preserving micro-texture, pores, and human realism. High-tech, dystopian atmosphere.",
+  watercolor: "Delicate watercolor illustration portrait. Soft edges, translucent water-based bleeding effects, visible paper texture. Soft diffused lighting, no hard digital lines, authentic traditional media aesthetic. Warm, approachable, and handcrafted feel.",
 };
 
 function buildExpressionInstruction(expression: ExpressionPreset): string {
   const expressions: Record<ExpressionPreset, string> = {
-    natural: "Keep original expression naturally.",
-    confident_neutral: "Confident neutral expression with relaxed jaw and focused eyes.",
-    warm_smile: "Warm genuine smile with relaxed eyes and natural approachability.",
-    serious_authority: "Serious authoritative expression with composed direct gaze.",
-    approachable_expert: "Approachable expert expression with subtle confident smile.",
+    natural: "Keep the subject's original expression exactly as captured in the source photo. Do not alter facial muscles, mouth position, or eye engagement.",
+    confident: "Confident neutral expression. Relaxed jaw, no forced smile, direct and focused eye contact, composed posture. Subtle inner calm.",
+    warm_smile: "Warm, genuine smile with natural Duchenne markers — slight squinch of the outer eyes, subtle teeth visible, relaxed cheeks. Approachable and human, not performative.",
+    serious: "Strong composed gaze, no expression movement, strong jaw, authority-forward. Eyes engaged but unsmiling. Gravitas without coldness.",
   };
   return expressions[expression];
 }

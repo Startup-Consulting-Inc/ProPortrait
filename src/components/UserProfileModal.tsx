@@ -20,30 +20,20 @@ interface UserProfileModalProps {
 type Tab = 'profile' | 'preferences' | 'account' | 'billing';
 
 const STYLES: { value: StyleOption; label: string }[] = [
-  { value: 'corporate', label: 'Corporate' },
-  { value: 'linkedin', label: 'LinkedIn' },
-  { value: 'creative', label: 'Creative' },
-  { value: 'studio', label: 'Studio' },
-  { value: 'tech', label: 'Tech' },
-  { value: 'outdoor', label: 'Outdoor' },
-  { value: 'bw', label: 'B&W' },
-  { value: 'vintage', label: 'Vintage' },
-  { value: 'cinematic', label: 'Cinematic' },
-  { value: 'cartoon', label: 'Cartoon' },
-  { value: 'art_deco', label: 'Art Deco' },
-  { value: 'resume', label: 'Resume' },
-  { value: 'speaker', label: 'Speaker' },
-  { value: 'dating', label: 'Dating' },
-  { value: 'academic', label: 'Academic' },
-  { value: 'creative_industry', label: 'Creative Ind.' },
+  { value: 'editorial', label: 'Editorial' },
+  { value: 'environmental', label: 'Environmental' },
+  { value: 'candid', label: 'Candid' },
+  { value: 'vintage', label: 'Vintage 35mm' },
+  { value: 'bw', label: 'Black & White' },
+  { value: 'cyberpunk', label: 'Cyberpunk' },
+  { value: 'watercolor', label: 'Watercolor' },
 ];
 
 const EXPRESSIONS: { value: ExpressionPreset; label: string }[] = [
-  { value: 'natural', label: 'Natural' },
-  { value: 'confident_neutral', label: 'Confident' },
   { value: 'warm_smile', label: 'Warm Smile' },
-  { value: 'serious_authority', label: 'Serious' },
-  { value: 'approachable_expert', label: 'Approachable' },
+  { value: 'confident', label: 'Confident' },
+  { value: 'serious', label: 'Serious' },
+  { value: 'natural', label: 'Natural' },
 ];
 
 export default function UserProfileModal({ open, onClose, onApplyPreferences }: UserProfileModalProps) {
@@ -59,8 +49,8 @@ export default function UserProfileModal({ open, onClose, onApplyPreferences }: 
   const [photoURL, setPhotoURL] = useState('');
 
   // Preferences tab state
-  const [style, setStyle] = useState<StyleOption>('corporate');
-  const [expression, setExpression] = useState<ExpressionPreset>('confident_neutral');
+  const [style, setStyle] = useState<StyleOption>('editorial');
+  const [expression, setExpression] = useState<ExpressionPreset>('warm_smile');
   const [identityLocks, setIdentityLocks] = useState<IdentityLocks>({
     eyeColor: true, skinTone: true, hairLength: true, hairTexture: false, glasses: false,
   });

@@ -9,15 +9,18 @@ export type IdentityLocks = {
 
 export type ExpressionPreset =
   | 'natural'
-  | 'confident_neutral'
+  | 'confident'
   | 'warm_smile'
-  | 'serious_authority'
-  | 'approachable_expert';
+  | 'serious';
 
 export type StyleOption =
-  | 'corporate' | 'creative' | 'studio' | 'tech' | 'outdoor'
-  | 'bw' | 'vintage' | 'cinematic' | 'cartoon' | 'art_deco'
-  | 'linkedin' | 'resume' | 'speaker' | 'dating' | 'academic' | 'creative_industry';
+  | 'editorial'
+  | 'environmental'
+  | 'candid'
+  | 'vintage'
+  | 'bw'
+  | 'cyberpunk'
+  | 'watercolor';
 
 // ── API calls — all Gemini requests go through the backend proxy ─────────────
 // In dev: VITE_API_URL is unset → empty string → Vite proxy handles /api/*
@@ -35,12 +38,12 @@ async function getAuthHeaders(): Promise<Record<string, string>> {
 export async function generateProfessionalPortrait(
   imageBase64: string,
   mimeType: string,
-  style: StyleOption = 'corporate',
+  style: StyleOption = 'editorial',
   likenessStrength: number = 50,
   numImages: number = 2,
   identityLocks: IdentityLocks = { eyeColor: true, skinTone: true, hairLength: true, hairTexture: false, glasses: false },
   naturalness: number = 50,
-  expressionPreset: ExpressionPreset = 'confident_neutral',
+  expressionPreset: ExpressionPreset = 'warm_smile',
   selectedPersonHint: string | null = null,
   removeBlemishes: boolean = true,
 ): Promise<string[]> {
