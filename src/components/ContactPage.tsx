@@ -1,4 +1,5 @@
 import { useState, type ChangeEvent, type FormEvent } from 'react';
+import AppFooter from './AppFooter';
 import { CheckCircle2, Clock3, LifeBuoy, Mail, SendHorizonal } from 'lucide-react';
 
 const API_BASE = (import.meta.env.VITE_API_URL as string | undefined) ?? '';
@@ -342,15 +343,7 @@ export default function ContactPage() {
         </div>
       </main>
 
-      <footer className="border-t border-slate-100 py-6 px-6 text-center text-xs text-slate-400">
-        <div className="max-w-6xl mx-auto flex flex-wrap justify-center gap-4">
-          <span>© 2026 ProPortrait AI</span>
-          <a href="/" className="hover:text-slate-600 transition-colors">Home</a>
-          <a href="/#pricing" className="hover:text-slate-600 transition-colors">Pricing</a>
-          <a href="/privacy" className="hover:text-slate-600 transition-colors">Privacy</a>
-          <a href="/terms" className="hover:text-slate-600 transition-colors">Terms</a>
-        </div>
-      </footer>
+      <AppFooter />
     </div>
   );
 }

@@ -16,6 +16,7 @@ import UserMenu from './components/UserMenu';
 import UserProfileModal from './components/UserProfileModal';
 import AdminPage from './pages/AdminPage';
 import { AuthProvider, useAuthContext } from './contexts/AuthContext';
+import AppFooter from './components/AppFooter';
 
 function AppContent() {
   const path = window.location.pathname;
@@ -106,7 +107,12 @@ function AppContent() {
         </>
       );
     }
-    return <AdminPage />;
+    return (
+      <>
+        <AdminPage />
+        <AppFooter />
+      </>
+    );
   }
 
   // /app — requires auth
@@ -190,6 +196,7 @@ function AppContent() {
         <div className="relative z-10 py-12">
           <PortraitGenerator />
         </div>
+        <AppFooter />
       </div>
 
       <UserProfileModal open={showProfile} onClose={() => setShowProfile(false)} />
