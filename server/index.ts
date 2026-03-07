@@ -9,6 +9,7 @@ import * as Sentry from '@sentry/node';
 import authRouter from './routes/auth.js';
 import paymentsRouter from './routes/payments.js';
 import emailRouter from './routes/email.js';
+import contactRouter from './routes/contact.js';
 import usersRouter from './routes/users.js';
 import adminRouter from './routes/admin.js';
 import { authMiddleware } from './middleware/authMiddleware.js';
@@ -236,6 +237,7 @@ app.post('/api/portraits/export', (req, res) => {
 app.use('/api/auth', authRouter);
 app.use('/api/payments', paymentsRouter);
 app.use('/api/email', emailRouter);
+app.use('/api/contact', contactRouter);
 app.use('/api/users', usersRouter);
 app.use('/api/admin', adminRouter);
 

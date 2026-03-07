@@ -75,6 +75,7 @@ In dev, Vite proxies `/api/*` to `localhost:3001`. In production, the frontend c
 | Route | Access |
 |---|---|
 | `/` | Public (landing page) |
+| `/contact` | Public |
 | `/app` | Requires Firebase login |
 | `/admin` | Requires Firebase login + `isAdmin: true` |
 | `/privacy`, `/terms` | Public |
@@ -202,6 +203,7 @@ src/
 │   ├── GenerationProgress.tsx  # 5-phase animated progress bar
 │   ├── EmailCapture.tsx        # Post-generation email capture modal
 │   ├── LandingPage.tsx         # Public landing page (/)
+│   ├── ContactPage.tsx         # Public contact page (/contact)
 │   ├── PrivacyNotice.tsx       # Dismissible privacy banner
 │   └── ErrorBoundary.tsx       # React class error boundary
 ├── pages/
@@ -229,6 +231,7 @@ server/
 │   ├── payments.ts             # Stripe checkout, webhook, billing portal
 │   ├── admin.ts                # GET /api/admin/users, POST /api/admin/users/:uid/pro
 │   ├── auth.ts                 # GET /api/auth/me
+│   ├── contact.ts              # POST /api/contact
 │   └── email.ts                # POST /api/email/capture
 ├── middleware/
 │   └── authMiddleware.ts       # Firebase JWT → Firestore; anonymous cookie fallback

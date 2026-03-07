@@ -141,6 +141,7 @@ export default function LandingPage({ onSignIn }: LandingPageProps) {
         <nav className="hidden sm:flex items-center gap-6 text-sm text-slate-500">
           <a href="#features" className="hover:text-slate-800 transition-colors">Features</a>
           <a href="#pricing" className="hover:text-slate-800 transition-colors">Pricing</a>
+          <a href="/contact" className="hover:text-slate-800 transition-colors">Contact</a>
         </nav>
         <button
           onClick={goToApp}
@@ -384,6 +385,7 @@ export default function LandingPage({ onSignIn }: LandingPageProps) {
         <div className="max-w-6xl mx-auto flex flex-wrap justify-center gap-4">
           <span>© 2026 ProPortrait AI</span>
           <a href="#pricing" className="hover:text-slate-600 transition-colors">Pricing</a>
+          <a href="/contact" className="hover:text-slate-600 transition-colors">Contact</a>
           <a href="/privacy" className="hover:text-slate-600 transition-colors">Privacy</a>
           <a href="/terms" className="hover:text-slate-600 transition-colors">Terms</a>
         </div>

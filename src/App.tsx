@@ -5,6 +5,7 @@
 
 import { useState, useEffect } from 'react';
 import PortraitGenerator from './components/PortraitGenerator';
+import ContactPage from './components/ContactPage';
 import PrivacyPage from './components/PrivacyPage';
 import TermsPage from './components/TermsPage';
 import CookieConsent from './components/CookieConsent';
@@ -63,6 +64,7 @@ function AppContent() {
   }, [loading, user, path]);
 
   // Static pages — no auth required
+  if (path === '/contact') return <ContactPage />;
   if (path === '/privacy') return <PrivacyPage />;
   if (path === '/terms') return <TermsPage />;
 
