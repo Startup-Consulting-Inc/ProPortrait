@@ -112,7 +112,7 @@ A persistent mode toggle at the top of the wizard keeps the default experience s
 
 | Quick Mode (default) | Advanced Mode |
 |---|---|
-| 8 curated styles in a 4-column grid | All 16 styles |
+| Curated styles in a grid | All 7 styles |
 | One-click Generate | Expression presets, identity locks, likeness/naturalness sliders, blemish toggle, group photo selector, variations picker, copy settings |
 | "Edit Portrait" button reveals AI editor on demand | Full AI editor panel open by default |
 | Aspect ratio + Download only | Full export options visible |
@@ -127,26 +127,17 @@ A persistent mode toggle at the top of the wizard keeps the default experience s
 
 ### Step 2 — Style & Settings
 
-**16 portrait styles:**
+**7 portrait styles:**
 
 | Style | Description |
 |---|---|
-| Corporate | Executive headshot, tailored suit, office background |
-| LinkedIn | Optimized profile headshot, neutral background |
-| Studio | Classic Rembrandt lighting, gray canvas |
-| Tech | Modern tech leader, blazer + tee, bright office |
-| Creative | Personal brand, smart-casual, artistic backdrop |
-| B&W | Fine-art black and white, rich tonal range |
+| Editorial | High-fashion editorial, bold lighting |
+| Environmental | Environmental portrait, natural setting |
+| Candid | Warm, natural candid look |
 | Vintage | 1950s–60s Kodachrome film look |
-| Cinematic | Movie-quality close-up, teal/orange grade |
-| Outdoor | Environmental portrait, urban park, warm daylight |
-| Cartoon | Pixar/Disney 3D animated character style |
-| Art Deco | 1920s glamour, geometric gold patterns |
-| Resume | Conservative CV headshot, clean white/gray |
-| Speaker | Conference keynote presenter, high-impact |
-| Dating | Warm, candid dating profile portrait |
-| Academic | Faculty/researcher, scholarly backdrop |
-| Creative Pro | Editorial portfolio, distinctive personal style |
+| B&W | Fine-art black and white, rich tonal range |
+| Cyberpunk | Neon-lit futuristic portrait |
+| Watercolor | Soft painterly watercolor style |
 
 **Advanced controls:**
 
