@@ -86,7 +86,10 @@ export async function openBillingPortal(): Promise<string> {
     headers,
     credentials: 'include',
   });
-  if (!res.ok) throw new Error('Failed to open billing portal');
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error((body as { error?: string }).error ?? 'Failed to open billing portal');
+  }
   const data = await res.json();
   return data.url as string;
 }

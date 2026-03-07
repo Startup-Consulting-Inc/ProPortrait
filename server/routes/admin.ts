@@ -68,9 +68,12 @@ router.get('/stats', requireAdmin, async (_req: Request, res: Response) => {
 // POST /api/admin/users/:uid/pro — toggle isPro for a user
 router.post('/users/:uid/pro', requireAdmin, async (req: Request, res: Response) => {
   const { uid } = req.params;
-  const { isPro } = req.body as { isPro: boolean };
+  const { isPro, tier } = req.body as { isPro: boolean; tier?: string };
   try {
-    await upsertUserDoc(uid, { isPro: Boolean(isPro) });
+    const update: Record<string, unknown> = { isPro: Boolean(isPro) };
+    if (isPro && tier) update.tier = tier;
+    else if (!isPro) update.tier = 'free';
+    await upsertUserDoc(uid, update);
     res.json({ ok: true });
   } catch (err) {
     console.error('[admin/users/pro]', err);

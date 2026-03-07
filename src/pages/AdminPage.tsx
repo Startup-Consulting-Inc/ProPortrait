@@ -236,7 +236,7 @@ export default function AdminPage() {
     }
   }, []);
 
-  const togglePro = async (uid: string, current: boolean) => {
+  const togglePro = async (uid: string, current: boolean, tier = 'pro') => {
     const token = await getIdToken();
     await fetch(`${API_BASE}/api/admin/users/${uid}/pro`, {
       method: 'POST',
@@ -245,7 +245,7 @@ export default function AdminPage() {
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
       },
       credentials: 'include',
-      body: JSON.stringify({ isPro: !current }),
+      body: JSON.stringify({ isPro: !current, tier }),
     });
     setUsers(prev => prev.map(u => u.uid === uid ? { ...u, isPro: !current } : u));
     setSelectedUser(prev => prev?.uid === uid ? { ...prev, isPro: !current } : prev);

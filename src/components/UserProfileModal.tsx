@@ -37,7 +37,7 @@ const EXPRESSIONS: { value: ExpressionPreset; label: string }[] = [
 ];
 
 export default function UserProfileModal({ open, onClose, onApplyPreferences }: UserProfileModalProps) {
-  const { user, profile, isPro, refreshProfile } = useAuthContext();
+  const { user, profile, isPro, tier, refreshProfile } = useAuthContext();
   const [tab, setTab] = useState<Tab>('profile');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -152,8 +152,8 @@ export default function UserProfileModal({ open, onClose, onApplyPreferences }: 
     try {
       const url = await openBillingPortal();
       window.open(url, '_blank');
-    } catch {
-      setError('Could not open billing portal.');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not open billing portal.');
     } finally {
       setSaving(false);
     }
@@ -378,38 +378,64 @@ export default function UserProfileModal({ open, onClose, onApplyPreferences }: 
           {/* Billing tab */}
           {tab === 'billing' && (
             <div className="flex flex-col gap-4">
-              <div className="flex items-center gap-3 p-4 bg-slate-50 rounded-xl border border-slate-200">
-                <div>
-                  <div className="text-sm font-medium text-slate-700">Current Plan</div>
-                  <div className={`text-lg font-bold ${isPro ? 'text-indigo-600' : 'text-slate-500'}`}>
-                    {isPro ? 'Pro Studio' : 'Free'}
-                  </div>
-                </div>
-                {isPro && (
-                  <span className="ml-auto text-xs font-semibold text-indigo-600 bg-indigo-50 border border-indigo-100 px-2.5 py-1 rounded-full">
-                    Active
-                  </span>
-                )}
-              </div>
+              {(() => {
+                const tierLabel: Record<string, string> = {
+                  free: 'Free',
+                  creator: 'Creator',
+                  pro: 'Pro Studio',
+                  max: 'Max Studio',
+                };
+                const isSubscription = tier === 'pro' || tier === 'max';
+                return (
+                  <>
+                    <div className="flex items-center gap-3 p-4 bg-slate-50 rounded-xl border border-slate-200">
+                      <div>
+                        <div className="text-sm font-medium text-slate-700">Current Plan</div>
+                        <div className={`text-lg font-bold ${isPro ? 'text-indigo-600' : 'text-slate-500'}`}>
+                          {tierLabel[tier] ?? tier}
+                        </div>
+                        {tier === 'creator' && (
+                          <div className="text-xs text-slate-400 mt-0.5">One-time purchase</div>
+                        )}
+                      </div>
+                      {isPro && (
+                        <span className="ml-auto text-xs font-semibold text-indigo-600 bg-indigo-50 border border-indigo-100 px-2.5 py-1 rounded-full">
+                          Active
+                        </span>
+                      )}
+                    </div>
 
-              {isPro ? (
-                <div className="flex flex-col gap-2">
-                  <button
-                    onClick={handleBillingPortal}
-                    disabled={saving}
-                    className="w-full border border-slate-200 hover:bg-slate-50 disabled:opacity-50 text-slate-700 font-semibold py-3 rounded-xl transition-colors text-sm"
-                  >
-                    {saving ? 'Opening…' : 'Manage Subscription'}
-                  </button>
-                  <button
-                    onClick={handleBillingPortal}
-                    disabled={saving}
-                    className="w-full border border-red-200 hover:bg-red-50 disabled:opacity-50 text-red-600 font-semibold py-3 rounded-xl transition-colors text-sm"
-                  >
-                    {saving ? 'Opening…' : 'Downgrade / Cancel'}
-                  </button>
-                </div>
-              ) : (
+                    {isPro && isSubscription && (
+                      <div className="flex flex-col gap-2">
+                        {profile?.stripeCustomerId ? (
+                          <>
+                            <button
+                              onClick={handleBillingPortal}
+                              disabled={saving}
+                              className="w-full border border-slate-200 hover:bg-slate-50 disabled:opacity-50 text-slate-700 font-semibold py-3 rounded-xl transition-colors text-sm"
+                            >
+                              {saving ? 'Opening…' : 'Manage Subscription'}
+                            </button>
+                            <button
+                              onClick={handleBillingPortal}
+                              disabled={saving}
+                              className="w-full border border-red-200 hover:bg-red-50 disabled:opacity-50 text-red-600 font-semibold py-3 rounded-xl transition-colors text-sm"
+                            >
+                              {saving ? 'Opening…' : 'Downgrade / Cancel'}
+                            </button>
+                          </>
+                        ) : (
+                          <p className="text-sm text-slate-500 text-center py-2">
+                            Your plan was activated manually. Contact support to make changes.
+                          </p>
+                        )}
+                      </div>
+                    )}
+                  </>
+                );
+              })()}
+
+              {!isPro && (
                 <div className="flex flex-col gap-3">
                   <p className="text-sm text-slate-500">
                     Upgrade to Pro for 2K resolution, priority generation, and persistent preferences.
