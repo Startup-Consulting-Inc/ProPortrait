@@ -7,7 +7,7 @@ interface UserMenuProps {
 }
 
 export default function UserMenu({ onOpenProfile, onOpenAdmin }: UserMenuProps) {
-  const { user, profile, isPro, isAdmin, signOut } = useAuthContext();
+  const { user, profile, isPro, tier, isAdmin, signOut } = useAuthContext();
   const [open, setOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -61,7 +61,7 @@ export default function UserMenu({ onOpenProfile, onOpenAdmin }: UserMenuProps) 
             <div className="text-xs text-slate-400 truncate">{user.email}</div>
             {isPro && (
               <span className="inline-block mt-1 text-xs font-semibold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full">
-                Pro
+                {tier === 'creator' ? 'Creator' : tier === 'max' ? 'Max' : 'Pro'}
               </span>
             )}
           </div>
