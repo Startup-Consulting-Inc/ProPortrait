@@ -1,4 +1,4 @@
-import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
+import { S3Client, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { GetObjectCommand } from '@aws-sdk/client-s3';
 import { randomUUID } from 'crypto';
@@ -66,4 +66,63 @@ export async function storePortrait(
   );
 
   return url;
+}
+
+/**
+ * Store a portrait permanently for a saved library entry.
+ * Returns the R2 key (for re-signing later) and a 7-day signed URL.
+ * Falls back to data URL if R2 is not configured.
+ */
+export async function storePermanentPortrait(
+  base64Data: string,
+  uid: string,
+  mimeType: string = 'image/png',
+): Promise<{ r2Key: string; imageUrl: string }> {
+  if (!r2Enabled) {
+    const dataUrl = `data:${mimeType};base64,${base64Data}`;
+    return { r2Key: '', imageUrl: dataUrl };
+  }
+
+  const ext = mimeType === 'image/png' ? 'png' : 'jpg';
+  const r2Key = `saves/${uid}/${randomUUID()}.${ext}`;
+  const bucket = process.env.R2_BUCKET_NAME!;
+
+  await getClient().send(
+    new PutObjectCommand({
+      Bucket: bucket,
+      Key: r2Key,
+      Body: Buffer.from(base64Data, 'base64'),
+      ContentType: mimeType,
+    }),
+  );
+
+  const imageUrl = await getSignedUrl(
+    getClient(),
+    new GetObjectCommand({ Bucket: bucket, Key: r2Key }),
+    { expiresIn: 60 * 60 * 24 * 7 }, // 7 days
+  );
+
+  return { r2Key, imageUrl };
+}
+
+/**
+ * Generate a fresh 7-day signed URL for an existing R2 key.
+ */
+export async function getSignedUrlForKey(r2Key: string): Promise<string> {
+  if (!r2Enabled || !r2Key) return '';
+  const bucket = process.env.R2_BUCKET_NAME!;
+  return getSignedUrl(
+    getClient(),
+    new GetObjectCommand({ Bucket: bucket, Key: r2Key }),
+    { expiresIn: 60 * 60 * 24 * 7 },
+  );
+}
+
+/**
+ * Delete an object from R2 by key. Fire-and-forget safe.
+ */
+export async function deleteR2Object(r2Key: string): Promise<void> {
+  if (!r2Enabled || !r2Key) return;
+  const bucket = process.env.R2_BUCKET_NAME!;
+  await getClient().send(new DeleteObjectCommand({ Bucket: bucket, Key: r2Key }));
 }

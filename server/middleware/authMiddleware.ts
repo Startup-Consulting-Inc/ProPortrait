@@ -22,16 +22,22 @@ export async function authMiddleware(req: Request, res: Response, next: NextFunc
       // Token is valid — fetch Firestore profile (best-effort, never blocks auth)
       let isPro = false;
       let isAdmin = false;
+      let tier: 'free' | 'creator' | 'pro' | 'max' = 'free';
       try {
         const snap = await adminFirestore().collection('users').doc(uid).get();
-        const doc = snap.exists ? (snap.data() as { isPro?: boolean; isAdmin?: boolean }) : {};
-        isPro = doc.isPro ?? false;
+        const doc = snap.exists ? (snap.data() as { isPro?: boolean; isAdmin?: boolean; tier?: string }) : {};
+        // Derive tier: explicit field takes precedence, fall back from isPro
+        const rawTier = doc.tier as string | undefined;
+        tier = (rawTier === 'creator' || rawTier === 'pro' || rawTier === 'max')
+          ? rawTier
+          : (doc.isPro ? 'pro' : 'free');
+        isPro = tier !== 'free';
         isAdmin = doc.isAdmin ?? false;
       } catch {
         // Firestore unavailable — continue with defaults
       }
 
-      req.auth = { mode: 'firebase', uid, email, isPro, isAdmin };
+      req.auth = { mode: 'firebase', uid, email, isPro, isAdmin, tier };
       next();
       return;
     }
@@ -49,6 +55,7 @@ export async function authMiddleware(req: Request, res: Response, next: NextFunc
     sessionId,
     isPro: session.isPro,
     isAdmin: false,
+    tier: session.isPro ? 'pro' : 'free',
   };
   next();
 }

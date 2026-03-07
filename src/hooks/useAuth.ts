@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import type { User } from 'firebase/auth';
 import { auth, signInWithGoogle, signInWithEmail, createAccountWithEmail, signOut } from '../services/auth';
 import { notifyFirstLogin, fetchUserProfile } from '../services/user';
-import type { UserProfile } from '../services/user';
+import type { UserProfile, Tier } from '../services/user';
 
 export interface AuthState {
   user: User | null;
@@ -10,6 +10,7 @@ export interface AuthState {
   loading: boolean;
   isPro: boolean;
   isAdmin: boolean;
+  tier: Tier;
   isFirebaseUser: boolean;
   signInWithGoogle: () => Promise<void>;
   signInWithEmail: (email: string, password: string) => Promise<void>;
@@ -75,12 +76,15 @@ export function useAuth(): AuthState {
     window.location.href = '/';
   };
 
+  const derivedTier: Tier = profile?.tier ?? (profile?.isPro ? 'pro' : 'free');
+
   return {
     user,
     profile,
     loading,
-    isPro: profile?.isPro ?? false,
+    isPro: derivedTier !== 'free',
     isAdmin: profile?.isAdmin ?? false,
+    tier: derivedTier,
     isFirebaseUser: !!user,
     signInWithGoogle: handleSignInWithGoogle,
     signInWithEmail: handleSignInWithEmail,

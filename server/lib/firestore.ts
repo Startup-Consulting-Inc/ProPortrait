@@ -1,13 +1,22 @@
 import { FieldValue } from 'firebase-admin/firestore';
 import { adminFirestore } from './firebase.js';
 
+export type Tier = 'free' | 'creator' | 'pro' | 'max';
+
 export interface UserDoc {
   email: string;
   displayName: string;
   photoURL?: string;
   isPro: boolean;
   isAdmin: boolean;
+  tier?: Tier;
   stripeCustomerId?: string;
+  // Generation limits
+  generationCount?: number;
+  generationsThisMonth?: number;
+  lastResetMonth?: string; // YYYY-MM
+  // Save limits
+  saveCount?: number;
   defaultStyle?: string;
   defaultExpression?: string;
   defaultIdentityLocks?: {
@@ -21,6 +30,13 @@ export interface UserDoc {
   defaultNaturalness?: number;
   createdAt?: FirebaseFirestore.Timestamp;
   updatedAt?: FirebaseFirestore.Timestamp;
+}
+
+export interface SavedPortraitDoc {
+  r2Key: string;
+  style: string;
+  title: string;
+  createdAt: FirebaseFirestore.Timestamp;
 }
 
 export async function getUserDoc(uid: string): Promise<UserDoc | null> {
@@ -47,6 +63,106 @@ export async function firestoreSetProStatus(
   };
   if (stripeCustomerId) update.stripeCustomerId = stripeCustomerId;
   await adminFirestore().collection('users').doc(uid).set(update, { merge: true });
+}
+
+export async function firestoreSetTier(
+  uid: string,
+  tier: Tier,
+  stripeCustomerId?: string,
+): Promise<void> {
+  const update: Record<string, unknown> = {
+    tier,
+    isPro: tier !== 'free',
+    updatedAt: FieldValue.serverTimestamp(),
+  };
+  if (stripeCustomerId) update.stripeCustomerId = stripeCustomerId;
+  await adminFirestore().collection('users').doc(uid).set(update, { merge: true });
+}
+
+/** Check generation limits and increment counter. Throws with code if over limit. */
+export async function checkAndIncrementGeneration(uid: string, doc: UserDoc): Promise<void> {
+  const tier: Tier = doc.tier ?? (doc.isPro ? 'pro' : 'free');
+  const currentMonth = new Date().toISOString().slice(0, 7); // YYYY-MM
+  const generationCount = doc.generationCount ?? 0;
+  let generationsThisMonth = doc.generationsThisMonth ?? 0;
+
+  // Monthly reset for pro/max
+  if ((tier === 'pro' || tier === 'max') && doc.lastResetMonth !== currentMonth) {
+    generationsThisMonth = 0;
+    await adminFirestore().collection('users').doc(uid).update({
+      generationsThisMonth: 0,
+      lastResetMonth: currentMonth,
+    });
+  }
+
+  if (tier === 'free' && generationCount >= 3) {
+    throw Object.assign(new Error('Free plan limit reached (3 portraits). Upgrade to continue.'), { code: 'generation_limit' });
+  }
+  if (tier === 'creator' && generationCount >= 30) {
+    throw Object.assign(new Error('Creator Pass limit reached (30 portraits).'), { code: 'generation_limit' });
+  }
+  if (tier === 'pro' && generationsThisMonth >= 100) {
+    throw Object.assign(new Error('Pro monthly limit reached (100/month). Resets next month.'), { code: 'generation_limit' });
+  }
+  if (tier === 'max' && generationsThisMonth >= 500) {
+    throw Object.assign(new Error('Max monthly limit reached (500/month). Resets next month.'), { code: 'generation_limit' });
+  }
+}
+
+// ── Saved Portraits ───────────────────────────────────────────────────────────
+
+export async function checkSaveLimit(uid: string, doc: UserDoc): Promise<void> {
+  const tier: Tier = doc.tier ?? (doc.isPro ? 'pro' : 'free');
+  if (tier === 'free') {
+    throw Object.assign(new Error('Free users cannot save portraits. Upgrade to save.'), { code: 'save_limit' });
+  }
+  if (tier === 'creator' && (doc.saveCount ?? 0) >= 30) {
+    throw Object.assign(new Error('Creator Pass save limit reached (30 saves).'), { code: 'save_limit' });
+  }
+  // pro and max: unlimited
+}
+
+export async function savePortraitDoc(
+  uid: string,
+  r2Key: string,
+  style: string,
+  title: string = '',
+): Promise<string> {
+  const ref = adminFirestore().collection('users').doc(uid).collection('savedPortraits').doc();
+  await ref.set({
+    r2Key,
+    style,
+    title: title || `Portrait — ${new Date().toLocaleDateString()}`,
+    createdAt: FieldValue.serverTimestamp(),
+  });
+  // Increment saveCount
+  await adminFirestore().collection('users').doc(uid).set(
+    { saveCount: FieldValue.increment(1), updatedAt: FieldValue.serverTimestamp() },
+    { merge: true },
+  );
+  return ref.id;
+}
+
+export async function getSavedPortraits(uid: string): Promise<Array<SavedPortraitDoc & { id: string }>> {
+  const snap = await adminFirestore()
+    .collection('users').doc(uid).collection('savedPortraits')
+    .orderBy('createdAt', 'desc')
+    .limit(200)
+    .get();
+  return snap.docs.map((d) => ({ id: d.id, ...(d.data() as SavedPortraitDoc) }));
+}
+
+export async function deleteSavedPortrait(uid: string, portraitId: string): Promise<string | null> {
+  const ref = adminFirestore().collection('users').doc(uid).collection('savedPortraits').doc(portraitId);
+  const snap = await ref.get();
+  if (!snap.exists) return null;
+  const data = snap.data() as SavedPortraitDoc;
+  await ref.delete();
+  await adminFirestore().collection('users').doc(uid).set(
+    { saveCount: FieldValue.increment(-1), updatedAt: FieldValue.serverTimestamp() },
+    { merge: true },
+  );
+  return data.r2Key;
 }
 
 // ── Usage Tracking ───────────────────────────────────────────────────────────
@@ -76,9 +192,12 @@ async function trackDailyStat(
 
 export async function trackGeneration(uid: string, style: string, isPro: boolean): Promise<void> {
   const cost = isPro ? COST.pro_generate : COST.free_generate;
+  const currentMonth = new Date().toISOString().slice(0, 7);
   await adminFirestore().collection('users').doc(uid).set(
     {
       generationCount: FieldValue.increment(1),
+      generationsThisMonth: FieldValue.increment(1),
+      lastResetMonth: currentMonth,
       totalCostUsd: FieldValue.increment(cost),
       lastActiveAt: FieldValue.serverTimestamp(),
       [`styleUsage.${style}`]: FieldValue.increment(1),

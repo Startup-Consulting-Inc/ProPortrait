@@ -15,7 +15,9 @@ import ComparisonSlider from './ComparisonSlider';
 import GenerationProgress from './GenerationProgress';
 import PricingModal from './PricingModal';
 import EmailCapture from './EmailCapture';
+import SavedPortraitsModal from './SavedPortraitsModal';
 import { useAuthContext } from '../contexts/AuthContext';
+import { savePortrait } from '../services/portraits';
 import { capture } from '../services/analytics';
 import { getIdToken } from '../services/auth';
 
@@ -45,7 +47,7 @@ type NaturalnessPreset = 'natural' | 'polished' | 'studio';
 const NATURALNESS_MAP: Record<NaturalnessPreset, number> = { natural: 15, polished: 50, studio: 85 };
 
 export default function PortraitGenerator() {
-  const { isPro, refreshProfile } = useAuthContext();
+  const { isPro, tier, refreshProfile, profile, isFirebaseUser } = useAuthContext();
   const [step, setStep] = useState<Step>(1);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [generatedImages, setGeneratedImages] = useState<string[]>([]);
@@ -104,6 +106,8 @@ export default function PortraitGenerator() {
   const [downloadingPlatform, setDownloadingPlatform] = useState<string | null>(null);
   const [showPricingModal, setShowPricingModal] = useState(false);
   const [showEmailCapture, setShowEmailCapture] = useState(false);
+  const [showLibrary, setShowLibrary] = useState(false);
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
 
   // Phase 5 — Presets
   const [presetCopied, setPresetCopied] = useState(false);
@@ -234,15 +238,56 @@ export default function PortraitGenerator() {
       // Show email capture once per browser session
       if (!sessionStorage.getItem('pp_email_captured')) setShowEmailCapture(true);
     } catch (err) {
-      capture('generation_failed', {
-        error: err instanceof Error ? err.message : 'unknown',
-        durationMs: Date.now() - generationStartRef.current,
-      });
+      const message = err instanceof Error ? err.message : 'unknown';
+      capture('generation_failed', { error: message, durationMs: Date.now() - generationStartRef.current });
       console.error(err);
-      setError('Failed to generate portrait. Please try again.');
+      if (message.includes('generation_limit') || message.includes('limit reached')) {
+        setShowPricingModal(true);
+      } else {
+        setError('Failed to generate portrait. Please try again.');
+      }
     } finally {
       setIsGenerating(false);
     }
+  };
+
+  const handleSavePortrait = async () => {
+    const currentImage = getCurrentImage();
+    if (!currentImage || !isFirebaseUser) return;
+    setSaveStatus('saving');
+    try {
+      const imageBase64 = currentImage.startsWith('data:')
+        ? (currentImage.split(',')[1] ?? currentImage)
+        : currentImage;
+      const mimeType = currentImage.startsWith('data:') ? (currentImage.split(';')[0].split(':')[1] ?? 'image/png') : 'image/png';
+      await savePortrait(imageBase64, mimeType, selectedStyle);
+      setSaveStatus('saved');
+      void refreshProfile();
+      setTimeout(() => setSaveStatus('idle'), 3000);
+    } catch (err: unknown) {
+      const e = err as Error & { code?: string };
+      if (e.code === 'save_limit') {
+        setShowPricingModal(true);
+        setSaveStatus('idle');
+      } else {
+        setSaveStatus('error');
+        setTimeout(() => setSaveStatus('idle'), 3000);
+      }
+    }
+  };
+
+  const handleLoadFromLibrary = (imageUrl: string, style: string) => {
+    setGeneratedImages([imageUrl]);
+    const initialHistory: Record<number, string[]> = { 0: [imageUrl] };
+    setHistory(initialHistory);
+    setHistoryStep({ 0: 0 });
+    setSelectedResultIndex(0);
+    setSelectedStyle(style as StyleOption);
+    setHasTransparentBackground(false);
+    setCompareMode(false);
+    setEditMode(null);
+    setSaveStatus('idle');
+    setStep(4);
   };
 
   const handleEdit = async (instruction: string) => {
@@ -1486,6 +1531,41 @@ export default function PortraitGenerator() {
                     <Download className="w-4 h-4" /> Download {isPro ? '(Pro)' : '(Free)'}
                   </button>
 
+                  {/* Save to Library */}
+                  <div className="flex gap-2">
+                    <button
+                      onClick={isFirebaseUser && tier !== 'free' ? handleSavePortrait : () => setShowPricingModal(true)}
+                      disabled={saveStatus === 'saving'}
+                      title={!isFirebaseUser ? 'Sign in to save portraits' : tier === 'free' ? 'Upgrade to save portraits' : ''}
+                      className={cn(
+                        'flex-1 py-2.5 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 border transition-all',
+                        saveStatus === 'saved'
+                          ? 'bg-green-50 border-green-300 text-green-700'
+                          : saveStatus === 'error'
+                            ? 'bg-red-50 border-red-300 text-red-600'
+                            : tier === 'free' || !isFirebaseUser
+                              ? 'bg-slate-50 border-slate-200 text-slate-400 cursor-pointer hover:border-indigo-300 hover:text-indigo-600'
+                              : 'bg-white border-slate-200 text-slate-700 hover:border-indigo-400 hover:bg-indigo-50',
+                      )}>
+                      {saveStatus === 'saving' && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                      {saveStatus === 'saved' && <CheckCheck className="w-3.5 h-3.5" />}
+                      {saveStatus === 'error' && <span className="w-3.5 h-3.5 text-xs">!</span>}
+                      {saveStatus === 'idle' && (tier === 'free' || !isFirebaseUser ? <Lock className="w-3.5 h-3.5" /> : <Shield className="w-3.5 h-3.5" />)}
+                      {saveStatus === 'saving' ? 'Saving…' : saveStatus === 'saved' ? 'Saved!' : saveStatus === 'error' ? 'Error' : 'Save'}
+                      {saveStatus === 'idle' && tier === 'creator' && (
+                        <span className="text-[10px] text-slate-400 font-normal">
+                          {profile?.saveCount ?? 0}/30
+                        </span>
+                      )}
+                    </button>
+                    <button
+                      onClick={() => setShowLibrary(true)}
+                      title="Open saved portraits library"
+                      className="px-3 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-500 hover:border-indigo-300 hover:text-indigo-600 hover:bg-indigo-50 transition-all">
+                      <Users className="w-4 h-4" />
+                    </button>
+                  </div>
+
                   {/* More Export Options toggle — Quick mode only */}
                   {!showAdvanced && (
                     <button onClick={() => setShowExportOptions(v => !v)}
@@ -1577,6 +1657,11 @@ export default function PortraitGenerator() {
       <EmailCapture
         open={showEmailCapture}
         onClose={() => setShowEmailCapture(false)}
+      />
+      <SavedPortraitsModal
+        open={showLibrary}
+        onClose={() => setShowLibrary(false)}
+        onLoad={handleLoadFromLibrary}
       />
       <FeatureTour
         active={showTour}

@@ -11,9 +11,10 @@ import emailRouter from './routes/email.js';
 import usersRouter from './routes/users.js';
 import adminRouter from './routes/admin.js';
 import { authMiddleware } from './middleware/authMiddleware.js';
-import { storePortrait } from './lib/storage.js';
+import { storePortrait, storePermanentPortrait, getSignedUrlForKey, deleteR2Object } from './lib/storage.js';
 import { trackCost, getDailySpend } from './lib/costTracker.js';
-import { trackGeneration, trackEdit, trackExport } from './lib/firestore.js';
+import { trackGeneration, trackEdit, trackExport, getUserDoc, checkAndIncrementGeneration, checkSaveLimit, savePortraitDoc, getSavedPortraits, deleteSavedPortrait } from './lib/firestore.js';
+import { requireFirebaseAuth } from './middleware/authMiddleware.js';
 import { applyWatermark } from './lib/watermark.js';
 
 // Load API key from .env.local (Vite convention), then .env as fallback
@@ -227,11 +228,95 @@ app.use('/api/email', emailRouter);
 app.use('/api/users', usersRouter);
 app.use('/api/admin', adminRouter);
 
+// POST /api/portraits/save — save a portrait to the user's library
+app.post('/api/portraits/save', requireFirebaseAuth, async (req, res) => {
+  const uid = req.auth.uid!;
+  const { imageBase64, mimeType = 'image/png', style = 'editorial', title } = req.body as {
+    imageBase64?: string; mimeType?: string; style?: string; title?: string;
+  };
+
+  if (!imageBase64) {
+    res.status(400).json({ error: 'imageBase64 is required' });
+    return;
+  }
+
+  try {
+    const doc = await getUserDoc(uid);
+    await checkSaveLimit(uid, doc ?? { email: '', displayName: '', isPro: req.auth.isPro, isAdmin: false });
+    const { r2Key, imageUrl } = await storePermanentPortrait(imageBase64, uid, mimeType);
+    const id = await savePortraitDoc(uid, r2Key, style, title);
+    res.json({ id, imageUrl, style, title });
+  } catch (err: unknown) {
+    const e = err as Error & { code?: string };
+    if (e.code === 'save_limit') {
+      res.status(403).json({ error: 'save_limit', message: e.message });
+    } else {
+      console.error('[portraits/save]', err);
+      res.status(500).json({ error: 'Failed to save portrait.' });
+    }
+  }
+});
+
+// GET /api/portraits/saved — list user's saved portraits
+app.get('/api/portraits/saved', requireFirebaseAuth, async (req, res) => {
+  const uid = req.auth.uid!;
+  try {
+    const portraits = await getSavedPortraits(uid);
+    // Re-sign all R2 URLs (7-day fresh URLs)
+    const withUrls = await Promise.all(
+      portraits.map(async (p) => ({
+        id: p.id,
+        style: p.style,
+        title: p.title,
+        createdAt: p.createdAt,
+        imageUrl: p.r2Key ? await getSignedUrlForKey(p.r2Key) : '',
+      })),
+    );
+    res.json({ portraits: withUrls });
+  } catch (err) {
+    console.error('[portraits/saved]', err);
+    res.status(500).json({ error: 'Failed to fetch saved portraits.' });
+  }
+});
+
+// DELETE /api/portraits/saved/:id — delete a saved portrait
+app.delete('/api/portraits/saved/:id', requireFirebaseAuth, async (req, res) => {
+  const uid = req.auth.uid!;
+  const { id } = req.params;
+  try {
+    const r2Key = await deleteSavedPortrait(uid, id);
+    if (r2Key) void deleteR2Object(r2Key);
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('[portraits/saved/delete]', err);
+    res.status(500).json({ error: 'Failed to delete portrait.' });
+  }
+});
+
 app.post('/api/portraits/generate', async (req, res) => {
   const apiKey = process.env.GEMINI_API_KEY || process.env.API_KEY;
   if (!apiKey) {
     res.status(500).json({ error: 'Server configuration error: API key not configured.' });
     return;
+  }
+
+  // ── Generation limit check ────────────────────────────────────────────────
+  if (req.auth.uid) {
+    try {
+      const userDoc = await getUserDoc(req.auth.uid);
+      await checkAndIncrementGeneration(
+        req.auth.uid,
+        userDoc ?? { email: '', displayName: '', isPro: req.auth.isPro, isAdmin: false },
+      );
+    } catch (err: unknown) {
+      const e = err as Error & { code?: string };
+      if (e.code === 'generation_limit') {
+        res.status(403).json({ error: 'generation_limit', message: e.message });
+        return;
+      }
+      // Firestore failure — allow generation to proceed
+      console.error('[portraits/generate] limit check failed:', err);
+    }
   }
 
   const imageSize = req.auth.isPro ? '2K' : '1K';

@@ -1,7 +1,8 @@
 import { Router, Request, Response } from 'express';
 import Stripe from 'stripe';
 import { getOrCreateSession, setProStatus, SESSION_COOKIE, COOKIE_OPTIONS } from '../lib/session.js';
-import { firestoreSetProStatus, getUserByStripeCustomerId, getUserDoc } from '../lib/firestore.js';
+import { firestoreSetProStatus, firestoreSetTier, getUserByStripeCustomerId, getUserDoc } from '../lib/firestore.js';
+import type { Tier } from '../lib/firestore.js';
 import { requireFirebaseAuth } from '../middleware/authMiddleware.js';
 
 const router = Router();
@@ -17,13 +18,13 @@ router.post('/checkout', async (req: Request, res: Response) => {
     return;
   }
 
-  const { plan } = req.body as { plan: 'session' | 'pro' };
+  const { plan } = req.body as { plan: 'creator' | 'pro' | 'max' };
   const appUrl = process.env.APP_URL || 'http://localhost:3000';
 
   // Build metadata to identify purchaser in webhook
   const firebaseUid = req.auth.uid;
   const sessionId = req.auth.sessionId;
-  const metadata: Record<string, string> = {};
+  const metadata: Record<string, string> = { plan };
   if (firebaseUid) {
     metadata.firebaseUid = firebaseUid;
   } else if (sessionId) {
@@ -46,11 +47,14 @@ router.post('/checkout', async (req: Request, res: Response) => {
   let priceId: string | undefined;
   let mode: 'payment' | 'subscription';
 
-  if (plan === 'session') {
-    priceId = process.env.STRIPE_SESSION_PRICE_ID;
+  if (plan === 'creator') {
+    priceId = process.env.STRIPE_CREATOR_PRICE_ID ?? process.env.STRIPE_SESSION_PRICE_ID;
     mode = 'payment';
   } else if (plan === 'pro') {
     priceId = process.env.STRIPE_PRO_PRICE_ID;
+    mode = 'subscription';
+  } else if (plan === 'max') {
+    priceId = process.env.STRIPE_MAX_PRICE_ID;
     mode = 'subscription';
   } else {
     res.status(400).json({ error: 'Invalid plan' });
@@ -105,13 +109,14 @@ router.post('/webhook', async (req: Request, res: Response) => {
     const uid = session.metadata?.firebaseUid;
     const sid = session.metadata?.sessionId;
     const customerId = session.customer as string | undefined;
+    const plan = (session.metadata?.plan ?? 'pro') as Tier;
 
     if (uid) {
-      // Firebase user → persist to Firestore
-      await firestoreSetProStatus(uid, true, customerId);
-      console.log(`[payments] Pro activated in Firestore for uid ${uid}`);
+      // Firebase user → persist tier to Firestore
+      await firestoreSetTier(uid, plan, customerId);
+      console.log(`[payments] Tier '${plan}' activated in Firestore for uid ${uid}`);
     } else if (sid) {
-      // Anonymous session → persist to in-memory store
+      // Anonymous session → mark as pro in memory (no tier granularity)
       setProStatus(sid, true, customerId);
       console.log(`[payments] Pro activated for session ${sid}`);
     }
@@ -123,8 +128,8 @@ router.post('/webhook', async (req: Request, res: Response) => {
 
     const result = await getUserByStripeCustomerId(customerId);
     if (result) {
-      await firestoreSetProStatus(result.uid, false);
-      console.log(`[payments] Pro revoked in Firestore for uid ${result.uid}`);
+      await firestoreSetTier(result.uid, 'free');
+      console.log(`[payments] Tier revoked (→ free) in Firestore for uid ${result.uid}`);
     } else {
       console.log(`[payments] Subscription deleted for customer ${customerId} — no Firestore doc found`);
     }
