@@ -9,6 +9,7 @@ interface AdminUser {
   email: string;
   displayName: string;
   isPro: boolean;
+  tier: string;
   isAdmin: boolean;
   createdAt: { seconds: number } | null;
   generationCount: number;
@@ -81,7 +82,7 @@ function UserDrawer({
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
               <h2 className="text-lg font-bold text-slate-900 truncate">{user.displayName || '—'}</h2>
-              {user.isPro && <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-indigo-100 text-indigo-700">Pro</span>}
+              {user.isPro && <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-indigo-100 text-indigo-700 capitalize">{user.tier}</span>}
               {user.isAdmin && <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-700">Admin</span>}
             </div>
             <p className="text-sm text-slate-500 font-mono truncate">{user.email}</p>
@@ -391,7 +392,7 @@ export default function AdminPage() {
                         <span className={`px-3 py-1 rounded-full text-xs font-semibold cursor-pointer transition-colors ${
                           u.isPro ? 'bg-indigo-100 text-indigo-700 hover:bg-indigo-200' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
                         }`}>
-                          {u.isPro ? 'Pro' : 'Free'}
+                          {u.isPro ? u.tier : 'Free'}
                         </span>
                       </td>
                       <td className="px-4 py-3 text-center">

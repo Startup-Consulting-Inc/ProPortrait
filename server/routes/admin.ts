@@ -34,6 +34,7 @@ router.get('/users', requireAdmin, async (_req: Request, res: Response) => {
         email:           d.email ?? '',
         displayName:     d.displayName ?? '',
         isPro:           d.isPro ?? false,
+        tier:            (d.tier ?? (d.isPro ? 'pro' : 'free')) as string,
         isAdmin:         d.isAdmin ?? false,
         generationCount: d.generationCount ?? 0,
         editCount:       d.editCount ?? 0,
