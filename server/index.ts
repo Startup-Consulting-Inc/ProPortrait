@@ -4,6 +4,7 @@ import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import { GoogleGenAI } from '@google/genai';
 import { config } from 'dotenv';
+import sharp from 'sharp';
 import * as Sentry from '@sentry/node';
 import authRouter from './routes/auth.js';
 import paymentsRouter from './routes/payments.js';
@@ -27,6 +28,16 @@ if (sentryDsn) Sentry.init({ dsn: sentryDsn, tracesSampleRate: 0.1 });
 const app = express();
 const PORT = process.env.PORT ? parseInt(process.env.PORT) : 3001;
 const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-3.1-flash-image-preview';
+
+// Compress image to JPEG ≤6MB base64 before sending to Gemini for editing
+async function compressForEdit(base64: string): Promise<{ data: string; mimeType: string }> {
+  const buf = Buffer.from(base64, 'base64');
+  const compressed = await sharp(buf)
+    .resize({ width: 1536, height: 1536, fit: 'inside', withoutEnlargement: true })
+    .jpeg({ quality: 85 })
+    .toBuffer();
+  return { data: compressed.toString('base64'), mimeType: 'image/jpeg' };
+}
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -481,11 +492,6 @@ app.post('/api/portraits/edit', async (req, res) => {
     }
   }
 
-  if (imageBase64.length > 14_000_000) {
-    res.status(400).json({ error: 'Image too large. Maximum size is 10MB.' });
-    return;
-  }
-
   const identityCore = "CRITICAL: Preserve the exact facial features, identity, ethnicity, age, expression, and facial structure.";
   const regionInstruction = regionOnly
     ? `${identityCore} ONLY modify: ${regionOnly}. Preserve everything else exactly as-is.`
@@ -498,13 +504,16 @@ app.post('/api/portraits/edit', async (req, res) => {
 
   const ai = new GoogleGenAI({ apiKey });
 
+  // Compress to JPEG ≤1536px before sending — keeps payload well under 10MB
+  const { data: editBase64, mimeType: editMimeType } = await compressForEdit(imageBase64);
+
   try {
     const response = await ai.models.generateContent({
       model: GEMINI_MODEL,
       contents: {
         parts: [
           { text: prompt },
-          { inlineData: { data: imageBase64, mimeType: 'image/png' } },
+          { inlineData: { data: editBase64, mimeType: editMimeType } },
         ],
       },
       config: {
