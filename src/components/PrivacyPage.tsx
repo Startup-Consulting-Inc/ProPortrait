@@ -39,9 +39,8 @@ export default function PrivacyPage() {
         <section className="mb-8">
           <h2 className="text-xl font-semibold mb-3">Data Retention</h2>
           <p className="text-slate-700 leading-relaxed">
-            Generated portraits are stored temporarily to allow you to download them. Free tier portraits are
-            deleted within 24 hours. Pro portraits are retained for up to 7 days. Your original uploaded photo
-            is not retained after the generation job completes.
+          Generated portraits are stored temporarily so you can download them. Free-tier portraits are deleted within 24 hours. If you are a paid subscriber, we store all portraits you save. Your original uploaded photo is not retained after the generation job is complete.
+
           </p>
         </section>
 
