@@ -4,6 +4,8 @@
  */
 
 import { useState, useRef, useCallback, useEffect } from 'react';
+import { useAuthContext } from '../contexts/AuthContext';
+import UserMenu from './UserMenu';
 import AppFooter from './AppFooter';
 
 function HeroSlider() {
@@ -123,6 +125,7 @@ interface LandingPageProps {
 }
 
 export default function LandingPage({ onSignIn }: LandingPageProps) {
+  const { user, loading } = useAuthContext();
   const goToApp = () => {
     if (onSignIn) {
       onSignIn();
@@ -135,21 +138,30 @@ export default function LandingPage({ onSignIn }: LandingPageProps) {
     <div className="min-h-screen bg-white font-sans text-slate-900 flex flex-col">
       {/* Navbar */}
       <header className="flex items-center justify-between px-6 py-4 max-w-6xl mx-auto w-full">
-        <div className="flex items-center gap-2">
+        <a href={user ? '/app' : '/'} className="flex items-center gap-2">
           <img src="/logo.png" alt="ProPortrait AI" className="h-7 w-7 rounded-lg" />
           <span className="font-bold text-lg tracking-tight">ProPortrait<span className="text-indigo-600"> AI</span></span>
-        </div>
+        </a>
         <nav className="hidden sm:flex items-center gap-6 text-sm text-slate-500">
           <a href="#features" className="hover:text-slate-800 transition-colors">Features</a>
           <a href="#pricing" className="hover:text-slate-800 transition-colors">Pricing</a>
           <a href="/contact" className="hover:text-slate-800 transition-colors">Contact</a>
         </nav>
-        <button
-          onClick={goToApp}
-          className="text-sm font-semibold text-indigo-600 hover:text-indigo-800 transition-colors"
-        >
-          Sign In →
-        </button>
+        {loading ? (
+          <div className="w-8 h-8" />
+        ) : user ? (
+          <UserMenu
+            onOpenProfile={() => window.location.href = '/app'}
+            onOpenAdmin={() => window.location.href = '/admin'}
+          />
+        ) : (
+          <button
+            onClick={goToApp}
+            className="text-sm font-semibold text-indigo-600 hover:text-indigo-800 transition-colors"
+          >
+            Sign In →
+          </button>
+        )}
       </header>
 
       <main className="flex-1 flex flex-col items-center px-6 max-w-6xl mx-auto w-full">

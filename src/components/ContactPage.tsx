@@ -1,6 +1,8 @@
 import { useState, type ChangeEvent, type FormEvent } from 'react';
 import AppFooter from './AppFooter';
 import { CheckCircle2, Clock3, LifeBuoy, Mail, SendHorizonal } from 'lucide-react';
+import { useAuthContext } from '../contexts/AuthContext';
+import UserMenu from './UserMenu';
 
 const API_BASE = (import.meta.env.VITE_API_URL as string | undefined) ?? '';
 
@@ -33,6 +35,7 @@ const INITIAL_FORM: ContactFormState = {
 };
 
 export default function ContactPage() {
+  const { user, loading: authLoading } = useAuthContext();
   const [form, setForm] = useState<ContactFormState>(INITIAL_FORM);
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
@@ -80,7 +83,7 @@ export default function ContactPage() {
   return (
     <div className="min-h-screen bg-white font-sans text-slate-900 flex flex-col">
       <header className="flex items-center justify-between px-6 py-4 max-w-6xl mx-auto w-full">
-        <a href="/" className="flex items-center gap-2">
+        <a href={user ? '/app' : '/'} className="flex items-center gap-2">
           <img src="/logo.png" alt="ProPortrait AI" className="h-7 w-7 rounded-lg" />
           <span className="font-bold text-lg tracking-tight">
             ProPortrait<span className="text-indigo-600"> AI</span>
@@ -91,12 +94,21 @@ export default function ContactPage() {
           <a href="/#pricing" className="hover:text-slate-800 transition-colors">Pricing</a>
           <a href="/contact" className="text-slate-900 font-semibold">Contact</a>
         </nav>
-        <a
-          href="/app"
-          className="text-sm font-semibold text-indigo-600 hover:text-indigo-800 transition-colors"
-        >
-          Start free
-        </a>
+        {authLoading ? (
+          <div className="w-8 h-8" />
+        ) : user ? (
+          <UserMenu
+            onOpenProfile={() => window.location.href = '/app'}
+            onOpenAdmin={() => window.location.href = '/admin'}
+          />
+        ) : (
+          <a
+            href="/app"
+            className="text-sm font-semibold text-indigo-600 hover:text-indigo-800 transition-colors"
+          >
+            Start free
+          </a>
+        )}
       </header>
 
       <main className="flex-1 px-6 py-10 max-w-6xl mx-auto w-full">
