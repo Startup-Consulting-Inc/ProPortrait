@@ -15,6 +15,9 @@ import {
   Loader2,
 } from 'lucide-react';
 import { cn } from '../lib/utils';
+import { getIdToken } from '../services/auth';
+
+const API_BASE = (import.meta.env.VITE_API_URL as string | undefined) ?? '';
 
 interface UserDetail {
   uid: string;
@@ -94,8 +97,15 @@ export default function AdminUserDetailModal({
       setLoading(true);
       setError('');
       try {
-        const response = await fetch(`/api/admin/users/${userId}`);
-        if (!response.ok) throw new Error('Failed to fetch user');
+        const token = await getIdToken();
+        const response = await fetch(`${API_BASE}/api/admin/users/${userId}`, {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+          credentials: 'include',
+        });
+        if (!response.ok) {
+          const text = await response.text();
+          throw new Error(text || `Failed to fetch user: ${response.status}`);
+        }
         const data = await response.json();
         setUser(data.user);
         setGenerations(data.recentGenerations || []);
@@ -114,9 +124,14 @@ export default function AdminUserDetailModal({
     if (!user) return;
     setIsSaving(true);
     try {
-      const response = await fetch(`/api/admin/users/${user.uid}/subscription`, {
+      const token = await getIdToken();
+      const response = await fetch(`${API_BASE}/api/admin/users/${user.uid}/subscription`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        credentials: 'include',
         body: JSON.stringify({ tier: selectedTier }),
       });
       if (!response.ok) throw new Error('Failed to update tier');
@@ -134,9 +149,14 @@ export default function AdminUserDetailModal({
     if (!user) return;
     setIsSaving(true);
     try {
-      const response = await fetch(`/api/admin/users/${user.uid}/suspend`, {
+      const token = await getIdToken();
+      const response = await fetch(`${API_BASE}/api/admin/users/${user.uid}/suspend`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        credentials: 'include',
         body: JSON.stringify({ suspended: !user.isSuspended }),
       });
       if (!response.ok) throw new Error('Failed to update suspension');
@@ -153,8 +173,11 @@ export default function AdminUserDetailModal({
     if (!user || deleteConfirmText !== 'DELETE') return;
     setIsSaving(true);
     try {
-      const response = await fetch(`/api/admin/users/${user.uid}`, {
+      const token = await getIdToken();
+      const response = await fetch(`${API_BASE}/api/admin/users/${user.uid}`, {
         method: 'DELETE',
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        credentials: 'include',
       });
       if (!response.ok) throw new Error('Failed to delete user');
       onUpdate();
