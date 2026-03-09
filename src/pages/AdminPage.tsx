@@ -1,6 +1,8 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useAuthContext } from '../contexts/AuthContext';
 import { getIdToken } from '../services/auth';
+import AdminUserDetailModal from '../components/AdminUserDetailModal';
+import { Search, Crown, Ban, Filter, RefreshCw, Users, BarChart3 } from 'lucide-react';
 
 const API_BASE = (import.meta.env.VITE_API_URL as string | undefined) ?? '';
 
@@ -11,6 +13,7 @@ interface AdminUser {
   isPro: boolean;
   tier: string;
   isAdmin: boolean;
+  isSuspended: boolean;
   createdAt: { seconds: number } | null;
   generationCount: number;
   editCount: number;
@@ -32,6 +35,9 @@ interface DailyStat {
   proGenerations?: number;
 }
 
+type TierFilter = 'all' | 'free' | 'creator' | 'pro' | 'max';
+type StatusFilter = 'all' | 'active' | 'suspended';
+
 function relativeTime(seconds: number): string {
   const diff = Math.floor(Date.now() / 1000) - seconds;
   if (diff < 60) return 'just now';
@@ -52,103 +58,6 @@ function fmtActive(ts: { seconds: number } | null): string {
 
 function initials(name: string): string {
   return name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2) || '?';
-}
-
-// ── User Detail Drawer ────────────────────────────────────────────────────────
-
-function UserDrawer({
-  user,
-  onClose,
-  onTogglePro,
-}: {
-  user: AdminUser;
-  onClose: () => void;
-  onTogglePro: (uid: string, current: boolean) => Promise<void>;
-}) {
-  const maxStyle = Math.max(1, ...Object.values(user.styleUsage));
-  const sortedStyles = Object.entries(user.styleUsage).sort((a, b) => b[1] - a[1]);
-
-  return (
-    <div className="fixed inset-0 z-50 flex justify-end" onClick={onClose}>
-      <div
-        className="relative bg-white w-full max-w-md h-full shadow-2xl overflow-y-auto flex flex-col"
-        onClick={e => e.stopPropagation()}
-      >
-        {/* Header */}
-        <div className="flex items-start gap-4 p-6 border-b border-slate-200">
-          <div className="w-14 h-14 rounded-full bg-indigo-600 flex items-center justify-center text-white text-xl font-bold flex-shrink-0">
-            {initials(user.displayName)}
-          </div>
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 flex-wrap">
-              <h2 className="text-lg font-bold text-slate-900 truncate">{user.displayName || '—'}</h2>
-              {user.isPro && <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-indigo-100 text-indigo-700 capitalize">{user.tier}</span>}
-              {user.isAdmin && <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-700">Admin</span>}
-            </div>
-            <p className="text-sm text-slate-500 font-mono truncate">{user.email}</p>
-          </div>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 text-2xl leading-none flex-shrink-0">×</button>
-        </div>
-
-        {/* Stats grid */}
-        <div className="p-6 border-b border-slate-200">
-          <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-3">Activity</h3>
-          <div className="grid grid-cols-2 gap-3">
-            {[
-              { label: 'Joined',        value: fmtDate(user.createdAt) },
-              { label: 'Last Active',   value: fmtActive(user.lastActiveAt) },
-              { label: 'Last Login',    value: fmtActive(user.lastLoginAt) },
-              { label: 'Logins',        value: user.loginCount },
-              { label: 'Generations',   value: user.generationCount },
-              { label: 'Edits',         value: user.editCount },
-              { label: 'Exports',       value: user.exportCount },
-              { label: 'Est. Cost',     value: `$${user.totalCostUsd.toFixed(2)}` },
-            ].map(({ label, value }) => (
-              <div key={label} className="bg-slate-50 rounded-lg px-3 py-2">
-                <p className="text-xs text-slate-400">{label}</p>
-                <p className="text-sm font-semibold text-slate-800">{value}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Style usage */}
-        {sortedStyles.length > 0 && (
-          <div className="p-6 border-b border-slate-200">
-            <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-3">Style Usage</h3>
-            <div className="space-y-2">
-              {sortedStyles.map(([style, count]) => (
-                <div key={style} className="flex items-center gap-3">
-                  <span className="text-xs text-slate-600 w-28 truncate capitalize">{style.replace(/_/g, ' ')}</span>
-                  <div className="flex-1 bg-slate-100 rounded-full h-2">
-                    <div
-                      className="bg-indigo-500 h-2 rounded-full"
-                      style={{ width: `${Math.round((count / maxStyle) * 100)}%` }}
-                    />
-                  </div>
-                  <span className="text-xs text-slate-500 w-6 text-right">{count}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Actions */}
-        <div className="p-6 mt-auto">
-          <button
-            onClick={() => onTogglePro(user.uid, user.isPro)}
-            className={`w-full py-2.5 rounded-lg text-sm font-semibold transition-colors ${
-              user.isPro
-                ? 'bg-red-50 text-red-600 hover:bg-red-100 border border-red-200'
-                : 'bg-indigo-600 text-white hover:bg-indigo-700'
-            }`}
-          >
-            {user.isPro ? 'Remove Pro Access' : 'Grant Pro Access'}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
 }
 
 // ── Rankings Tab ──────────────────────────────────────────────────────────────
@@ -214,7 +123,12 @@ export default function AdminPage() {
   const [fetching, setFetching] = useState(false);
   const [error, setError] = useState('');
   const [activeTab, setActiveTab] = useState<'users' | 'rankings'>('users');
-  const [selectedUser, setSelectedUser] = useState<AdminUser | null>(null);
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+
+  // Filters
+  const [searchQuery, setSearchQuery] = useState('');
+  const [tierFilter, setTierFilter] = useState<TierFilter>('all');
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
 
   const fetchAll = useCallback(async () => {
     setFetching(true);
@@ -249,12 +163,35 @@ export default function AdminPage() {
       body: JSON.stringify({ isPro: !current, tier }),
     });
     setUsers(prev => prev.map(u => u.uid === uid ? { ...u, isPro: !current } : u));
-    setSelectedUser(prev => prev?.uid === uid ? { ...prev, isPro: !current } : prev);
   };
 
   useEffect(() => {
     if (isAdmin) fetchAll();
   }, [isAdmin, fetchAll]);
+
+  // Filtered users
+  const filteredUsers = useMemo(() => {
+    return users.filter(u => {
+      // Search filter
+      if (searchQuery) {
+        const query = searchQuery.toLowerCase();
+        const matches = 
+          u.email.toLowerCase().includes(query) ||
+          u.displayName?.toLowerCase().includes(query) ||
+          u.uid.toLowerCase().includes(query);
+        if (!matches) return false;
+      }
+      
+      // Tier filter
+      if (tierFilter !== 'all' && u.tier !== tierFilter) return false;
+      
+      // Status filter
+      if (statusFilter === 'suspended' && !u.isSuspended) return false;
+      if (statusFilter === 'active' && u.isSuspended) return false;
+      
+      return true;
+    });
+  }, [users, searchQuery, tierFilter, statusFilter]);
 
   // Derived summary
   const today = stats[0];
@@ -265,6 +202,17 @@ export default function AdminPage() {
   const proGen = today?.proGenerations ?? 0;
   const freePct = totalGen > 0 ? Math.round((freeGen / totalGen) * 100) : 0;
   const proPct  = totalGen > 0 ? Math.round((proGen  / totalGen) * 100) : 0;
+  
+  // Stats by tier
+  const statsByTier = useMemo(() => {
+    return {
+      free: users.filter(u => u.tier === 'free').length,
+      creator: users.filter(u => u.tier === 'creator').length,
+      pro: users.filter(u => u.tier === 'pro').length,
+      max: users.filter(u => u.tier === 'max').length,
+      suspended: users.filter(u => u.isSuspended).length,
+    };
+  }, [users]);
 
   if (loading) {
     return <div className="min-h-screen flex items-center justify-center text-slate-500">Loading…</div>;
@@ -286,21 +234,24 @@ export default function AdminPage() {
   return (
     <>
       <div className="min-h-screen bg-slate-50 p-6">
-        <div className="max-w-6xl mx-auto">
+        <div className="max-w-7xl mx-auto">
 
           {/* Header */}
           <div className="flex items-center justify-between mb-6">
             <div>
               <h1 className="text-2xl font-bold text-slate-900">Admin Dashboard</h1>
-              <p className="text-sm text-slate-500 mt-1">{users.length} users total</p>
+              <p className="text-sm text-slate-500 mt-1">
+                {users.length} users · {statsByTier.suspended} suspended
+              </p>
             </div>
             <div className="flex gap-3">
               <a href="/app" className="text-sm text-slate-500 hover:text-slate-700 transition-colors py-2">← Back to App</a>
               <button
                 onClick={fetchAll}
                 disabled={fetching}
-                className="text-sm bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-semibold px-4 py-2 rounded-lg transition-colors"
+                className="flex items-center gap-2 text-sm bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-semibold px-4 py-2 rounded-lg transition-colors"
               >
+                <RefreshCw className={`w-4 h-4 ${fetching ? 'animate-spin' : ''}`} />
                 {fetching ? 'Loading…' : 'Refresh'}
               </button>
             </div>
@@ -311,27 +262,39 @@ export default function AdminPage() {
           )}
 
           {/* Summary cards */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-            <div className="bg-white rounded-xl border border-slate-200 px-5 py-4">
-              <p className="text-xs text-slate-500 font-medium uppercase tracking-wide mb-1">Generations Today</p>
-              <p className="text-2xl font-bold text-slate-900">{totalGen}</p>
-              <p className="text-xs text-slate-400 mt-1">{freeGen} free · {proGen} pro</p>
-            </div>
-            <div className="bg-white rounded-xl border border-slate-200 px-5 py-4">
-              <p className="text-xs text-slate-500 font-medium uppercase tracking-wide mb-1">Est. Cost Today</p>
-              <p className="text-2xl font-bold text-slate-900">${(today?.totalCostUsd ?? 0).toFixed(2)}</p>
-              <p className="text-xs text-slate-400 mt-1">API cost estimate</p>
-            </div>
-            <div className="bg-white rounded-xl border border-slate-200 px-5 py-4">
-              <p className="text-xs text-slate-500 font-medium uppercase tracking-wide mb-1">Active (7d)</p>
-              <p className="text-2xl font-bold text-slate-900">{activeUsers7d}</p>
-              <p className="text-xs text-slate-400 mt-1">of {users.length} registered</p>
-            </div>
-            <div className="bg-white rounded-xl border border-slate-200 px-5 py-4">
-              <p className="text-xs text-slate-500 font-medium uppercase tracking-wide mb-1">Free / Pro Split</p>
-              <p className="text-2xl font-bold text-slate-900">{freePct}% / {proPct}%</p>
-              <p className="text-xs text-slate-400 mt-1">today's generations</p>
-            </div>
+          <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
+            <StatCard
+              icon={Users}
+              label="Total Users"
+              value={users.length}
+              subtext={`${activeUsers7d} active (7d)`}
+            />
+            <StatCard
+              icon={Crown}
+              label="Pro Users"
+              value={statsByTier.pro + statsByTier.max + statsByTier.creator}
+              subtext={`${statsByTier.pro} Pro · ${statsByTier.max} Max`}
+              color="indigo"
+            />
+            <StatCard
+              icon={Ban}
+              label="Suspended"
+              value={statsByTier.suspended}
+              subtext="Blocked access"
+              color="amber"
+            />
+            <StatCard
+              icon={BarChart3}
+              label="Gen Today"
+              value={totalGen}
+              subtext={`${freePct}% free · ${proPct}% pro`}
+            />
+            <StatCard
+              icon={BarChart3}
+              label="Est. Cost Today"
+              value={`$${(today?.totalCostUsd ?? 0).toFixed(2)}`}
+              subtext="API cost estimate"
+            />
           </div>
 
           {/* Tabs */}
@@ -353,62 +316,121 @@ export default function AdminPage() {
 
           {/* Users Tab */}
           {activeTab === 'users' && (
-            <div className="bg-white rounded-2xl border border-slate-200 overflow-x-auto">
-              <table className="w-full text-sm min-w-[900px]">
-                <thead className="bg-slate-50 border-b border-slate-200">
-                  <tr>
-                    <th className="text-left px-4 py-3 font-semibold text-slate-600">User</th>
-                    <th className="text-left px-4 py-3 font-semibold text-slate-600">Email</th>
-                    <th className="text-left px-4 py-3 font-semibold text-slate-600">Joined</th>
-                    <th className="text-right px-4 py-3 font-semibold text-slate-600">Logins</th>
-                    <th className="text-right px-4 py-3 font-semibold text-slate-600">Gen</th>
-                    <th className="text-right px-4 py-3 font-semibold text-slate-600">Edits</th>
-                    <th className="text-right px-4 py-3 font-semibold text-slate-600">Exports</th>
-                    <th className="text-left px-4 py-3 font-semibold text-slate-600">Last Active</th>
-                    <th className="text-right px-4 py-3 font-semibold text-slate-600">Est. Cost</th>
-                    <th className="text-left px-4 py-3 font-semibold text-slate-600">Top Style</th>
-                    <th className="text-center px-4 py-3 font-semibold text-slate-600">Pro</th>
-                    <th className="text-center px-4 py-3 font-semibold text-slate-600">Admin</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {users.map(u => (
-                    <tr
-                      key={u.uid}
-                      className="hover:bg-slate-50 transition-colors cursor-pointer"
-                      onClick={() => setSelectedUser(u)}
-                    >
-                      <td className="px-4 py-3 font-medium text-slate-800">{u.displayName || '—'}</td>
-                      <td className="px-4 py-3 text-slate-500 font-mono text-xs">{u.email}</td>
-                      <td className="px-4 py-3 text-slate-400">{fmtDate(u.createdAt)}</td>
-                      <td className="px-4 py-3 text-right text-slate-500">{u.loginCount}</td>
-                      <td className="px-4 py-3 text-right text-slate-700 font-medium">{u.generationCount}</td>
-                      <td className="px-4 py-3 text-right text-slate-500">{u.editCount}</td>
-                      <td className="px-4 py-3 text-right text-slate-500">{u.exportCount}</td>
-                      <td className="px-4 py-3 text-slate-400 text-xs">{fmtActive(u.lastActiveAt)}</td>
-                      <td className="px-4 py-3 text-right text-slate-500 font-mono text-xs">${u.totalCostUsd.toFixed(2)}</td>
-                      <td className="px-4 py-3 text-slate-500 text-xs capitalize">{u.topStyle?.replace(/_/g, ' ') ?? '—'}</td>
-                      <td className="px-4 py-3 text-center" onClick={e => { e.stopPropagation(); togglePro(u.uid, u.isPro); }}>
-                        <span className={`px-3 py-1 rounded-full text-xs font-semibold cursor-pointer transition-colors ${
-                          u.isPro ? 'bg-indigo-100 text-indigo-700 hover:bg-indigo-200' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
-                        }`}>
-                          {u.isPro ? u.tier : 'Free'}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-center">
-                        {u.isAdmin && (
-                          <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-700">Admin</span>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                  {!fetching && users.length === 0 && (
+            <div className="space-y-4">
+              {/* Filters */}
+              <div className="bg-white rounded-xl border border-slate-200 p-4 flex flex-wrap gap-4">
+                <div className="flex-1 min-w-[200px]">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                    <input
+                      type="text"
+                      placeholder="Search users..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    />
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Filter className="w-4 h-4 text-slate-400" />
+                  <select
+                    value={tierFilter}
+                    onChange={(e) => setTierFilter(e.target.value as TierFilter)}
+                    className="px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  >
+                    <option value="all">All Tiers</option>
+                    <option value="free">Free</option>
+                    <option value="creator">Creator</option>
+                    <option value="pro">Pro</option>
+                    <option value="max">Max</option>
+                  </select>
+                  <select
+                    value={statusFilter}
+                    onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}
+                    className="px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  >
+                    <option value="all">All Status</option>
+                    <option value="active">Active</option>
+                    <option value="suspended">Suspended</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="bg-white rounded-2xl border border-slate-200 overflow-x-auto">
+                <table className="w-full text-sm min-w-[900px]">
+                  <thead className="bg-slate-50 border-b border-slate-200">
                     <tr>
-                      <td colSpan={12} className="px-4 py-8 text-center text-slate-400">No users yet.</td>
+                      <th className="text-left px-4 py-3 font-semibold text-slate-600">User</th>
+                      <th className="text-left px-4 py-3 font-semibold text-slate-600">Tier</th>
+                      <th className="text-left px-4 py-3 font-semibold text-slate-600">Joined</th>
+                      <th className="text-right px-4 py-3 font-semibold text-slate-600">Logins</th>
+                      <th className="text-right px-4 py-3 font-semibold text-slate-600">Gen</th>
+                      <th className="text-right px-4 py-3 font-semibold text-slate-600">Edits</th>
+                      <th className="text-left px-4 py-3 font-semibold text-slate-600">Last Active</th>
+                      <th className="text-right px-4 py-3 font-semibold text-slate-600">Est. Cost</th>
+                      <th className="text-left px-4 py-3 font-semibold text-slate-600">Top Style</th>
+                      <th className="text-center px-4 py-3 font-semibold text-slate-600">Actions</th>
                     </tr>
-                  )}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {filteredUsers.map(u => (
+                      <tr
+                        key={u.uid}
+                        className={`hover:bg-slate-50 transition-colors cursor-pointer ${u.isSuspended ? 'opacity-50' : ''}`}
+                        onClick={() => setSelectedUserId(u.uid)}
+                      >
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-xs font-semibold text-indigo-700">
+                              {initials(u.displayName)}
+                            </div>
+                            <div>
+                              <div className="font-medium text-slate-800">{u.displayName || '—'}</div>
+                              <div className="text-xs text-slate-500 font-mono">{u.email}</div>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
+                            u.tier === 'free' ? 'bg-slate-100 text-slate-600' :
+                            u.tier === 'creator' ? 'bg-blue-100 text-blue-700' :
+                            u.tier === 'pro' ? 'bg-indigo-100 text-indigo-700' :
+                            'bg-purple-100 text-purple-700'
+                          }`}>
+                            {u.tier?.toUpperCase() || 'FREE'}
+                          </span>
+                          {u.isSuspended && (
+                            <span className="ml-2 px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-700">
+                              SUSPENDED
+                            </span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-slate-500 text-xs">{fmtDate(u.createdAt)}</td>
+                        <td className="px-4 py-3 text-right text-slate-500">{u.loginCount}</td>
+                        <td className="px-4 py-3 text-right text-slate-700 font-medium">{u.generationCount}</td>
+                        <td className="px-4 py-3 text-right text-slate-500">{u.editCount}</td>
+                        <td className="px-4 py-3 text-slate-500 text-xs">{fmtActive(u.lastActiveAt)}</td>
+                        <td className="px-4 py-3 text-right text-slate-500 font-mono text-xs">${u.totalCostUsd.toFixed(2)}</td>
+                        <td className="px-4 py-3 text-slate-500 text-xs capitalize">{u.topStyle?.replace(/_/g, ' ') ?? '—'}</td>
+                        <td className="px-4 py-3 text-center" onClick={e => { e.stopPropagation(); togglePro(u.uid, u.isPro); }}>
+                          <button className="text-xs text-indigo-600 hover:text-indigo-800 font-medium">
+                            {u.isPro ? 'Remove Pro' : 'Make Pro'}
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                    {!fetching && filteredUsers.length === 0 && (
+                      <tr>
+                        <td colSpan={10} className="px-4 py-8 text-center text-slate-400">
+                          {searchQuery || tierFilter !== 'all' || statusFilter !== 'all'
+                            ? 'No users match your filters.'
+                            : 'No users yet.'}
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
             </div>
           )}
 
@@ -420,28 +442,28 @@ export default function AdminPage() {
                 users={users}
                 value={u => u.generationCount}
                 format={v => `${v} gen`}
-                onSelect={setSelectedUser}
+                onSelect={(u) => setSelectedUserId(u.uid)}
               />
               <RankingCard
                 title="Highest Spend"
                 users={users}
                 value={u => u.totalCostUsd}
                 format={v => `$${v.toFixed(2)}`}
-                onSelect={setSelectedUser}
+                onSelect={(u) => setSelectedUserId(u.uid)}
               />
               <RankingCard
                 title="Most Active"
                 users={users}
                 value={u => u.lastActiveAt?.seconds ?? 0}
                 format={(_, u) => fmtActive(u.lastActiveAt)}
-                onSelect={setSelectedUser}
+                onSelect={(u) => setSelectedUserId(u.uid)}
               />
               <RankingCard
                 title="Most Exports"
                 users={users}
                 value={u => u.exportCount}
                 format={v => `${v} export${v !== 1 ? 's' : ''}`}
-                onSelect={setSelectedUser}
+                onSelect={(u) => setSelectedUserId(u.uid)}
               />
             </div>
           )}
@@ -449,14 +471,50 @@ export default function AdminPage() {
         </div>
       </div>
 
-      {/* User detail drawer */}
-      {selectedUser && (
-        <UserDrawer
-          user={selectedUser}
-          onClose={() => setSelectedUser(null)}
-          onTogglePro={togglePro}
-        />
-      )}
+      {/* User detail modal */}
+      <AdminUserDetailModal
+        open={!!selectedUserId}
+        userId={selectedUserId}
+        onClose={() => setSelectedUserId(null)}
+        onUpdate={fetchAll}
+      />
     </>
+  );
+}
+
+function StatCard({
+  icon: Icon,
+  label,
+  value,
+  subtext,
+  color = 'slate',
+}: {
+  icon: React.ComponentType<{ className?: string }>;
+  label: string;
+  value: string | number;
+  subtext: string;
+  color?: 'slate' | 'indigo' | 'amber';
+}) {
+  const colorClasses = {
+    slate: 'bg-white border-slate-200',
+    indigo: 'bg-indigo-50 border-indigo-200',
+    amber: 'bg-amber-50 border-amber-200',
+  };
+
+  const iconColors = {
+    slate: 'text-slate-400',
+    indigo: 'text-indigo-500',
+    amber: 'text-amber-500',
+  };
+
+  return (
+    <div className={`rounded-xl border px-5 py-4 ${colorClasses[color]}`}>
+      <div className="flex items-center gap-2 mb-1">
+        <Icon className={`w-4 h-4 ${iconColors[color]}`} />
+        <p className="text-xs text-slate-500 font-medium uppercase tracking-wide">{label}</p>
+      </div>
+      <p className="text-2xl font-bold text-slate-900">{value}</p>
+      <p className="text-xs text-slate-400 mt-1">{subtext}</p>
+    </div>
   );
 }

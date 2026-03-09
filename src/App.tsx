@@ -16,9 +16,11 @@ import UserMenu from './components/UserMenu';
 import UserProfileModal from './components/UserProfileModal';
 import AdminPage from './pages/AdminPage';
 import OnboardingModal from './components/OnboardingModal';
+import SessionWarningModal from './components/SessionWarningModal';
 import { AuthProvider, useAuthContext } from './contexts/AuthContext';
 import AppFooter from './components/AppFooter';
 import { shouldShowOnboarding } from './services/onboarding';
+import { useInactivityTimeout } from './hooks/useInactivityTimeout';
 import type { PortraitDefaults } from './types/onboarding';
 
 function AppContent() {
@@ -108,6 +110,21 @@ function AppContent() {
   const handleOnboardingSkip = useCallback(() => {
     setShowOnboarding(false);
   }, []);
+
+  // Session timeout - 15 minutes of inactivity
+  const isGenerating = false; // TODO: Get from PortraitGenerator if needed
+  const handleSessionLogout = useCallback(() => {
+    // Sign out and redirect to home
+    window.location.href = '/?session_expired=true';
+  }, []);
+
+  const { showWarning, dismissWarning } = useInactivityTimeout({
+    timeoutMinutes: 15,
+    warningMinutes: 1,
+    onLogout: handleSessionLogout,
+    onWarning: () => { /* warning modal shows automatically */ },
+    disabled: !user || path === '/' || isGenerating, // Disable on landing page and during generation
+  });
 
   // Static pages — no auth required
   if (path === '/contact') return <ContactPage />;
@@ -257,6 +274,13 @@ function AppContent() {
         open={showOnboarding}
         onComplete={handleOnboardingComplete}
         onSkip={handleOnboardingSkip}
+      />
+
+      <SessionWarningModal
+        open={showWarning}
+        onStayLoggedIn={dismissWarning}
+        onLogout={handleSessionLogout}
+        remainingSeconds={60}
       />
     </>
   );

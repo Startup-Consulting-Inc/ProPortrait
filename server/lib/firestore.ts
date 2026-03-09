@@ -39,6 +39,12 @@ export interface UserDoc {
   primaryUseCases?: string[];
   defaultBackgroundCategory?: 'quick' | 'brand' | 'creative';
   preferredBackgrounds?: string[];
+  // Account management
+  isSuspended?: boolean;
+  suspensionReason?: string;
+  suspendedAt?: FirebaseFirestore.Timestamp | null;
+  subscriptionExpiresAt?: FirebaseFirestore.Timestamp | null;
+  adminNote?: string;
   // Timestamps
   createdAt?: FirebaseFirestore.Timestamp;
   updatedAt?: FirebaseFirestore.Timestamp;
