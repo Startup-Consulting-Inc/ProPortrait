@@ -32,6 +32,12 @@ export interface UserProfile {
   };
   defaultLikeness?: number;
   defaultNaturalness?: number;
+  // Onboarding fields
+  onboardingCompletedAt?: string;
+  icpSegment?: string;
+  industry?: string;
+  vibePreference?: string;
+  primaryUseCases?: string[];
 }
 
 export async function notifyFirstLogin(displayName?: string, photoURL?: string): Promise<void> {

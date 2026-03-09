@@ -1,7 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { FieldValue } from 'firebase-admin/firestore';
 import { adminAuth, adminFirestore } from '../lib/firebase.js';
-import { getUserDoc, upsertUserDoc, trackLogin } from '../lib/firestore.js';
+import { getUserDoc, upsertUserDoc, trackLogin, saveOnboardingData, type OnboardingData } from '../lib/firestore.js';
 import { requireFirebaseAuth } from '../middleware/authMiddleware.js';
 
 const router = Router();
@@ -89,6 +89,49 @@ router.delete('/me', requireFirebaseAuth, async (req: Request, res: Response) =>
   } catch (err) {
     console.error('[users/delete]', err);
     res.status(500).json({ error: 'Failed to delete account.' });
+  }
+});
+
+// POST /api/users/me/onboarding — save onboarding data and generate defaults
+router.post('/me/onboarding', requireFirebaseAuth, async (req: Request, res: Response) => {
+  const uid = req.auth.uid!;
+  const { icpSegment, industry, vibePreference, primaryUseCases } = req.body as Partial<OnboardingData>;
+
+  // Validate required fields
+  if (!icpSegment || !industry || !vibePreference) {
+    res.status(400).json({ error: 'Missing required onboarding fields: icpSegment, industry, vibePreference' });
+    return;
+  }
+
+  // Validate icpSegment
+  const validSegments = ['career', 'executive', 'creative_tech', 'service', 'artist'];
+  if (!validSegments.includes(icpSegment)) {
+    res.status(400).json({ error: `Invalid icpSegment. Must be one of: ${validSegments.join(', ')}` });
+    return;
+  }
+
+  // Validate vibePreference
+  const validVibes = ['polished', 'warm', 'bold', 'creative'];
+  if (!validVibes.includes(vibePreference)) {
+    res.status(400).json({ error: `Invalid vibePreference. Must be one of: ${validVibes.join(', ')}` });
+    return;
+  }
+
+  try {
+    const onboardingData: OnboardingData = {
+      icpSegment: icpSegment as OnboardingData['icpSegment'],
+      industry: String(industry).slice(0, 100),
+      vibePreference: vibePreference as OnboardingData['vibePreference'],
+      primaryUseCases: Array.isArray(primaryUseCases) 
+        ? primaryUseCases.filter((u): u is string => typeof u === 'string').map(u => u.slice(0, 50)).slice(0, 5)
+        : [],
+    };
+
+    const defaults = await saveOnboardingData(uid, onboardingData);
+    res.json({ ok: true, defaults });
+  } catch (err) {
+    console.error('[users/onboarding]', err);
+    res.status(500).json({ error: 'Failed to save onboarding data.' });
   }
 });
 

@@ -15,6 +15,7 @@ interface UserProfileModalProps {
     likeness?: number;
     naturalness?: number;
   }) => void;
+  onRetakeOnboarding?: () => void;
 }
 
 type Tab = 'profile' | 'preferences' | 'account' | 'billing';
@@ -36,7 +37,7 @@ const EXPRESSIONS: { value: ExpressionPreset; label: string }[] = [
   { value: 'natural', label: 'Natural' },
 ];
 
-export default function UserProfileModal({ open, onClose, onApplyPreferences }: UserProfileModalProps) {
+export default function UserProfileModal({ open, onClose, onApplyPreferences, onRetakeOnboarding }: UserProfileModalProps) {
   const { user, profile, isPro, tier, refreshProfile } = useAuthContext();
   const [tab, setTab] = useState<Tab>('profile');
   const [saving, setSaving] = useState(false);
@@ -242,6 +243,49 @@ export default function UserProfileModal({ open, onClose, onApplyPreferences }: 
           {/* Preferences tab */}
           {tab === 'preferences' && (
             <div className="flex flex-col gap-5">
+              {/* Onboarding Profile Summary */}
+              {profile?.onboardingCompletedAt && (
+                <div className="bg-indigo-50 rounded-xl p-4 border border-indigo-100">
+                  <div className="flex items-center justify-between mb-2">
+                    <h4 className="text-sm font-semibold text-indigo-900">Your Portrait Profile</h4>
+                    {onRetakeOnboarding && (
+                      <button
+                        onClick={() => { onClose(); onRetakeOnboarding(); }}
+                        className="text-xs text-indigo-600 hover:text-indigo-800 font-medium"
+                      >
+                        Retake Quiz
+                      </button>
+                    )}
+                  </div>
+                  <div className="space-y-1.5 text-sm">
+                    {profile.icpSegment && (
+                      <div className="flex items-center gap-2">
+                        <span className="text-slate-500">Purpose:</span>
+                        <span className="font-medium text-slate-700 capitalize">
+                          {profile.icpSegment.replace('_', ' ')}
+                        </span>
+                      </div>
+                    )}
+                    {profile.industry && (
+                      <div className="flex items-center gap-2">
+                        <span className="text-slate-500">Industry:</span>
+                        <span className="font-medium text-slate-700">
+                          {profile.industry.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                        </span>
+                      </div>
+                    )}
+                    {profile.vibePreference && (
+                      <div className="flex items-center gap-2">
+                        <span className="text-slate-500">Vibe:</span>
+                        <span className="font-medium text-slate-700 capitalize">
+                          {profile.vibePreference}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
               <div className="flex flex-col gap-2">
                 <label className="text-sm font-medium text-slate-700">Default Style</label>
                 <div className="grid grid-cols-4 gap-2">

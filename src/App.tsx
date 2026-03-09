@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import PortraitGenerator from './components/PortraitGenerator';
 import ContactPage from './components/ContactPage';
 import PrivacyPage from './components/PrivacyPage';
@@ -15,12 +15,15 @@ import AuthModal from './components/AuthModal';
 import UserMenu from './components/UserMenu';
 import UserProfileModal from './components/UserProfileModal';
 import AdminPage from './pages/AdminPage';
+import OnboardingModal from './components/OnboardingModal';
 import { AuthProvider, useAuthContext } from './contexts/AuthContext';
 import AppFooter from './components/AppFooter';
+import { shouldShowOnboarding } from './services/onboarding';
+import type { PortraitDefaults } from './types/onboarding';
 
 function AppContent() {
   const path = window.location.pathname;
-  const { user, loading, isPro, refreshProfile } = useAuthContext();
+  const { user, loading, isPro, refreshProfile, profile } = useAuthContext();
 
   // Profile modal
   const [showProfile, setShowProfile] = useState(false);
@@ -33,6 +36,10 @@ function AppContent() {
     new URLSearchParams(window.location.search).get('payment') === 'success',
   );
   const [proActivated, setProActivated] = useState(false);
+  // Onboarding
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [onboardingDefaults, setOnboardingDefaults] = useState<PortraitDefaults | null>(null);
+  const [pendingOnboarding, setPendingOnboarding] = useState(false);
 
   // After Stripe redirect with ?payment=success, poll until Firestore reflects isPro=true
   useEffect(() => {
@@ -64,6 +71,35 @@ function AppContent() {
     }
   }, [loading, user, path]);
 
+  // Check if user needs onboarding after auth loads
+  useEffect(() => {
+    if (!loading && user && path === '/app') {
+      // Check if onboarding is needed
+      if (shouldShowOnboarding(profile)) {
+        // If we have a pending onboarding flag (new account), show immediately
+        // Otherwise, we'll show it when they try to generate
+        if (pendingOnboarding) {
+          setShowOnboarding(true);
+          setPendingOnboarding(false);
+        }
+      }
+    }
+  }, [loading, user, profile, path, pendingOnboarding]);
+
+  const handleAccountCreated = useCallback(() => {
+    setPendingOnboarding(true);
+  }, []);
+
+  const handleOnboardingComplete = useCallback((defaults: PortraitDefaults) => {
+    setOnboardingDefaults(defaults);
+    setShowOnboarding(false);
+    void refreshProfile(); // Refresh to get the saved defaults
+  }, [refreshProfile]);
+
+  const handleOnboardingSkip = useCallback(() => {
+    setShowOnboarding(false);
+  }, []);
+
   // Static pages — no auth required
   if (path === '/contact') return <ContactPage />;
   if (path === '/privacy') return <PrivacyPage />;
@@ -78,6 +114,7 @@ function AppContent() {
           open={showAuth}
           onClose={() => setShowAuth(false)}
           onSuccess={() => { window.location.href = '/app'; }}
+          onAccountCreated={handleAccountCreated}
         />
       </>
     );
@@ -103,6 +140,7 @@ function AppContent() {
               setShowAuth(false);
               window.location.href = '/admin';
             }}
+            onAccountCreated={handleAccountCreated}
           />
         </>
       );
@@ -159,6 +197,7 @@ function AppContent() {
             setShowAuth(false);
             window.location.href = '/app';
           }}
+          onAccountCreated={handleAccountCreated}
         />
       </>
     );
@@ -194,12 +233,22 @@ function AppContent() {
           <ThemeToggle theme={theme} onChange={handleThemeChange} />
         </div>
         <div className="relative z-10 py-12">
-          <PortraitGenerator />
+          <PortraitGenerator onboardingDefaults={onboardingDefaults ?? undefined} />
         </div>
         <AppFooter />
       </div>
 
-      <UserProfileModal open={showProfile} onClose={() => setShowProfile(false)} />
+      <UserProfileModal 
+        open={showProfile} 
+        onClose={() => setShowProfile(false)} 
+        onRetakeOnboarding={() => setShowOnboarding(true)}
+      />
+
+      <OnboardingModal
+        open={showOnboarding}
+        onComplete={handleOnboardingComplete}
+        onSkip={handleOnboardingSkip}
+      />
     </>
   );
 }

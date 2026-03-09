@@ -2,6 +2,8 @@ import { FieldValue } from 'firebase-admin/firestore';
 import { adminFirestore } from './firebase.js';
 
 export type Tier = 'free' | 'creator' | 'pro' | 'max';
+export type IcpSegment = 'career' | 'executive' | 'creative_tech' | 'service' | 'artist';
+export type VibePreference = 'polished' | 'warm' | 'bold' | 'creative';
 
 export interface UserDoc {
   email: string;
@@ -17,6 +19,7 @@ export interface UserDoc {
   lastResetMonth?: string; // YYYY-MM
   // Save limits
   saveCount?: number;
+  // Default preferences for portrait generation
   defaultStyle?: string;
   defaultExpression?: string;
   defaultIdentityLocks?: {
@@ -28,6 +31,15 @@ export interface UserDoc {
   };
   defaultLikeness?: number;
   defaultNaturalness?: number;
+  // Onboarding data
+  onboardingCompletedAt?: FirebaseFirestore.Timestamp;
+  icpSegment?: IcpSegment;
+  industry?: string;
+  vibePreference?: VibePreference;
+  primaryUseCases?: string[];
+  defaultBackgroundCategory?: 'quick' | 'brand' | 'creative';
+  preferredBackgrounds?: string[];
+  // Timestamps
   createdAt?: FirebaseFirestore.Timestamp;
   updatedAt?: FirebaseFirestore.Timestamp;
 }
@@ -269,4 +281,142 @@ export async function getUserByStripeCustomerId(customerId: string): Promise<{ u
   if (snap.empty) return null;
   const docSnap = snap.docs[0];
   return { uid: docSnap.id, doc: docSnap.data() as UserDoc };
+}
+
+// ── Onboarding ────────────────────────────────────────────────────────────────
+
+export interface OnboardingData {
+  icpSegment: IcpSegment;
+  industry: string;
+  vibePreference: VibePreference;
+  primaryUseCases: string[];
+}
+
+export interface PortraitDefaults {
+  style: string;
+  expression: string;
+  identityLocks: {
+    eyeColor: boolean;
+    skinTone: boolean;
+    hairLength: boolean;
+    hairTexture: boolean;
+    glasses: boolean;
+  };
+  likeness: number;
+  naturalness: number;
+  naturalnessPreset: 'natural' | 'polished' | 'studio';
+  backgroundCategory: 'quick' | 'brand' | 'creative';
+  preferredBackgrounds: string[];
+  removeBlemishes: boolean;
+}
+
+/** Generate portrait defaults based on onboarding answers */
+export function generateDefaultsFromOnboarding(data: OnboardingData): PortraitDefaults {
+  const { icpSegment, vibePreference, industry } = data;
+  
+  // Default style based on ICP + vibe
+  let style: string;
+  if (icpSegment === 'career') {
+    style = 'editorial';
+  } else if (icpSegment === 'executive') {
+    style = vibePreference === 'bold' ? 'environmental' : 'editorial';
+  } else if (icpSegment === 'creative_tech') {
+    if (vibePreference === 'creative') style = 'watercolor';
+    else if (vibePreference === 'bold') style = 'cyberpunk';
+    else style = 'candid';
+  } else if (icpSegment === 'service') {
+    style = vibePreference === 'warm' ? 'environmental' : 'editorial';
+  } else { // artist
+    if (vibePreference === 'creative') style = 'watercolor';
+    else if (vibePreference === 'bold') style = 'cyberpunk';
+    else style = 'vintage';
+  }
+  
+  // Expression based on ICP
+  const expression = (icpSegment === 'career' || icpSegment === 'executive') 
+    ? 'confident' 
+    : (icpSegment === 'creative_tech' || icpSegment === 'service')
+    ? 'warm_smile'
+    : 'natural';
+  
+  // Identity locks based on industry
+  const identityLocks = {
+    eyeColor: true,
+    skinTone: true,
+    hairLength: true,
+    hairTexture: industry === 'healthcare_medical' || industry === 'legal', // More professional standards
+    glasses: industry === 'legal' || industry === 'finance_banking',
+  };
+  
+  // Naturalness based on ICP
+  let naturalness: number;
+  let naturalnessPreset: 'natural' | 'polished' | 'studio';
+  if (icpSegment === 'career' || icpSegment === 'executive') {
+    naturalness = 50;
+    naturalnessPreset = 'polished';
+  } else if (icpSegment === 'creative_tech' || icpSegment === 'service') {
+    naturalness = 30;
+    naturalnessPreset = 'polished';
+  } else {
+    naturalness = 15;
+    naturalnessPreset = 'natural';
+  }
+  
+  // Background preferences
+  let backgroundCategory: 'quick' | 'brand' | 'creative';
+  let preferredBackgrounds: string[];
+  
+  if (icpSegment === 'career') {
+    backgroundCategory = 'quick';
+    preferredBackgrounds = ['charcoal_dark', 'warm_gray'];
+  } else if (icpSegment === 'executive') {
+    backgroundCategory = 'brand';
+    preferredBackgrounds = ['charcoal_dark', 'deep_burgundy'];
+  } else if (icpSegment === 'creative_tech') {
+    backgroundCategory = 'creative';
+    preferredBackgrounds = ['blurred_office', 'urban_blur', 'charcoal_dark'];
+  } else if (icpSegment === 'service') {
+    backgroundCategory = 'quick';
+    preferredBackgrounds = ['soft_cream', 'warm_gray'];
+  } else {
+    backgroundCategory = 'creative';
+    preferredBackgrounds = ['natural_outdoors', 'cozy_workspace'];
+  }
+  
+  return {
+    style,
+    expression,
+    identityLocks,
+    likeness: 75, // Slightly higher than default 70
+    naturalness,
+    naturalnessPreset,
+    backgroundCategory,
+    preferredBackgrounds,
+    removeBlemishes: true,
+  };
+}
+
+export async function saveOnboardingData(
+  uid: string,
+  data: OnboardingData,
+): Promise<PortraitDefaults> {
+  const defaults = generateDefaultsFromOnboarding(data);
+  
+  await adminFirestore().collection('users').doc(uid).set(
+    {
+      ...data,
+      onboardingCompletedAt: FieldValue.serverTimestamp(),
+      defaultStyle: defaults.style,
+      defaultExpression: defaults.expression,
+      defaultIdentityLocks: defaults.identityLocks,
+      defaultLikeness: defaults.likeness,
+      defaultNaturalness: defaults.naturalness,
+      defaultBackgroundCategory: defaults.backgroundCategory,
+      preferredBackgrounds: defaults.preferredBackgrounds,
+      updatedAt: FieldValue.serverTimestamp(),
+    },
+    { merge: true },
+  );
+  
+  return defaults;
 }

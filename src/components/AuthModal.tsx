@@ -6,10 +6,11 @@ interface AuthModalProps {
   open: boolean;
   onClose: () => void;
   onSuccess?: () => void;
+  onAccountCreated?: () => void; // Called when a new account is created
   initialTab?: 'signin' | 'create';
 }
 
-export default function AuthModal({ open, onClose, onSuccess, initialTab = 'signin' }: AuthModalProps) {
+export default function AuthModal({ open, onClose, onSuccess, onAccountCreated, initialTab = 'signin' }: AuthModalProps) {
   const { signInWithGoogle, signInWithEmail, createAccount } = useAuthContext();
   const [tab, setTab] = useState<'signin' | 'create'>(initialTab);
   const [email, setEmail] = useState('');
@@ -81,6 +82,7 @@ export default function AuthModal({ open, onClose, onSuccess, initialTab = 'sign
     setLoading(true);
     try {
       await createAccount(email, password, displayName.trim());
+      onAccountCreated?.(); // Trigger onboarding for new accounts
       onSuccess?.();
       onClose();
     } catch (err) {

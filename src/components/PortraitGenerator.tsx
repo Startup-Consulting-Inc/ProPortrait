@@ -20,6 +20,7 @@ import { useAuthContext } from '../contexts/AuthContext';
 import { savePortrait } from '../services/portraits';
 import { capture } from '../services/analytics';
 import { getIdToken } from '../services/auth';
+import type { PortraitDefaults } from '../types/onboarding';
 
 const API_BASE = (import.meta.env.VITE_API_URL as string | undefined) ?? '';
 
@@ -46,7 +47,11 @@ type NaturalnessPreset = 'natural' | 'polished' | 'studio';
 
 const NATURALNESS_MAP: Record<NaturalnessPreset, number> = { natural: 15, polished: 50, studio: 85 };
 
-export default function PortraitGenerator() {
+interface PortraitGeneratorProps {
+  onboardingDefaults?: PortraitDefaults;
+}
+
+export default function PortraitGenerator({ onboardingDefaults }: PortraitGeneratorProps) {
   const { isPro, tier, refreshProfile, profile, isFirebaseUser } = useAuthContext();
   const [step, setStep] = useState<Step>(1);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
@@ -55,7 +60,6 @@ export default function PortraitGenerator() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [selectedStyle, setSelectedStyle] = useState<StyleOption>('editorial');
   const [editMode, setEditMode] = useState<EditMode>(null);
   const [customEditPrompt, setCustomEditPrompt] = useState('');
   const [regionTarget, setRegionTarget] = useState<string | null>(null);
@@ -65,20 +69,31 @@ export default function PortraitGenerator() {
   const [historyStep, setHistoryStep] = useState<Record<number, number>>({});
 
   // Phase 1 — Identity & Realism
-  const [identityLocks, setIdentityLocks] = useState<IdentityLocks>({
-    eyeColor: true,
-    skinTone: true,
-    hairLength: true,
-    hairTexture: false,
-    glasses: false,
-  });
-  const [naturalness, setNaturalness] = useState<number>(50);
-  const [naturalnessPreset, setNaturalnessPreset] = useState<NaturalnessPreset>('polished');
-  const [removeBlemishes, setRemoveBlemishes] = useState<boolean>(true);
+  const [identityLocks, setIdentityLocks] = useState<IdentityLocks>(
+    onboardingDefaults?.identityLocks ?? {
+      eyeColor: true,
+      skinTone: true,
+      hairLength: true,
+      hairTexture: false,
+      glasses: false,
+    }
+  );
+  const [naturalness, setNaturalness] = useState<number>(onboardingDefaults?.naturalness ?? 50);
+  const [naturalnessPreset, setNaturalnessPreset] = useState<NaturalnessPreset>(
+    onboardingDefaults?.naturalnessPreset ?? 'polished'
+  );
+  const [removeBlemishes, setRemoveBlemishes] = useState<boolean>(
+    onboardingDefaults?.removeBlemishes ?? true
+  );
 
   // Phase 2 — Styles & Expression
-  const [expressionPreset, setExpressionPreset] = useState<ExpressionPreset>('warm_smile');
-  const [likenessStrength, setLikenessStrength] = useState<number>(70);
+  const [expressionPreset, setExpressionPreset] = useState<ExpressionPreset>(
+    (onboardingDefaults?.expression as ExpressionPreset) ?? 'warm_smile'
+  );
+  const [likenessStrength, setLikenessStrength] = useState<number>(onboardingDefaults?.likeness ?? 70);
+  const [selectedStyle, setSelectedStyle] = useState<StyleOption>(
+    (onboardingDefaults?.style as StyleOption) ?? 'editorial'
+  );
   const variantCountFlag = useFeatureFlag<number>('variant-count', 2);
   const [numVariations, setNumVariations] = useState<number>(variantCountFlag);
 
@@ -116,6 +131,32 @@ export default function PortraitGenerator() {
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [showEditPanel, setShowEditPanel] = useState(false);
   const [showExportOptions, setShowExportOptions] = useState(false);
+
+  // Apply profile defaults on mount (for returning users with saved preferences)
+  useEffect(() => {
+    if (profile && !onboardingDefaults) {
+      // Apply saved defaults from profile
+      if (profile.defaultStyle) {
+        setSelectedStyle(profile.defaultStyle as StyleOption);
+      }
+      if (profile.defaultExpression) {
+        setExpressionPreset(profile.defaultExpression as ExpressionPreset);
+      }
+      if (profile.defaultIdentityLocks) {
+        setIdentityLocks(profile.defaultIdentityLocks as IdentityLocks);
+      }
+      if (profile.defaultLikeness !== undefined) {
+        setLikenessStrength(profile.defaultLikeness);
+      }
+      if (profile.defaultNaturalness !== undefined) {
+        setNaturalness(profile.defaultNaturalness);
+        // Update preset based on value
+        if (profile.defaultNaturalness <= 20) setNaturalnessPreset('natural');
+        else if (profile.defaultNaturalness >= 80) setNaturalnessPreset('studio');
+        else setNaturalnessPreset('polished');
+      }
+    }
+  }, [profile, onboardingDefaults]);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
