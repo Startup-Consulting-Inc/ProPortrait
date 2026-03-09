@@ -107,6 +107,30 @@ Unauthenticated users hitting `/app` or `/admin` are shown the **AuthModal** (Go
 
 ## Features
 
+### User Onboarding
+
+New users complete a 2-step onboarding flow that personalizes their portrait settings:
+
+1. **Purpose & Industry** — Select primary use (Job Search, Executive, Creative, Services, Arts) and field
+2. **Vibe & Use Cases** — Choose desired aesthetic (Polished, Warm, Bold, Creative) and where photo will be used
+
+Based on answers, the system automatically configures:
+- **Style** — Editorial for corporate, Watercolor for creative, etc.
+- **Expression** — Confident for executives, Warm Smile for services
+- **Identity Locks** — Industry-appropriate defaults (e.g., glasses ON for legal)
+- **Skin Smoothing** — Natural for artists, Polished for corporate
+- **Background Preferences** — Premium darks for executives, warm neutrals for services
+
+Users can retake the onboarding quiz anytime from Profile settings.
+
+### Session Timeout
+
+For security, users are automatically logged out after **15 minutes of inactivity**:
+- Tracks mouse, keyboard, scroll, and touch events
+- Warning modal appears at 14 minutes with 60-second countdown
+- Works correctly when tab is in background (checks elapsed time on return)
+- Disabled during portrait generation to avoid interrupting long processes
+
 ### Quick / Advanced Mode
 
 A persistent mode toggle at the top of the wizard keeps the default experience simple:
@@ -143,9 +167,9 @@ A persistent mode toggle at the top of the wizard keeps the default experience s
 **Advanced controls:**
 
 - **Group photo support** — select which person: Single person, Left, Center, Right, or custom free-text
-- **Expression presets** — Confident Neutral (default), Warm Smile, Authority, Approachable Expert, Natural
+- **Expression presets** — Confident, Warm Smile, Serious, Natural
 - **Identity Locks** — per-feature toggles (eye color, skin tone, hair length ON by default; hair texture, glasses OFF)
-- **Likeness strength** 0–100 (default 70)
+- **Likeness strength** 0–100 (default 75)
 - **Skin smoothness / Naturalness** 0–100 with presets: Natural (15), Polished (50), Studio (85 — paid)
 - **Blemish removal** toggle (ON by default)
 - **Variations** — 2 or 4 images per generation
@@ -166,6 +190,7 @@ A persistent mode toggle at the top of the wizard keeps the default experience s
 - **Undo / Redo** with step counter (Cmd/Ctrl+Z / Cmd/Ctrl+Shift+Z)
 - **Edit history strip** — thumbnail timeline; click any state to jump back
 - **Save to Library** — save portrait to Firestore + R2 (paid tiers)
+- **Feature Tour** — interactive guided tour for first-time users
 
 ### Step 4 — Export
 
@@ -186,6 +211,28 @@ A persistent mode toggle at the top of the wizard keeps the default experience s
 - **Download All Platforms** — ZIP of all five presets (JSZip, dynamic import)
 - **Share** — LinkedIn / Twitter / copy link
 
+### Admin Dashboard
+
+Admin users (`/admin`) have access to user management features:
+
+**User List:**
+- Search users by name, email, or UID
+- Filter by tier (Free/Creator/Pro/Max) and status (Active/Suspended)
+- Stats cards: Total users, Pro users, Suspended, Daily generations, Cost
+
+**User Detail Modal:**
+- **Overview** — Profile info, onboarding answers, usage stats (generations, edits, exports), account timeline
+- **Subscription** — Change tier, suspend/unsuspend user, delete user permanently
+- **Activity** — Recent saved portraits
+
+**Admin API Endpoints:**
+- `GET /api/admin/users` — List all users
+- `GET /api/admin/users/:uid` — Get detailed user info
+- `DELETE /api/admin/users/:uid` — Delete user and all data
+- `POST /api/admin/users/:uid/suspend` — Suspend/unsuspend user
+- `PATCH /api/admin/users/:uid/subscription` — Manage subscription tier
+- `GET /api/admin/stats` — Daily usage statistics
+
 ---
 
 ## Project Structure
@@ -193,54 +240,65 @@ A persistent mode toggle at the top of the wizard keeps the default experience s
 ```
 src/
 ├── components/
-│   ├── PortraitGenerator.tsx   # Main 4-step wizard
-│   ├── AuthModal.tsx           # Sign in / create account (Google + email)
-│   ├── UserMenu.tsx            # Avatar dropdown (Profile, Admin, Sign Out)
-│   ├── UserProfileModal.tsx    # 4-tab: Profile, Preferences, Account, Billing
-│   ├── PricingModal.tsx        # 4-tier pricing modal + Stripe redirect
-│   ├── SavedPortraitsModal.tsx # Library of saved portraits
-│   ├── ComparisonSlider.tsx    # Before/after drag comparison
-│   ├── GenerationProgress.tsx  # 5-phase animated progress bar
-│   ├── EmailCapture.tsx        # Post-generation email capture modal
-│   ├── LandingPage.tsx         # Public landing page (/)
-│   ├── ContactPage.tsx         # Public contact page (/contact)
-│   ├── PrivacyNotice.tsx       # Dismissible privacy banner
-│   └── ErrorBoundary.tsx       # React class error boundary
+│   ├── PortraitGenerator.tsx      # Main 4-step wizard
+│   ├── OnboardingModal.tsx        # User onboarding flow (ICP-based defaults)
+│   ├── AuthModal.tsx              # Sign in / create account (Google + email)
+│   ├── UserMenu.tsx               # Avatar dropdown (Profile, Admin, Sign Out)
+│   ├── UserProfileModal.tsx       # 4-tab: Profile, Preferences, Account, Billing
+│   ├── AdminUserDetailModal.tsx   # Admin user management (view, edit, delete)
+│   ├── PricingModal.tsx           # 4-tier pricing modal + Stripe redirect
+│   ├── SavedPortraitsModal.tsx    # Library of saved portraits
+│   ├── SessionWarningModal.tsx    # Session timeout warning
+│   ├── ComparisonSlider.tsx       # Before/after drag comparison
+│   ├── GenerationProgress.tsx     # 5-phase animated progress bar
+│   ├── FeatureTour.tsx            # Interactive feature tour
+│   ├── EmailCapture.tsx           # Post-generation email capture modal
+│   ├── LandingPage.tsx            # Public landing page (/)
+│   ├── ContactPage.tsx            # Public contact page (/contact)
+│   ├── CookieConsent.tsx          # GDPR cookie consent banner
+│   ├── ThemeToggle.tsx            # Dark/light mode toggle
+│   └── ErrorBoundary.tsx          # React class error boundary
 ├── pages/
-│   └── AdminPage.tsx           # /admin dashboard (user table, stats, pro toggle)
+│   └── AdminPage.tsx              # /admin dashboard (users, stats, management)
 ├── contexts/
-│   └── AuthContext.tsx         # Global auth state via onAuthStateChanged
+│   └── AuthContext.tsx            # Global auth state via onAuthStateChanged
 ├── hooks/
-│   ├── useAuth.ts              # Firebase auth + profile fetch
-│   └── useFeatureFlag.ts       # PostHog feature flag hook
+│   ├── useAuth.ts                 # Firebase auth + profile fetch
+│   ├── useFeatureFlag.ts          # PostHog feature flag hook
+│   └── useInactivityTimeout.ts    # Session timeout tracking
+├── types/
+│   └── onboarding.ts              # Onboarding types and options
 ├── services/
-│   ├── ai.ts                   # API calls → backend proxy (/api/portraits/*)
-│   ├── auth.ts                 # Firebase client SDK (signIn, signOut, getIdToken)
-│   └── user.ts                 # User API with Bearer token (profile, billing portal)
+│   ├── ai.ts                      # API calls → backend proxy (/api/portraits/*)
+│   ├── auth.ts                    # Firebase client SDK (signIn, signOut, getIdToken)
+│   ├── user.ts                    # User API with Bearer token (profile, billing portal)
+│   ├── onboarding.ts              # Onboarding API (save preferences)
+│   ├── portraits.ts               # Saved portraits API
+│   └── analytics.ts               # PostHog analytics tracking
 ├── lib/
-│   ├── platformPresets.ts      # Platform export configs
-│   └── utils.ts                # cn() Tailwind utility
+│   ├── platformPresets.ts         # Platform export configs
+│   └── utils.ts                   # cn() Tailwind utility
 ├── App.tsx
 └── main.tsx
 
 server/
-├── index.ts                    # Express app (port 3001 / 8080 in prod)
+├── index.ts                       # Express app (port 3001 / 8080 in prod)
 ├── routes/
-│   ├── portraits.ts            # POST /api/portraits/generate & /edit
-│   ├── users.ts                # GET|PATCH|DELETE /api/users/me
-│   ├── payments.ts             # Stripe checkout, webhook, billing portal
-│   ├── admin.ts                # GET /api/admin/users, POST /api/admin/users/:uid/pro
-│   ├── auth.ts                 # GET /api/auth/me
-│   ├── contact.ts              # POST /api/contact
-│   └── email.ts                # POST /api/email/capture
+│   ├── portraits.ts               # POST /api/portraits/generate & /edit
+│   ├── users.ts                   # GET|PATCH|DELETE /api/users/me
+│   ├── payments.ts                # Stripe checkout, webhook, billing portal
+│   ├── admin.ts                   # Admin endpoints (users, stats, suspend, delete)
+│   ├── auth.ts                    # GET /api/auth/me
+│   ├── contact.ts                 # POST /api/contact
+│   └── email.ts                   # POST /api/email/capture
 ├── middleware/
-│   └── authMiddleware.ts       # Firebase JWT → Firestore; anonymous cookie fallback
+│   └── authMiddleware.ts          # Firebase JWT → Firestore; anonymous cookie fallback
 ├── lib/
-│   ├── firebase.ts             # Admin SDK singleton (ADC)
-│   ├── firestore.ts            # UserDoc CRUD, tier/pro status, generation limits
-│   ├── session.ts              # In-memory session store + UUID cookie
-│   └── storage.ts              # Cloudflare R2 portrait storage
-└── types.d.ts                  # req.auth type: { mode, uid?, email?, isPro, isAdmin }
+│   ├── firebase.ts                # Admin SDK singleton (ADC)
+│   ├── firestore.ts               # UserDoc CRUD, tier/pro status, generation limits, onboarding
+│   ├── session.ts                 # In-memory session store + UUID cookie
+│   └── storage.ts                 # Cloudflare R2 portrait storage
+└── types.d.ts                     # req.auth type: { mode, uid?, email?, isPro, isAdmin }
 ```
 
 ---
@@ -335,3 +393,11 @@ For local Firebase Admin SDK: run `gcloud auth application-default login` (ADC).
 ## Privacy
 
 Photos are processed by Google Gemini via the backend. Portraits are stored temporarily in Cloudflare R2 as 24-hour signed URLs and are not retained beyond that window. No images are stored permanently. Users see a dismissible privacy notice on the upload screen before any photo is submitted.
+
+User data collected:
+- Email, display name, profile photo (Firebase Auth)
+- Usage statistics (generation count, style preferences)
+- Onboarding preferences (purpose, industry, vibe) — used to personalize portrait settings
+- Saved portraits (paid tiers only, stored in Cloudflare R2 with 24h expiration)
+
+Users can delete their account and all associated data from the Profile → Account settings.
