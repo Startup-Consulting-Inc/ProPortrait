@@ -81,7 +81,7 @@ export default function ContactPage() {
     <div className="min-h-screen bg-white font-sans text-slate-900 flex flex-col">
       <header className="flex items-center justify-between px-6 py-4 max-w-6xl mx-auto w-full">
         <a href="/" className="flex items-center gap-2">
-          <img src="/logo.svg" alt="ProPortrait AI" className="h-7 w-7" />
+          <img src="/logo.png" alt="ProPortrait AI" className="h-7 w-7 rounded-lg" />
           <span className="font-bold text-lg tracking-tight">
             ProPortrait<span className="text-indigo-600"> AI</span>
           </span>

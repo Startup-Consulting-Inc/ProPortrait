@@ -136,7 +136,7 @@ export default function LandingPage({ onSignIn }: LandingPageProps) {
       {/* Navbar */}
       <header className="flex items-center justify-between px-6 py-4 max-w-6xl mx-auto w-full">
         <div className="flex items-center gap-2">
-          <img src="/logo.svg" alt="ProPortrait AI" className="h-7 w-7" />
+          <img src="/logo.png" alt="ProPortrait AI" className="h-7 w-7 rounded-lg" />
           <span className="font-bold text-lg tracking-tight">ProPortrait<span className="text-indigo-600"> AI</span></span>
         </div>
         <nav className="hidden sm:flex items-center gap-6 text-sm text-slate-500">

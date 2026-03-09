@@ -116,7 +116,7 @@ export default function AuthModal({ open, onClose, onSuccess, onAccountCreated, 
         {/* Header */}
         <div className="flex items-center justify-between px-6 pt-6 pb-0">
           <div className="flex items-center gap-2">
-            <img src="/logo.svg" alt="" className="h-6 w-6" />
+            <img src="/logo.png" alt="" className="h-6 w-6 rounded-md" />
             <span className="font-bold text-slate-900">ProPortrait AI</span>
           </div>
           <button onClick={onClose} className="text-slate-400 hover:text-slate-600 transition-colors p-1">

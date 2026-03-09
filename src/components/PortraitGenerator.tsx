@@ -712,7 +712,7 @@ export default function PortraitGenerator({ onboardingDefaults }: PortraitGenera
       {/* Header */}
       <div className="text-center mb-10">
         <div className="flex items-center justify-center gap-3 mb-3">
-          <img src="/logo.svg" alt="ProPortrait AI" className="w-11 h-11 rounded-xl shadow-md" />
+          <img src="/logo.png" alt="ProPortrait AI" className="w-11 h-11 rounded-xl shadow-md" />
           <h1 className="text-4xl font-bold text-slate-900 dark:text-slate-100 tracking-tight">
             ProPortrait <span className="text-indigo-600">AI</span>
           </h1>
