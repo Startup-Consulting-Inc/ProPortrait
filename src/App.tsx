@@ -74,20 +74,29 @@ function AppContent() {
   // Check if user needs onboarding after auth loads
   useEffect(() => {
     if (!loading && user && path === '/app') {
-      // Check if onboarding is needed
-      if (shouldShowOnboarding(profile)) {
-        // If we have a pending onboarding flag (new account), show immediately
-        // Otherwise, we'll show it when they try to generate
-        if (pendingOnboarding) {
+      // Check for pending onboarding from session (set before redirect to /app)
+      const pendingFromSession = sessionStorage.getItem('pp_pending_onboarding') === 'true';
+      if (pendingFromSession) {
+        sessionStorage.removeItem('pp_pending_onboarding');
+        // Check if onboarding hasn't been completed yet
+        if (shouldShowOnboarding(profile)) {
           setShowOnboarding(true);
-          setPendingOnboarding(false);
         }
+        return;
+      }
+      
+      // Also check the in-memory flag (for same-page transitions)
+      if (pendingOnboarding && shouldShowOnboarding(profile)) {
+        setShowOnboarding(true);
+        setPendingOnboarding(false);
       }
     }
   }, [loading, user, profile, path, pendingOnboarding]);
 
   const handleAccountCreated = useCallback(() => {
     setPendingOnboarding(true);
+    // Persist across redirect to /app
+    sessionStorage.setItem('pp_pending_onboarding', 'true');
   }, []);
 
   const handleOnboardingComplete = useCallback((defaults: PortraitDefaults) => {
