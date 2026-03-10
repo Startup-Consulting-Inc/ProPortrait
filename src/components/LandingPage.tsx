@@ -314,19 +314,22 @@ export default function LandingPage({ onSignIn }: LandingPageProps) {
                 👋
               </div>
               <div className="flex-1">
-                <h3 className="text-lg font-bold text-slate-900 mb-2">Hi, I'm Jay — the founder</h3>
+                <h3 className="text-lg font-bold text-slate-900 mb-2">Hi, I'm Jaehee — the founder</h3>
                 <p className="text-slate-600 text-sm leading-relaxed mb-4">
-                  I built ProPortrait AI because I needed professional headshots for my own LinkedIn and couldn't find an 
-                  AI solution that actually preserved my identity. After 50+ iterations with Gemini, I finally got results 
-                  that looked like me, just professionally photographed.
+                  I'm a builder who turns data and AI into practical tools that actually solve real problems. I teach 
+                  and mentor developers and non-developers alike on building useful AI applications — not just impressive demos.
                 </p>
                 <p className="text-slate-600 text-sm leading-relaxed mb-4">
-                  This beta launch is about getting ProPortrait into your hands. Every piece of feedback helps me make 
-                  it better for everyone. In return, I'm giving early adopters the full Creator experience free, plus 
-                  50% off if you help me improve the product.
+                  I built ProPortrait AI out of personal frustration: I needed professional headshots for my portfolio 
+                  and couldn't find an AI solution that truly preserved my identity. So I built one myself.
+                </p>
+                <p className="text-slate-600 text-sm leading-relaxed mb-4">
+                  This beta launch is about getting ProPortrait into your hands. Your feedback directly shapes what 
+                  this becomes. As a thank-you to early adopters, I'm offering the full Creator experience free during 
+                  beta — plus 50% off when you help me improve the product.
                 </p>
                 <p className="text-slate-500 text-sm italic">
-                  — Jay, founder @ ProPortrait AI
+                  — Jaehee, founder @ ProPortrait AI
                 </p>
               </div>
             </div>
