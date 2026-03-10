@@ -27,6 +27,10 @@ if (sentryDsn) Sentry.init({ dsn: sentryDsn, tracesSampleRate: 0.1 });
 
 const app = express();
 const PORT = process.env.PORT ? parseInt(process.env.PORT) : 3001;
+
+// Trust proxy headers when running behind Cloud Run load balancer
+// Required for express-rate-limit to correctly identify users
+app.set('trust proxy', 1);
 const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-3.1-flash-image-preview';
 
 // Compress image to JPEG ≤6MB base64 before sending to Gemini for editing
