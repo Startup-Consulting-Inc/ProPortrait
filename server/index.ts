@@ -415,27 +415,35 @@ app.post('/api/portraits/generate', async (req, res) => {
       "CRITICAL: Keep everything else EXACTLY the same — do not change the face shape, identity, expression, clothing, background, lighting, composition, or skin tone. " +
       "Only modify the skin surface quality.";
 
-    const response = await ai.models.generateContent({
-      model: GEMINI_MODEL,
-      contents: {
-        parts: [
-          { text: retouchPrompt },
-          { inlineData: { data: base64Data, mimeType: 'image/png' } },
-        ],
-      },
-      config: {
-        imageConfig: { aspectRatio: '3:4', imageSize },
-      },
-    });
+    try {
+      const response = await ai.models.generateContent({
+        model: GEMINI_MODEL,
+        contents: {
+          parts: [
+            { text: retouchPrompt },
+            { inlineData: { data: base64Data, mimeType: 'image/png' } },
+          ],
+        },
+        config: {
+          imageConfig: { aspectRatio: '3:4', imageSize },
+        },
+      });
 
-    for (const candidate of response.candidates || []) {
-      for (const part of candidate.content?.parts ?? []) {
-        if (part.inlineData?.data) {
-          return part.inlineData.data;
+      for (const candidate of response.candidates || []) {
+        for (const part of candidate.content?.parts ?? []) {
+          if (part.inlineData?.data) {
+            return part.inlineData.data;
+          }
         }
       }
+      // If no image returned, fall back to original
+      console.warn('[server] Retouch pass returned no image, using original');
+      return base64Data;
+    } catch (err) {
+      // If retouch fails, return original image instead of failing entire request
+      console.warn('[server] Retouch pass failed, using original:', err);
+      return base64Data;
     }
-    throw new Error("No image generated in retouch pass.");
   };
 
   try {
