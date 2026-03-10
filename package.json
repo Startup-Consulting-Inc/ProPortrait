@@ -33,7 +33,7 @@
     "firebase-admin": "^13.7.0",
     "jszip": "^3.10.1",
     "lucide-react": "^0.546.0",
-    "motion": "^12.23.24",
+    "motion": "^12.35.2",
     "posthog-js": "^1.357.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
