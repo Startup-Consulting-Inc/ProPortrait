@@ -288,7 +288,9 @@ app.get('/api/portraits/saved', requireFirebaseAuth, async (req, res) => {
         imageUrl: p.r2Key ? await getSignedUrlForKey(p.r2Key) : '',
       })),
     );
-    res.json({ portraits: withUrls });
+    // Filter out portraits with missing images (corrupted/missing R2 data)
+    const validPortraits = withUrls.filter((p) => p.imageUrl !== '');
+    res.json({ portraits: validPortraits });
   } catch (err) {
     console.error('[portraits/saved]', err);
     res.status(500).json({ error: 'Failed to fetch saved portraits.' });
