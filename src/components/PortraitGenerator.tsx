@@ -16,6 +16,8 @@ import GenerationProgress from './GenerationProgress';
 import PricingModal from './PricingModal';
 import EmailCapture from './EmailCapture';
 import SavedPortraitsModal from './SavedPortraitsModal';
+import ExportSuccessToast from './ExportSuccessToast';
+import BetaFeedbackModal from './BetaFeedbackModal';
 import { useAuthContext } from '../contexts/AuthContext';
 import { savePortrait } from '../services/portraits';
 import { capture } from '../services/analytics';
@@ -123,6 +125,12 @@ export default function PortraitGenerator({ onboardingDefaults }: PortraitGenera
   const [showEmailCapture, setShowEmailCapture] = useState(false);
   const [showLibrary, setShowLibrary] = useState(false);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+
+  // Post-export UX
+  const [showExportToast, setShowExportToast] = useState(false);
+  const [lastExportedFile, setLastExportedFile] = useState('');
+  const [showBetaFeedback, setShowBetaFeedback] = useState(false);
+  const [hasSubmittedFeedback, setHasSubmittedFeedback] = useState(profile?.betaFeedback ? true : false);
 
   // Phase 5 — Presets
   const [presetCopied, setPresetCopied] = useState(false);
@@ -448,14 +456,26 @@ export default function PortraitGenerator({ onboardingDefaults }: PortraitGenera
     img.crossOrigin = 'anonymous';
     img.onload = () => {
       const dataUrl = renderToCanvas(img, width, height);
+      const fileName = `portrait-${selectedStyle}.${exportFormat}`;
       const a = document.createElement('a');
       a.href = dataUrl;
-      a.download = `portrait-${selectedStyle}.${exportFormat}`;
+      a.download = fileName;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
       capture('portrait_downloaded', { platform: 'custom', isPro });
       void trackExportClient('custom');
+      
+      // Show success toast
+      setLastExportedFile(fileName);
+      setShowExportToast(true);
+      
+      // Check if we should show beta feedback (after 3rd export, if beta user and hasn't submitted)
+      const exportCount = (profile?.exportCount ?? 0) + 1;
+      if (exportCount >= 3 && profile?.joinedDuringBeta && !hasSubmittedFeedback && !showBetaFeedback) {
+        // Small delay to let the toast appear first
+        setTimeout(() => setShowBetaFeedback(true), 1500);
+      }
     };
   };
 
@@ -479,6 +499,16 @@ export default function PortraitGenerator({ onboardingDefaults }: PortraitGenera
       setDownloadingPlatform(null);
       capture('platform_downloaded', { platform: presetId, isPro });
       void trackExportClient(presetId);
+      
+      // Show success toast
+      setLastExportedFile(preset.filename);
+      setShowExportToast(true);
+      
+      // Check if we should show beta feedback (after 3rd export, if beta user and hasn't submitted)
+      const exportCount = (profile?.exportCount ?? 0) + 1;
+      if (exportCount >= 3 && profile?.joinedDuringBeta && !hasSubmittedFeedback && !showBetaFeedback) {
+        setTimeout(() => setShowBetaFeedback(true), 1500);
+      }
     };
   };
 
@@ -506,6 +536,16 @@ export default function PortraitGenerator({ onboardingDefaults }: PortraitGenera
     URL.revokeObjectURL(url);
     setDownloadingPlatform(null);
     void trackExportClient('all');
+    
+    // Show success toast
+    setLastExportedFile('proportrait-all-platforms.zip');
+    setShowExportToast(true);
+    
+    // Check if we should show beta feedback (after 3rd export, if beta user and hasn't submitted)
+    const exportCount = (profile?.exportCount ?? 0) + 1;
+    if (exportCount >= 3 && profile?.joinedDuringBeta && !hasSubmittedFeedback && !showBetaFeedback) {
+      setTimeout(() => setShowBetaFeedback(true), 1500);
+    }
   };
 
   const handleCopyPreset = () => {
@@ -1710,6 +1750,29 @@ export default function PortraitGenerator({ onboardingDefaults }: PortraitGenera
           setShowTour(false);
           localStorage.setItem('pp_tour_done', '1');
           capture('feature_tour_completed');
+        }}
+      />
+      
+      {/* Post-Export UX */}
+      <ExportSuccessToast
+        show={showExportToast}
+        onClose={() => setShowExportToast(false)}
+        onSave={handleSavePortrait}
+        isSaved={saveStatus === 'saved'}
+        canSave={isFirebaseUser && tier !== 'free'}
+        fileName={lastExportedFile}
+      />
+      
+      <BetaFeedbackModal
+        show={showBetaFeedback}
+        onClose={() => setShowBetaFeedback(false)}
+        generationCount={profile?.generationCount ?? 0}
+        onSubmitted={(eligible) => {
+          setHasSubmittedFeedback(true);
+          if (eligible) {
+            // Refresh profile to get updated discount status
+            void refreshProfile();
+          }
         }}
       />
     </div>

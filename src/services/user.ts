@@ -10,6 +10,16 @@ async function authHeaders(): Promise<Record<string, string>> {
 
 export type Tier = 'free' | 'creator' | 'pro' | 'max';
 
+export interface BetaFeedback {
+  submittedAt: string;
+  rating: number;
+  feedback: string;
+  npsScore?: number;
+  featureRequests?: string;
+  eligibleForDiscount: boolean;
+  discountApplied: boolean;
+}
+
 export interface UserProfile {
   email: string;
   displayName: string;
@@ -20,6 +30,7 @@ export interface UserProfile {
   saveCount?: number;
   generationCount?: number;
   generationsThisMonth?: number;
+  exportCount?: number;
   stripeCustomerId?: string;
   defaultStyle?: string;
   defaultExpression?: string;
@@ -38,6 +49,11 @@ export interface UserProfile {
   industry?: string;
   vibePreference?: string;
   primaryUseCases?: string[];
+  // Beta program
+  joinedDuringBeta?: boolean;
+  betaJoinedAt?: string;
+  betaFeedback?: BetaFeedback;
+  betaFeedbackCount?: number;
 }
 
 export async function notifyFirstLogin(displayName?: string, photoURL?: string): Promise<void> {
