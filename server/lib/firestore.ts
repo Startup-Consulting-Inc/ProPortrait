@@ -5,6 +5,16 @@ export type Tier = 'free' | 'creator' | 'pro' | 'max';
 export type IcpSegment = 'career' | 'executive' | 'creative_tech' | 'service' | 'artist';
 export type VibePreference = 'polished' | 'warm' | 'bold' | 'creative';
 
+export interface BetaFeedback {
+  submittedAt: FirebaseFirestore.Timestamp;
+  rating: number; // 1-5
+  feedback: string;
+  npsScore?: number; // 0-10
+  featureRequests?: string;
+  eligibleForDiscount: boolean;
+  discountApplied: boolean;
+}
+
 export interface UserDoc {
   email: string;
   displayName: string;
@@ -39,6 +49,11 @@ export interface UserDoc {
   primaryUseCases?: string[];
   defaultBackgroundCategory?: 'quick' | 'brand' | 'creative';
   preferredBackgrounds?: string[];
+  // Beta program
+  joinedDuringBeta?: boolean;
+  betaJoinedAt?: FirebaseFirestore.Timestamp;
+  betaFeedback?: BetaFeedback;
+  betaFeedbackCount?: number;
   // Account management
   isSuspended?: boolean;
   suspensionReason?: string;
@@ -425,4 +440,85 @@ export async function saveOnboardingData(
   );
   
   return defaults;
+}
+
+// ── Beta Program ──────────────────────────────────────────────────────────────
+
+export interface FeedbackSubmission {
+  rating: number;
+  feedback: string;
+  npsScore?: number;
+  featureRequests?: string;
+}
+
+/**
+ * Submit beta feedback and check discount eligibility.
+ * Eligible if: joinedDuringBeta AND generationCount >= 3
+ */
+export async function submitBetaFeedback(
+  uid: string,
+  data: FeedbackSubmission,
+): Promise<{ eligibleForDiscount: boolean; message: string }> {
+  const doc = await getUserDoc(uid);
+  if (!doc) {
+    throw new Error('User not found');
+  }
+
+  // Check eligibility: must have joined during beta AND generated 3+ portraits
+  const generationCount = doc.generationCount ?? 0;
+  const isBetaUser = doc.joinedDuringBeta === true;
+  const eligibleForDiscount = isBetaUser && generationCount >= 3;
+
+  const feedback: BetaFeedback = {
+    submittedAt: FieldValue.serverTimestamp() as FirebaseFirestore.Timestamp,
+    rating: data.rating,
+    feedback: data.feedback,
+    npsScore: data.npsScore,
+    featureRequests: data.featureRequests,
+    eligibleForDiscount,
+    discountApplied: false,
+  };
+
+  await adminFirestore().collection('users').doc(uid).set(
+    {
+      betaFeedback: feedback,
+      betaFeedbackCount: FieldValue.increment(1),
+      updatedAt: FieldValue.serverTimestamp(),
+    },
+    { merge: true },
+  );
+
+  const message = eligibleForDiscount
+    ? 'Thank you! You are eligible for 50% off Pro or Max for 1 year. The discount will be applied at checkout.'
+    : 'Thank you for your feedback!';
+
+  return { eligibleForDiscount, message };
+}
+
+/**
+ * Check if user is eligible for beta discount
+ */
+export async function isEligibleForBetaDiscount(uid: string): Promise<boolean> {
+  const doc = await getUserDoc(uid);
+  if (!doc) return false;
+  
+  // Must be beta user with feedback submitted and not already used discount
+  if (!doc.joinedDuringBeta) return false;
+  if (!doc.betaFeedback?.eligibleForDiscount) return false;
+  if (doc.betaFeedback?.discountApplied) return false;
+  
+  return true;
+}
+
+/**
+ * Mark beta discount as applied (call after successful checkout)
+ */
+export async function markBetaDiscountApplied(uid: string): Promise<void> {
+  await adminFirestore().collection('users').doc(uid).set(
+    {
+      'betaFeedback.discountApplied': true,
+      updatedAt: FieldValue.serverTimestamp(),
+    },
+    { merge: true },
+  );
 }

@@ -1,7 +1,7 @@
 import { Router, Request, Response } from 'express';
 import Stripe from 'stripe';
 import { getOrCreateSession, setProStatus, SESSION_COOKIE, COOKIE_OPTIONS } from '../lib/session.js';
-import { firestoreSetProStatus, firestoreSetTier, getUserByStripeCustomerId, getUserDoc } from '../lib/firestore.js';
+import { firestoreSetProStatus, firestoreSetTier, getUserByStripeCustomerId, getUserDoc, isEligibleForBetaDiscount, markBetaDiscountApplied } from '../lib/firestore.js';
 import type { Tier } from '../lib/firestore.js';
 import { requireFirebaseAuth } from '../middleware/authMiddleware.js';
 
@@ -66,10 +66,22 @@ router.post('/checkout', async (req: Request, res: Response) => {
     return;
   }
 
+  // Check for beta discount eligibility (Pro/Max only)
+  let discounts: Stripe.Checkout.SessionCreateParams['discounts'] | undefined;
+  if ((plan === 'pro' || plan === 'max') && firebaseUid) {
+    const eligibleForBetaDiscount = await isEligibleForBetaDiscount(firebaseUid);
+    if (eligibleForBetaDiscount) {
+      // Apply BETA50 coupon (50% off for 1 year)
+      discounts = [{ coupon: 'BETA50' }];
+      metadata.betaDiscount = 'applied';
+    }
+  }
+
   try {
     const checkout = await stripe.checkout.sessions.create({
       mode,
       line_items: [{ price: priceId, quantity: 1 }],
+      ...(discounts ? { discounts } : {}),
       ...checkoutBase,
     });
     res.json({ url: checkout.url });
@@ -115,6 +127,12 @@ router.post('/webhook', async (req: Request, res: Response) => {
       // Firebase user → persist tier to Firestore
       await firestoreSetTier(uid, plan, customerId);
       console.log(`[payments] Tier '${plan}' activated in Firestore for uid ${uid}`);
+      
+      // Mark beta discount as applied if it was used
+      if (session.metadata?.betaDiscount === 'applied') {
+        await markBetaDiscountApplied(uid);
+        console.log(`[payments] Beta discount marked as applied for uid ${uid}`);
+      }
     } else if (sid) {
       // Anonymous session → mark as pro in memory (no tier granularity)
       setProStatus(sid, true, customerId);

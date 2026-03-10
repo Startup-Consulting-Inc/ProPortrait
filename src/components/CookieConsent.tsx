@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { optIn, optOut } from '../services/analytics';
 
 const STORAGE_KEY = 'pp_cookie_consent';

@@ -1,10 +1,13 @@
 import { Router, Request, Response } from 'express';
 import { FieldValue } from 'firebase-admin/firestore';
 import { adminAuth, adminFirestore } from '../lib/firebase.js';
-import { getUserDoc, upsertUserDoc, trackLogin, saveOnboardingData, type OnboardingData } from '../lib/firestore.js';
+import { getUserDoc, upsertUserDoc, trackLogin, saveOnboardingData, submitBetaFeedback, type OnboardingData, type FeedbackSubmission } from '../lib/firestore.js';
 import { requireFirebaseAuth } from '../middleware/authMiddleware.js';
 
 const router = Router();
+
+// Beta configuration — can be controlled via env or changed manually
+const BETA_ACTIVE = process.env.BETA_ACTIVE !== 'false'; // default true
 
 // POST /api/users/me/first-login — seed Firestore doc on first Firebase sign-in
 router.post('/me/first-login', requireFirebaseAuth, async (req: Request, res: Response) => {
@@ -19,12 +22,20 @@ router.post('/me/first-login', requireFirebaseAuth, async (req: Request, res: Re
 
   if (!existing) {
     const { displayName, photoURL } = req.body as { displayName?: string; photoURL?: string };
+    
+    // Beta users get Creator tier free
+    const isBetaUser = BETA_ACTIVE;
+    
     await adminFirestore().collection('users').doc(uid).set({
       email,
       displayName: displayName || email.split('@')[0],
       photoURL: photoURL || null,
-      isPro: false,
+      tier: isBetaUser ? 'creator' : 'free',
+      isPro: isBetaUser, // Creator is a paid tier, so isPro = true during beta
       isAdmin,
+      // Beta tracking
+      joinedDuringBeta: isBetaUser,
+      betaJoinedAt: isBetaUser ? FieldValue.serverTimestamp() : null,
       createdAt: FieldValue.serverTimestamp(),
       updatedAt: FieldValue.serverTimestamp(),
     });
@@ -132,6 +143,35 @@ router.post('/me/onboarding', requireFirebaseAuth, async (req: Request, res: Res
   } catch (err) {
     console.error('[users/onboarding]', err);
     res.status(500).json({ error: 'Failed to save onboarding data.' });
+  }
+});
+
+// POST /api/users/me/feedback — submit beta feedback
+router.post('/me/feedback', requireFirebaseAuth, async (req: Request, res: Response) => {
+  const uid = req.auth.uid!;
+  const { rating, feedback, npsScore, featureRequests } = req.body as Partial<FeedbackSubmission>;
+
+  // Validate required fields
+  if (!rating || typeof rating !== 'number' || rating < 1 || rating > 5) {
+    res.status(400).json({ error: 'Rating is required and must be a number between 1 and 5' });
+    return;
+  }
+  if (!feedback || typeof feedback !== 'string' || feedback.trim().length < 10) {
+    res.status(400).json({ error: 'Feedback is required and must be at least 10 characters' });
+    return;
+  }
+
+  try {
+    const result = await submitBetaFeedback(uid, {
+      rating,
+      feedback: feedback.trim(),
+      npsScore: typeof npsScore === 'number' && npsScore >= 0 && npsScore <= 10 ? npsScore : undefined,
+      featureRequests: typeof featureRequests === 'string' ? featureRequests.trim().slice(0, 500) : undefined,
+    });
+    res.json({ ok: true, ...result });
+  } catch (err) {
+    console.error('[users/feedback]', err);
+    res.status(500).json({ error: 'Failed to submit feedback.' });
   }
 });
 

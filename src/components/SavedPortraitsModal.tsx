@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { X, Loader2, Trash2, FolderOpen, Image as ImageIcon } from 'lucide-react';
 import { getSavedPortraits, deleteSavedPortrait } from '../services/portraits';
 import type { SavedPortrait } from '../services/portraits';

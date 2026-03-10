@@ -5,7 +5,6 @@ import App from './App.tsx';
 import ErrorBoundary from './components/ErrorBoundary.tsx';
 import { initAnalytics } from './services/analytics.ts';
 import './index.css';
-import './styles/tokens.css';
 
 const sentryDsn = import.meta.env.VITE_SENTRY_DSN as string | undefined;
 if (sentryDsn) {

@@ -170,9 +170,9 @@ export default function LandingPage({ onSignIn }: LandingPageProps) {
         <section className="py-10 grid lg:grid-cols-2 gap-12 lg:gap-16 items-center w-full">
           {/* Left — copy */}
           <div className="flex flex-col items-start gap-6 order-2 lg:order-1">
-            <div className="inline-flex items-center gap-2 bg-indigo-50 text-indigo-700 text-sm font-semibold px-3 py-1.5 rounded-full border border-indigo-100">
-              <span className="w-2 h-2 bg-indigo-500 rounded-full animate-pulse" />
-              AI-Powered · Ready in 30 seconds
+            <div className="inline-flex items-center gap-2 bg-amber-50 text-amber-700 text-sm font-semibold px-3 py-1.5 rounded-full border border-amber-200">
+              <span className="text-base">🎁</span>
+              Free Beta: Get Creator Access ($24.99 value)
             </div>
 
             <h1 className="text-4xl sm:text-5xl lg:text-5xl font-extrabold leading-tight tracking-tight">
@@ -180,6 +180,19 @@ export default function LandingPage({ onSignIn }: LandingPageProps) {
               professional photo,<br />
               <span className="text-indigo-600">without the photoshoot.</span>
             </h1>
+
+            <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 w-full">
+              <div className="flex items-start gap-3">
+                <span className="text-2xl">🧪</span>
+                <div>
+                  <p className="font-semibold text-amber-900">Limited Beta Access</p>
+                  <p className="text-sm text-amber-800">
+                    Sign up during beta and get <strong>Creator tier free</strong> — 30 professional portraits, 
+                    all styles, 2K resolution. Share feedback, unlock <strong>50% off Pro or Max for a year</strong>.
+                  </p>
+                </div>
+              </div>
+            </div>
 
             <p className="text-lg text-slate-500 leading-relaxed max-w-md">
               Upload any photo. ProPortrait AI generates studio-quality headshots
@@ -194,15 +207,20 @@ export default function LandingPage({ onSignIn }: LandingPageProps) {
               <svg className="w-5 h-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                 <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-8.707l-3-3a1 1 0 00-1.414 1.414L10.586 9H7a1 1 0 100 2h3.586l-1.293 1.293a1 1 0 101.414 1.414l3-3a1 1 0 000-1.414z" clipRule="evenodd" />
               </svg>
-              Generate My Portrait
-              <span className="text-indigo-300 font-normal text-base group-hover:translate-x-0.5 transition-transform">— It's free</span>
+              Get Free Beta Access
+              <span className="text-indigo-300 font-normal text-base group-hover:translate-x-0.5 transition-transform">— 30 portraits</span>
             </button>
 
-            <div className="flex flex-wrap items-center gap-5 pt-2 text-sm text-slate-400">
-              {['No credit card', 'Photos never stored', '7 professional styles'].map((t) => (
-                <span key={t} className="flex items-center gap-1.5">
-                  <svg className="w-4 h-4 text-emerald-500" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" /></svg>
-                  {t}
+            <div className="flex flex-wrap items-center gap-5 pt-2 text-sm text-slate-500">
+              {[
+                { icon: '✓', text: 'No credit card required' },
+                { icon: '✓', text: 'Photos deleted after 24h' },
+                { icon: '✓', text: '30 free portraits' },
+                { icon: '✓', text: 'All 7 styles included' },
+              ].map((t) => (
+                <span key={t.text} className="flex items-center gap-1.5">
+                  <span className="text-emerald-500 font-bold">{t.icon}</span>
+                  {t.text}
                 </span>
               ))}
             </div>
@@ -217,8 +235,46 @@ export default function LandingPage({ onSignIn }: LandingPageProps) {
           </div>
         </section>
 
+        {/* How it works */}
+        <section className="py-12 w-full">
+          <div className="text-center mb-10">
+            <h2 className="text-2xl font-bold text-slate-900">How it works</h2>
+            <p className="mt-2 text-slate-500">From casual photo to professional portrait in 30 seconds</p>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+            {[
+              {
+                step: '1',
+                title: 'Upload any photo',
+                desc: 'Casual selfie, group photo, or existing picture. We handle the rest.',
+              },
+              {
+                step: '2',
+                title: 'AI generates options',
+                desc: 'Choose from 7 professional styles. Identity preserved, quality enhanced.',
+              },
+              {
+                step: '3',
+                title: 'Download & use',
+                desc: 'Platform-ready exports for LinkedIn, resumes, social media, and more.',
+              },
+            ].map((f) => (
+              <div key={f.title} className="flex flex-col items-center text-center p-6">
+                <div className="w-12 h-12 bg-indigo-600 text-white rounded-full flex items-center justify-center text-xl font-bold mb-4">
+                  {f.step}
+                </div>
+                <div className="font-semibold text-slate-800 mb-2">{f.title}</div>
+                <div className="text-sm text-slate-500">{f.desc}</div>
+              </div>
+            ))}
+          </div>
+        </section>
+
         {/* Feature strip */}
         <section id="features" className="py-10 w-full">
+          <div className="text-center mb-10">
+            <h2 className="text-2xl font-bold text-slate-900">Why ProPortrait AI?</h2>
+          </div>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
             {[
               {
@@ -250,11 +306,61 @@ export default function LandingPage({ onSignIn }: LandingPageProps) {
           </div>
         </section>
 
+        {/* Founder Section */}
+        <section className="py-12 w-full">
+          <div className="bg-gradient-to-r from-slate-50 to-slate-100 rounded-2xl p-8 sm:p-10 border border-slate-200">
+            <div className="flex flex-col sm:flex-row gap-6 items-start">
+              <div className="w-16 h-16 rounded-full bg-indigo-100 flex items-center justify-center text-2xl shrink-0">
+                👋
+              </div>
+              <div className="flex-1">
+                <h3 className="text-lg font-bold text-slate-900 mb-2">Hi, I'm Jay — the founder</h3>
+                <p className="text-slate-600 text-sm leading-relaxed mb-4">
+                  I built ProPortrait AI because I needed professional headshots for my own LinkedIn and couldn't find an 
+                  AI solution that actually preserved my identity. After 50+ iterations with Gemini, I finally got results 
+                  that looked like me, just professionally photographed.
+                </p>
+                <p className="text-slate-600 text-sm leading-relaxed mb-4">
+                  This beta launch is about getting ProPortrait into your hands. Every piece of feedback helps me make 
+                  it better for everyone. In return, I'm giving early adopters the full Creator experience free, plus 
+                  50% off if you help me improve the product.
+                </p>
+                <p className="text-slate-500 text-sm italic">
+                  — Jay, founder @ ProPortrait AI
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Beta Reward Banner */}
+        <section className="py-8 w-full">
+          <div className="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-2xl p-6 sm:p-8">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+              <div className="text-4xl">🎁</div>
+              <div className="flex-1">
+                <h3 className="text-lg font-bold text-amber-900">Beta Special Offer</h3>
+                <p className="text-amber-800 mt-1">
+                  Sign up during beta and get <strong>Creator tier free</strong> ($24.99 value) — 
+                  30 portraits, all styles, 2K resolution. 
+                  Share feedback to unlock <strong>50% off Pro or Max for 1 year</strong>.
+                </p>
+              </div>
+              <button
+                onClick={goToApp}
+                className="shrink-0 bg-amber-500 hover:bg-amber-600 text-white font-bold px-6 py-3 rounded-xl transition-colors"
+              >
+                Claim Free Access
+              </button>
+            </div>
+          </div>
+        </section>
+
         {/* Pricing */}
         <section id="pricing" className="py-16 w-full">
           <div className="text-center mb-10">
             <h2 className="text-3xl font-extrabold tracking-tight text-slate-900">Simple, transparent pricing</h2>
-            <p className="mt-3 text-slate-500 text-lg">Start free. Upgrade when you need more.</p>
+            <p className="mt-3 text-slate-500 text-lg">Beta users get Creator free. Active users earn 50% off.</p>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
@@ -286,13 +392,17 @@ export default function LandingPage({ onSignIn }: LandingPageProps) {
               </button>
             </div>
 
-            {/* Creator */}
-            <div className="flex flex-col p-6 rounded-2xl border border-slate-200 bg-white">
-              <div className="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-1">Creator</div>
-              <div className="flex items-baseline gap-1 mb-1">
-                <span className="text-4xl font-extrabold text-slate-900">$24.99</span>
+            {/* Creator — Free during beta */}
+            <div className="flex flex-col p-6 rounded-2xl border-2 border-amber-400 bg-amber-50 relative">
+              <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-amber-500 text-white text-xs font-bold px-3 py-1 rounded-full">
+                🧪 Free During Beta
               </div>
-              <div className="text-xs text-slate-400 mb-5">One-time purchase</div>
+              <div className="text-sm font-semibold text-amber-600 uppercase tracking-wide mb-1">Creator</div>
+              <div className="flex items-baseline gap-1 mb-1">
+                <span className="text-4xl font-extrabold text-slate-900">$0</span>
+                <span className="text-slate-400 line-through text-lg">$24.99</span>
+              </div>
+              <div className="text-xs text-amber-600 font-semibold mb-5">Limited time only</div>
               <ul className="space-y-2.5 flex-1 mb-6">
                 {[
                   '30 portrait generations',
@@ -302,17 +412,20 @@ export default function LandingPage({ onSignIn }: LandingPageProps) {
                   'PNG + transparent bg',
                   'All platform exports',
                 ].map((f) => (
-                  <li key={f} className="flex items-center gap-2 text-sm text-slate-600">
+                  <li key={f} className="flex items-center gap-2 text-sm text-slate-700">
                     {CHECK_ICON}{f}
                   </li>
                 ))}
               </ul>
               <button
                 onClick={goToApp}
-                className="w-full border border-indigo-200 hover:bg-indigo-50 text-indigo-700 font-semibold py-2.5 rounded-xl text-sm transition-colors"
+                className="w-full bg-amber-500 hover:bg-amber-600 text-white font-bold py-2.5 rounded-xl text-sm transition-colors shadow"
               >
-                Buy Creator Pass
+                Get Free Access
               </button>
+              <p className="text-xs text-amber-700 mt-3 text-center">
+                Beta users get 50% off Pro/Max with feedback
+              </p>
             </div>
 
             {/* Pro — highlighted */}
@@ -380,14 +493,37 @@ export default function LandingPage({ onSignIn }: LandingPageProps) {
           </div>
         </section>
 
+        {/* FAQ */}
+        <section id="faq" className="py-16 w-full">
+          <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-center text-slate-900 mb-10">Frequently Asked Questions</h2>
+          <div className="grid gap-6 md:grid-cols-2 max-w-4xl mx-auto">
+            {[
+              { q: 'What is the beta program?', a: 'During beta, all new signups get Creator tier (normally $24.99) completely free. This helps us gather feedback while you get professional portraits at no cost.' },
+              { q: 'How do I get 50% off?', a: 'Generate 3+ portraits and submit feedback. Active beta users who help us improve unlock 50% off Pro or Max for 1 year.' },
+              { q: 'Is this a subscription?', a: 'You can choose. The free plan and Creator Pass are one-time. Pro and Max are monthly or yearly subscriptions with significant savings.' },
+              { q: 'What styles are available?', a: 'Corporate headshot, creative cinematic, casual lifestyle, athletic, classic formal, seasonal looks, and more. All tiers get access to every style.' },
+              { q: 'What resolution do I get?', a: 'Free tier delivers 1K resolution; Creator and above provide 2K+ (super-resolution).' },
+              { q: 'Can I use these commercially?', a: 'Yes—generated portraits are yours to use for personal branding, business profiles, marketing, and social media.' },
+              { q: 'What happens when I hit my limit?', a: 'You\'ll get a simple prompt to upgrade. Your saved portraits are always accessible, and you can delete to free up saves.' },
+              { q: 'Which platforms are supported?', a: 'LinkedIn, Instagram, X/Twitter, YouTube, TikTok, and general-purpose export sizes.' },
+            ].map((item, idx) => (
+              <div key={idx} className="rounded-xl border border-slate-200 bg-white p-5">
+                <div className="font-semibold text-slate-900 mb-2">{item.q}</div>
+                <p className="text-sm text-slate-600 leading-relaxed">{item.a}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+
         {/* Bottom CTA */}
         <section className="py-12 flex flex-col items-center gap-4 text-center w-full">
           <p className="text-slate-500 text-lg">Ready to look your best?</p>
+          <p className="text-amber-600 font-medium">🧪 Join 100+ beta users — get Creator free today</p>
           <button
             onClick={goToApp}
             className="inline-flex items-center gap-2 bg-slate-900 hover:bg-slate-700 text-white font-bold text-base px-7 py-3.5 rounded-xl transition-colors"
           >
-            Get started — free
+            Get Free Beta Access
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" /></svg>
           </button>
         </section>

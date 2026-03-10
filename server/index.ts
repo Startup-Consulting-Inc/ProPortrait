@@ -12,11 +12,10 @@ import emailRouter from './routes/email.js';
 import contactRouter from './routes/contact.js';
 import usersRouter from './routes/users.js';
 import adminRouter from './routes/admin.js';
-import { authMiddleware } from './middleware/authMiddleware.js';
+import { authMiddleware, requireFirebaseAuth } from './middleware/authMiddleware.js';
 import { storePortrait, storePermanentPortrait, getSignedUrlForKey, deleteR2Object } from './lib/storage.js';
 import { trackCost, getDailySpend } from './lib/costTracker.js';
 import { trackGeneration, trackEdit, trackExport, getUserDoc, checkAndIncrementGeneration, checkSaveLimit, savePortraitDoc, getSavedPortraits, deleteSavedPortrait } from './lib/firestore.js';
-import { requireFirebaseAuth } from './middleware/authMiddleware.js';
 import { applyWatermark } from './lib/watermark.js';
 
 // Load API key from .env.local (Vite convention), then .env as fallback
