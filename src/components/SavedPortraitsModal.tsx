@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { X, Loader2, Trash2, FolderOpen, Image as ImageIcon } from 'lucide-react';
+import { X, Loader2, Trash2, FolderOpen, Image as ImageIcon, AlertTriangle } from 'lucide-react';
 import { getSavedPortraits, deleteSavedPortrait } from '../services/portraits';
 import type { SavedPortrait } from '../services/portraits';
 import { cn } from '../lib/utils';
@@ -12,7 +12,12 @@ interface SavedPortraitsModalProps {
 
 function timeAgo(createdAt: SavedPortrait['createdAt']): string {
   if (!createdAt) return '';
-  const date = new Date(createdAt.seconds * 1000);
+  // Handle both Firestore Timestamp formats: { seconds, nanoseconds } or { _seconds, _nanoseconds }
+  const seconds = (createdAt as { seconds?: number; _seconds?: number }).seconds 
+    ?? (createdAt as { _seconds?: number })._seconds;
+  if (typeof seconds !== 'number') return '';
+  const date = new Date(seconds * 1000);
+  if (isNaN(date.getTime())) return '';
   const diff = Date.now() - date.getTime();
   const days = Math.floor(diff / 86400000);
   if (days === 0) return 'Today';
@@ -26,11 +31,13 @@ export default function SavedPortraitsModal({ open, onClose, onLoad }: SavedPort
   const [loading, setLoading] = useState(false);
   const [deleting, setDeleting] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
 
   useEffect(() => {
     if (!open) return;
     setLoading(true);
     setError(null);
+    setDeleteConfirm(null);
     getSavedPortraits()
       .then(setPortraits)
       .catch(() => setError('Failed to load saved portraits.'))
@@ -42,11 +49,20 @@ export default function SavedPortraitsModal({ open, onClose, onLoad }: SavedPort
     try {
       await deleteSavedPortrait(id);
       setPortraits((prev) => prev.filter((p) => p.id !== id));
+      setDeleteConfirm(null);
     } catch {
       setError('Failed to delete portrait.');
     } finally {
       setDeleting(null);
     }
+  };
+
+  const confirmDelete = (id: string) => {
+    setDeleteConfirm(id);
+  };
+
+  const cancelDelete = () => {
+    setDeleteConfirm(null);
   };
 
   if (!open) return null;
@@ -117,25 +133,37 @@ export default function SavedPortraitsModal({ open, onClose, onLoad }: SavedPort
                         <ImageIcon className="w-8 h-8 text-slate-300" />
                       </div>
                     )}
-                    {/* Delete overlay on hover */}
-                    <button
-                      onClick={() => handleDelete(portrait.id)}
-                      disabled={deleting === portrait.id}
-                      className={cn(
-                        'absolute top-2 right-2 p-1.5 rounded-lg bg-white/90 border border-slate-200 text-slate-500 opacity-0 group-hover:opacity-100 transition-opacity hover:text-red-500 hover:border-red-200',
-                        deleting === portrait.id && 'opacity-100',
-                      )}
-                      aria-label="Delete portrait"
-                    >
-                      {deleting === portrait.id ? (
-                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                      ) : (
-                        <Trash2 className="w-3.5 h-3.5" />
-                      )}
-                    </button>
+                    
+                    {/* Delete confirmation overlay */}
+                    {deleteConfirm === portrait.id && (
+                      <div className="absolute inset-0 bg-black/70 flex flex-col items-center justify-center p-4 z-10">
+                        <AlertTriangle className="w-8 h-8 text-amber-400 mb-2" />
+                        <p className="text-white text-xs text-center mb-3">Delete this portrait?</p>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={cancelDelete}
+                            className="px-3 py-1.5 bg-slate-600 text-white text-xs rounded-lg hover:bg-slate-500 transition-colors"
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            onClick={() => handleDelete(portrait.id)}
+                            disabled={deleting === portrait.id}
+                            className="px-3 py-1.5 bg-red-600 text-white text-xs rounded-lg hover:bg-red-500 transition-colors flex items-center gap-1"
+                          >
+                            {deleting === portrait.id ? (
+                              <Loader2 className="w-3 h-3 animate-spin" />
+                            ) : (
+                              <Trash2 className="w-3 h-3" />
+                            )}
+                            Delete
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </div>
 
-                  {/* Info + Load */}
+                  {/* Info + Actions */}
                   <div className="p-3 flex flex-col gap-2">
                     <div>
                       <p className="text-xs font-semibold text-slate-800 truncate">{portrait.title}</p>
@@ -146,12 +174,23 @@ export default function SavedPortraitsModal({ open, onClose, onLoad }: SavedPort
                         <span className="text-[10px] text-slate-400">{timeAgo(portrait.createdAt)}</span>
                       </div>
                     </div>
-                    <button
-                      onClick={() => { onLoad(portrait.imageUrl, portrait.style); onClose(); }}
-                      className="w-full py-1.5 bg-indigo-600 text-white text-xs font-semibold rounded-lg hover:bg-indigo-700 transition-colors"
-                    >
-                      Load into Studio
-                    </button>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => { onLoad(portrait.imageUrl, portrait.style); onClose(); }}
+                        className="flex-1 py-1.5 bg-indigo-600 text-white text-xs font-semibold rounded-lg hover:bg-indigo-700 transition-colors"
+                      >
+                        Load
+                      </button>
+                      <button
+                        onClick={() => confirmDelete(portrait.id)}
+                        disabled={deleting === portrait.id}
+                        className="px-2.5 py-1.5 border border-slate-200 text-slate-500 rounded-lg hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-colors"
+                        aria-label="Delete portrait"
+                        title="Delete portrait"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
                   </div>
                 </div>
               ))}
