@@ -175,4 +175,43 @@ router.post('/me/feedback', requireFirebaseAuth, async (req: Request, res: Respo
   }
 });
 
+// GET /api/users/me/portrait-proxy — proxy R2 image with CORS headers
+// This allows canvas operations on images that don't have CORS configured
+router.get('/me/portrait-proxy', requireFirebaseAuth, async (req: Request, res: Response) => {
+  const imageUrl = req.query.url as string;
+  
+  if (!imageUrl) {
+    res.status(400).json({ error: 'URL parameter required' });
+    return;
+  }
+
+  // Validate URL is from our R2 bucket
+  if (!imageUrl.includes('r2.cloudflarestorage.com')) {
+    res.status(400).json({ error: 'Invalid URL' });
+    return;
+  }
+
+  try {
+    const response = await fetch(imageUrl);
+    if (!response.ok) {
+      res.status(response.status).json({ error: 'Failed to fetch image' });
+      return;
+    }
+
+    const contentType = response.headers.get('content-type') || 'image/png';
+    const buffer = await response.arrayBuffer();
+
+    // Set CORS headers to allow canvas operations
+    res.set('Access-Control-Allow-Origin', '*');
+    res.set('Cross-Origin-Resource-Policy', 'cross-origin');
+    res.set('Content-Type', contentType);
+    res.set('Cache-Control', 'public, max-age=3600');
+    
+    res.send(Buffer.from(buffer));
+  } catch (err) {
+    console.error('[users/portrait-proxy]', err);
+    res.status(500).json({ error: 'Failed to proxy image' });
+  }
+});
+
 export default router;

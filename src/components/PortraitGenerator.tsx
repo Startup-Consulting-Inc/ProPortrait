@@ -441,6 +441,14 @@ export default function PortraitGenerator({ onboardingDefaults }: PortraitGenera
     return canvas.toDataURL(exportFormat === 'png' ? 'image/png' : 'image/jpeg', 0.95);
   };
 
+  // Helper to proxy R2 images through backend to avoid CORS issues
+  const getProxiedImageUrl = (url: string): string => {
+    if (url.includes('r2.cloudflarestorage.com')) {
+      return `${API_BASE}/api/users/me/portrait-proxy?url=${encodeURIComponent(url)}`;
+    }
+    return url;
+  };
+
   const handleExport = () => {
     const currentImage = getCurrentImage();
     if (!currentImage || !canvasRef.current) return;
@@ -452,7 +460,7 @@ export default function PortraitGenerator({ onboardingDefaults }: PortraitGenera
     const height = ratio > 1 ? Math.round(baseSize / ratio) : baseSize;
 
     const img = new Image();
-    img.src = currentImage;
+    img.src = getProxiedImageUrl(currentImage);
     img.crossOrigin = 'anonymous';
     img.onload = () => {
       const dataUrl = renderToCanvas(img, width, height);
@@ -486,7 +494,7 @@ export default function PortraitGenerator({ onboardingDefaults }: PortraitGenera
 
     setDownloadingPlatform(presetId);
     const img = new Image();
-    img.src = currentImage;
+    img.src = getProxiedImageUrl(currentImage);
     img.crossOrigin = 'anonymous';
     img.onload = () => {
       const dataUrl = renderToCanvas(img, preset.width, preset.height);
@@ -519,7 +527,7 @@ export default function PortraitGenerator({ onboardingDefaults }: PortraitGenera
     setDownloadingPlatform('all');
     const zip = new JSZip();
     const img = new Image();
-    img.src = currentImage;
+    img.src = getProxiedImageUrl(currentImage);
     img.crossOrigin = 'anonymous';
     await new Promise<void>(r => { img.onload = () => r(); });
     for (const preset of PLATFORM_PRESETS) {
