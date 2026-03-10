@@ -1642,10 +1642,27 @@ export default function PortraitGenerator({ onboardingDefaults }: PortraitGenera
                     <button
                       onClick={() => setShowLibrary(true)}
                       title="Open saved portraits library"
-                      className="px-3 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-500 hover:border-indigo-300 hover:text-indigo-600 hover:bg-indigo-50 transition-all">
+                      className="px-3 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-600 hover:border-indigo-300 hover:text-indigo-600 hover:bg-indigo-50 transition-all flex items-center gap-2">
                       <Users className="w-4 h-4" />
+                      <span className="text-xs font-medium">Library</span>
+                      {profile?.saveCount ? (
+                        <span className="text-[10px] bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded-full">
+                          {profile.saveCount}
+                        </span>
+                      ) : null}
                     </button>
                   </div>
+
+                  {/* View in Library link (appears after save) */}
+                  {saveStatus === 'saved' && (
+                    <button
+                      onClick={() => setShowLibrary(true)}
+                      className="w-full py-2 text-xs text-indigo-600 hover:text-indigo-700 font-medium flex items-center justify-center gap-1.5 transition-colors"
+                    >
+                      <Users className="w-3.5 h-3.5" />
+                      View in Library →
+                    </button>
+                  )}
 
                   {/* More Export Options toggle — Quick mode only */}
                   {!showAdvanced && (
