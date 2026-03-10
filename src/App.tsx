@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import PortraitGenerator from './components/PortraitGenerator';
 import ContactPage from './components/ContactPage';
 import PrivacyPage from './components/PrivacyPage';
@@ -14,6 +14,7 @@ import LandingPage from './components/LandingPage';
 import AuthModal from './components/AuthModal';
 import UserMenu from './components/UserMenu';
 import UserProfileModal from './components/UserProfileModal';
+import SavedPortraitsModal from './components/SavedPortraitsModal';
 import AdminPage from './pages/AdminPage';
 import OnboardingModal from './components/OnboardingModal';
 import SessionWarningModal from './components/SessionWarningModal';
@@ -29,6 +30,8 @@ function AppContent() {
 
   // Profile modal
   const [showProfile, setShowProfile] = useState(false);
+  // Saved Portraits library modal
+  const [showLibrary, setShowLibrary] = useState(false);
   // Auth modal
   const [showAuth, setShowAuth] = useState(false);
   // Admin nav
@@ -255,11 +258,16 @@ function AppContent() {
           <UserMenu
             onOpenProfile={() => setShowProfile(true)}
             onOpenAdmin={() => { window.location.href = '/admin'; }}
+            onOpenLibrary={() => setShowLibrary(true)}
           />
           <ThemeToggle theme={theme} onChange={handleThemeChange} />
         </div>
         <div className="relative z-10 py-12">
-          <PortraitGenerator onboardingDefaults={onboardingDefaults ?? undefined} />
+          <PortraitGenerator 
+            onboardingDefaults={onboardingDefaults ?? undefined}
+            externalLibraryOpen={showLibrary}
+            onExternalLibraryClose={() => setShowLibrary(false)}
+          />
         </div>
         <AppFooter />
       </div>

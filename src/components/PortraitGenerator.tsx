@@ -51,9 +51,15 @@ const NATURALNESS_MAP: Record<NaturalnessPreset, number> = { natural: 15, polish
 
 interface PortraitGeneratorProps {
   onboardingDefaults?: PortraitDefaults;
+  externalLibraryOpen?: boolean;
+  onExternalLibraryClose?: () => void;
 }
 
-export default function PortraitGenerator({ onboardingDefaults }: PortraitGeneratorProps) {
+export default function PortraitGenerator({ 
+  onboardingDefaults, 
+  externalLibraryOpen, 
+  onExternalLibraryClose 
+}: PortraitGeneratorProps) {
   const { isPro, tier, refreshProfile, profile, isFirebaseUser } = useAuthContext();
   const [step, setStep] = useState<Step>(1);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
@@ -139,6 +145,19 @@ export default function PortraitGenerator({ onboardingDefaults }: PortraitGenera
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [showEditPanel, setShowEditPanel] = useState(false);
   const [showExportOptions, setShowExportOptions] = useState(false);
+
+  // Sync external library open state (from UserMenu)
+  useEffect(() => {
+    if (externalLibraryOpen !== undefined) {
+      setShowLibrary(externalLibraryOpen);
+    }
+  }, [externalLibraryOpen]);
+
+  // Handle library close - notify parent if needed
+  const handleLibraryClose = () => {
+    setShowLibrary(false);
+    onExternalLibraryClose?.();
+  };
 
   // Apply profile defaults on mount (for returning users with saved preferences)
   useEffect(() => {
@@ -1766,7 +1785,7 @@ export default function PortraitGenerator({ onboardingDefaults }: PortraitGenera
       />
       <SavedPortraitsModal
         open={showLibrary}
-        onClose={() => setShowLibrary(false)}
+        onClose={handleLibraryClose}
         onLoad={handleLoadFromLibrary}
       />
       <FeatureTour
