@@ -23,6 +23,12 @@ export function adminAuth(): Auth {
   return getAuth(getAdminApp());
 }
 
+let _db: Firestore | null = null;
+
 export function adminFirestore(): Firestore {
-  return getFirestore(getAdminApp());
+  if (!_db) {
+    _db = getFirestore(getAdminApp());
+    _db.settings({ ignoreUndefinedProperties: true });
+  }
+  return _db;
 }

@@ -32,12 +32,14 @@ export default function SavedPortraitsModal({ open, onClose, onLoad }: SavedPort
   const [deleting, setDeleting] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+  const [failedImages, setFailedImages] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (!open) return;
     setLoading(true);
     setError(null);
     setDeleteConfirm(null);
+    setFailedImages(new Set());
     getSavedPortraits()
       .then(setPortraits)
       .catch(() => setError('Failed to load saved portraits.'))
@@ -122,28 +124,17 @@ export default function SavedPortraitsModal({ open, onClose, onLoad }: SavedPort
                 >
                   {/* Thumbnail */}
                   <div className="aspect-[3/4] bg-slate-100 relative overflow-hidden">
-                    {portrait.imageUrl ? (
+                    {portrait.imageUrl && !failedImages.has(portrait.id) ? (
                       <img
                         src={portrait.imageUrl}
                         alt={portrait.title}
                         className="w-full h-full object-cover"
-                        onError={(e) => {
-                          // Replace broken image with placeholder
-                          const target = e.currentTarget;
-                          target.style.display = 'none';
-                          const parent = target.parentElement;
-                          if (parent) {
-                            const placeholder = document.createElement('div');
-                            placeholder.className = 'w-full h-full flex flex-col items-center justify-center text-slate-400';
-                            placeholder.innerHTML = '<svg class="w-8 h-8 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg><span class="text-xs">Image unavailable</span>';
-                            parent.appendChild(placeholder);
-                          }
-                        }}
+                        onError={() => setFailedImages((prev) => new Set(prev).add(portrait.id))}
                       />
                     ) : (
                       <div className="w-full h-full flex flex-col items-center justify-center text-slate-400">
                         <ImageIcon className="w-8 h-8 mb-1" />
-                        <span className="text-xs">No image</span>
+                        <span className="text-xs">Image unavailable</span>
                       </div>
                     )}
                     
