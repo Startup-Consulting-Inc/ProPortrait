@@ -177,7 +177,8 @@ router.post('/me/feedback', requireFirebaseAuth, async (req: Request, res: Respo
 
 // GET /api/users/me/portrait-proxy — proxy R2 image with CORS headers
 // This allows canvas operations on images that don't have CORS configured
-router.get('/me/portrait-proxy', requireFirebaseAuth, async (req: Request, res: Response) => {
+// Note: No auth required because img tags can't send auth headers, and R2 signed URLs are already secure
+router.get('/me/portrait-proxy', async (req: Request, res: Response) => {
   const imageUrl = req.query.url as string;
   
   if (!imageUrl) {
@@ -185,8 +186,8 @@ router.get('/me/portrait-proxy', requireFirebaseAuth, async (req: Request, res: 
     return;
   }
 
-  // Validate URL is from our R2 bucket
-  if (!imageUrl.includes('r2.cloudflarestorage.com')) {
+  // Validate URL is from our R2 bucket and is a signed URL (contains signature)
+  if (!imageUrl.includes('r2.cloudflarestorage.com') || !imageUrl.includes('X-Amz-Signature')) {
     res.status(400).json({ error: 'Invalid URL' });
     return;
   }
