@@ -8,7 +8,7 @@ async function authHeaders(): Promise<Record<string, string>> {
   return { Authorization: `Bearer ${token}` };
 }
 
-export type Tier = 'free' | 'creator' | 'pro' | 'max';
+export type Tier = 'free' | 'basic' | 'plus';
 
 export interface BetaFeedback {
   submittedAt: string;
@@ -31,6 +31,7 @@ export interface UserProfile {
   generationCount?: number;
   generationsThisMonth?: number;
   exportCount?: number;
+  downloadCredits?: number;
   stripeCustomerId?: string;
   defaultStyle?: string;
   defaultExpression?: string;

@@ -6,8 +6,8 @@ import { requireFirebaseAuth } from '../middleware/authMiddleware.js';
 
 const router = Router();
 
-// Beta configuration — can be controlled via env or changed manually
-const BETA_ACTIVE = process.env.BETA_ACTIVE !== 'false'; // default true
+// Beta configuration — disabled for public launch
+const BETA_ACTIVE = process.env.BETA_ACTIVE === 'true'; // default false
 
 // POST /api/users/me/first-login — seed Firestore doc on first Firebase sign-in
 router.post('/me/first-login', requireFirebaseAuth, async (req: Request, res: Response) => {
@@ -23,15 +23,16 @@ router.post('/me/first-login', requireFirebaseAuth, async (req: Request, res: Re
   if (!existing) {
     const { displayName, photoURL } = req.body as { displayName?: string; photoURL?: string };
     
-    // Beta users get Creator tier free
+    // Beta users get Plus tier with download credits free
     const isBetaUser = BETA_ACTIVE;
     
     await adminFirestore().collection('users').doc(uid).set({
       email,
       displayName: displayName || email.split('@')[0],
       photoURL: photoURL || null,
-      tier: isBetaUser ? 'creator' : 'free',
-      isPro: isBetaUser, // Creator is a paid tier, so isPro = true during beta
+      tier: isBetaUser ? 'plus' : 'free',
+      isPro: isBetaUser, // Plus is a paid tier, so isPro = true during beta
+      downloadCredits: isBetaUser ? 3 : 0, // Beta users get 3 free downloads
       isAdmin,
       // Beta tracking
       joinedDuringBeta: isBetaUser,
@@ -172,6 +173,86 @@ router.post('/me/feedback', requireFirebaseAuth, async (req: Request, res: Respo
   } catch (err) {
     console.error('[users/feedback]', err);
     res.status(500).json({ error: 'Failed to submit feedback.' });
+  }
+});
+
+// GET /api/users/me/download-credits — check remaining download credits
+router.get('/me/download-credits', requireFirebaseAuth, async (req: Request, res: Response) => {
+  const doc = await getUserDoc(req.auth.uid!);
+  if (!doc) {
+    res.status(404).json({ error: 'User not found.' });
+    return;
+  }
+  
+  const tier = doc.tier ?? 'free';
+  const credits = doc.downloadCredits ?? 0;
+  
+  res.json({ 
+    tier,
+    credits,
+    canDownload: tier !== 'free' && credits > 0,
+    isFree: tier === 'free',
+  });
+});
+
+// POST /api/users/me/consume-download — consume a download credit (called before actual download)
+router.post('/me/consume-download', requireFirebaseAuth, async (req: Request, res: Response) => {
+  const { consume } = req.body as { consume?: boolean };
+  const doc = await getUserDoc(req.auth.uid!);
+  
+  if (!doc) {
+    res.status(404).json({ error: 'User not found.' });
+    return;
+  }
+  
+  const tier = doc.tier ?? 'free';
+  const credits = doc.downloadCredits ?? 0;
+  
+  // Free users cannot download
+  if (tier === 'free') {
+    res.status(403).json({ 
+      error: 'Free users cannot download. Please upgrade to download your portrait.',
+      code: 'download_limit',
+      tier,
+      credits: 0,
+    });
+    return;
+  }
+  
+  // Check if credits available
+  if (credits <= 0) {
+    res.status(403).json({ 
+      error: 'No download credits remaining. Please purchase more downloads.',
+      code: 'download_limit',
+      tier,
+      credits: 0,
+    });
+    return;
+  }
+  
+  // If consume flag is set, actually consume the credit
+  if (consume) {
+    await adminFirestore().collection('users').doc(req.auth.uid!).set(
+      { 
+        downloadCredits: FieldValue.increment(-1), 
+        updatedAt: FieldValue.serverTimestamp() 
+      },
+      { merge: true },
+    );
+    
+    res.json({ 
+      success: true, 
+      consumed: 1,
+      remaining: credits - 1,
+      tier,
+    });
+  } else {
+    // Just checking - don't consume
+    res.json({ 
+      canDownload: true,
+      credits,
+      tier,
+    });
   }
 });
 

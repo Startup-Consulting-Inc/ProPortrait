@@ -41,6 +41,7 @@ function serializeUser(doc: FirebaseFirestore.QueryDocumentSnapshot | FirebaseFi
     editCount: d.editCount ?? 0,
     exportCount: d.exportCount ?? 0,
     saveCount: d.saveCount ?? 0,
+    downloadCredits: d.downloadCredits ?? 0,
     loginCount: d.loginCount ?? 0,
     totalCostUsd: d.totalCostUsd ?? 0,
     // Preferences

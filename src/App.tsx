@@ -53,7 +53,7 @@ function AppContent() {
       setPaymentPending(false);
       setProActivated(true);
       // Clean URL
-      window.history.replaceState({}, '', '/app');
+      window.history.replaceState({}, '', '/create');
       setTimeout(() => setProActivated(false), 6000);
       return;
     }
@@ -69,17 +69,21 @@ function AppContent() {
     return () => clearInterval(interval);
   }, [paymentPending, loading, isPro]);
 
-  // Redirect to login if accessing protected routes while not authenticated
+  // Deferred sign-in: /create is now public, only /admin requires auth upfront
   useEffect(() => {
-    if (!loading && !user && (path === '/app' || path === '/admin')) {
+    if (!loading && !user && path === '/admin') {
       setShowAuth(true);
+    }
+    // Redirect legacy /app URLs to /create
+    if (path === '/app') {
+      window.location.href = '/create';
     }
   }, [loading, user, path]);
 
   // Check if user needs onboarding after auth loads
   useEffect(() => {
-    if (!loading && user && path === '/app') {
-      // Check for pending onboarding from session (set before redirect to /app)
+    if (!loading && user && path === '/create') {
+      // Check for pending onboarding from session
       const pendingFromSession = sessionStorage.getItem('pp_pending_onboarding') === 'true';
       if (pendingFromSession) {
         sessionStorage.removeItem('pp_pending_onboarding');
@@ -100,7 +104,7 @@ function AppContent() {
 
   const handleAccountCreated = useCallback(() => {
     setPendingOnboarding(true);
-    // Persist across redirect to /app
+    // Persist across redirect to /create
     sessionStorage.setItem('pp_pending_onboarding', 'true');
   }, []);
 
@@ -135,15 +139,16 @@ function AppContent() {
   if (path === '/terms') return <TermsPage />;
 
   // Landing page — public
-  if (path !== '/app' && path !== '/admin') {
+  if (path !== '/create' && path !== '/admin' && path !== '/app') {
     return (
       <>
         <LandingPage onSignIn={() => setShowAuth(true)} />
         <AuthModal
           open={showAuth}
           onClose={() => setShowAuth(false)}
-          onSuccess={() => { window.location.href = '/app'; }}
+          onSuccess={() => { window.location.href = '/create'; }}
           onAccountCreated={handleAccountCreated}
+          context="download"
         />
       </>
     );
@@ -182,7 +187,7 @@ function AppContent() {
     );
   }
 
-  // /app — requires auth
+  // /create — public with deferred sign-in
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
     const stored = localStorage.getItem('pp_theme');
     if (stored === 'dark' || stored === 'light') return stored;
@@ -214,23 +219,7 @@ function AppContent() {
     );
   }
 
-  // Not signed in — show landing with auth modal
-  if (!user) {
-    return (
-      <>
-        <LandingPage onSignIn={() => setShowAuth(true)} />
-        <AuthModal
-          open={showAuth}
-          onClose={() => setShowAuth(false)}
-          onSuccess={() => {
-            setShowAuth(false);
-            window.location.href = '/app';
-          }}
-          onAccountCreated={handleAccountCreated}
-        />
-      </>
-    );
-  }
+  // Anonymous users can access /create (deferred sign-in)
 
   return (
     <>
@@ -255,11 +244,20 @@ function AppContent() {
       >
         <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 pointer-events-none" />
         <div className="absolute top-4 right-4 z-20 flex items-center gap-3">
-          <UserMenu
-            onOpenProfile={() => setShowProfile(true)}
-            onOpenAdmin={() => { window.location.href = '/admin'; }}
-            onOpenLibrary={() => setShowLibrary(true)}
-          />
+          {user ? (
+            <UserMenu
+              onOpenProfile={() => setShowProfile(true)}
+              onOpenAdmin={() => { window.location.href = '/admin'; }}
+              onOpenLibrary={() => setShowLibrary(true)}
+            />
+          ) : (
+            <button
+              onClick={() => setShowAuth(true)}
+              className="bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors"
+            >
+              Sign In
+            </button>
+          )}
           <ThemeToggle theme={theme} onChange={handleThemeChange} />
         </div>
         <div className="relative z-10 py-12">
@@ -267,8 +265,26 @@ function AppContent() {
             onboardingDefaults={onboardingDefaults ?? undefined}
             externalLibraryOpen={showLibrary}
             onExternalLibraryClose={() => setShowLibrary(false)}
+            onRequiresAuth={() => setShowAuth(true)}
           />
         </div>
+
+        {/* Auth modal for deferred sign-in */}
+        <AuthModal
+          open={showAuth}
+          onClose={() => setShowAuth(false)}
+          onSuccess={() => {
+            setShowAuth(false);
+            // PortraitGenerator will handle continuing to payment flow
+          }}
+          onAccountCreated={handleAccountCreated}
+          context="download"
+        />
+
+        {/* URL redirect: /app -> /create for backward compatibility */}
+        {path === '/app' && typeof window !== 'undefined' && (
+          (window.location.href = '/create', null)
+        )}
         <AppFooter />
       </div>
 

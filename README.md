@@ -84,24 +84,27 @@ Unauthenticated users hitting `/app` or `/admin` are shown the **AuthModal** (Go
 
 ---
 
-## Membership Tiers
+## Pricing Model
 
-| Feature | Free | Creator | Pro | Max |
-|---|---|---|---|---|
-| Portrait generation | 3 total | 30 total | 100/month | 500/month |
-| Export resolution | 1024px | 2048px | 2048px | 2048px |
-| JPG export | ✅ | ✅ | ✅ | ✅ |
-| PNG / lossless export | — | ✅ | ✅ | ✅ |
-| Transparent background | — | ✅ | ✅ | ✅ |
-| Studio skin smoothing | — | ✅ | ✅ | ✅ |
-| Save to Library | — | ✅ | ✅ | ✅ |
-| Platform batch download | ✅ | ✅ | ✅ | ✅ |
+**Pay only when you're ready to download.** Generate and edit unlimited portraits for free.
 
-| Plan | Price | Type |
+| Feature | Free | Basic | Plus |
+|---|---|---|---|
+| Portrait generation | Unlimited | Unlimited | Unlimited |
+| Editing | Unlimited | Unlimited | Unlimited |
+| Watermarked preview | ✅ | — | — |
+| HD download (2048px) | — | ✅ | ✅ |
+| All platform sizes (ZIP) | — | — | ✅ |
+| Save to Library | 10 saves | 50 saves | 200 saves |
+| Download credits | 0 | 1 | 1 |
+
+| Plan | Price | Best For |
 |---|---|---|
-| Creator | $24.99 | One-time |
-| Pro | $29.99/month | Subscription |
-| Max | $49.99/month | Subscription |
+| Free | $0 | Exploring, testing styles |
+| Basic | $4.99 one-time | Single HD download |
+| Plus | $9.99 one-time | All platform sizes |
+
+**Download credits never expire.** Purchase once, use anytime.
 
 ---
 

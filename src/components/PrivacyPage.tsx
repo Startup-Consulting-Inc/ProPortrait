@@ -6,7 +6,7 @@ export default function PrivacyPage() {
   return (
     <div className="min-h-screen bg-white font-sans text-slate-900 flex flex-col">
       <div className="flex-1 max-w-3xl mx-auto px-6 py-12 w-full">
-        <a href={user ? '/app' : '/'} className="inline-flex items-center gap-2 text-indigo-600 hover:text-indigo-800 text-sm mb-8">
+        <a href={user ? '/create' : '/'} className="inline-flex items-center gap-2 text-indigo-600 hover:text-indigo-800 text-sm mb-8">
           ← Back to ProPortrait AI
         </a>
 

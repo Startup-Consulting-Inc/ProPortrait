@@ -225,7 +225,7 @@ export default function AdminPage() {
           <div className="text-6xl mb-4">🚫</div>
           <h1 className="text-2xl font-bold text-slate-800 mb-2">Access Denied</h1>
           <p className="text-slate-500">You don't have permission to view this page.</p>
-          <a href="/app" className="mt-6 inline-block text-indigo-600 hover:underline text-sm">Go to App</a>
+          <a href="/create" className="mt-6 inline-block text-indigo-600 hover:underline text-sm">Go to Creator</a>
         </div>
       </div>
     );
@@ -245,7 +245,7 @@ export default function AdminPage() {
               </p>
             </div>
             <div className="flex gap-3">
-              <a href="/app" className="text-sm text-slate-500 hover:text-slate-700 transition-colors py-2">← Back to App</a>
+              <a href="/create" className="text-sm text-slate-500 hover:text-slate-700 transition-colors py-2">← Back to Creator</a>
               <button
                 onClick={fetchAll}
                 disabled={fetching}

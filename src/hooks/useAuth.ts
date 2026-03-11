@@ -76,7 +76,7 @@ export function useAuth(): AuthState {
     window.location.href = '/';
   };
 
-  const derivedTier: Tier = profile?.tier ?? (profile?.isPro ? 'pro' : 'free');
+  const derivedTier: Tier = profile?.tier ?? 'free';
 
   return {
     user,

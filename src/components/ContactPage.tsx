@@ -83,7 +83,7 @@ export default function ContactPage() {
   return (
     <div className="min-h-screen bg-white font-sans text-slate-900 flex flex-col">
       <header className="flex items-center justify-between px-6 py-4 max-w-6xl mx-auto w-full">
-        <a href={user ? '/app' : '/'} className="flex items-center gap-2">
+        <a href={user ? '/create' : '/'} className="flex items-center gap-2">
           <img src="/logo.png" alt="ProPortrait AI" className="h-7 w-7 rounded-lg" />
           <span className="font-bold text-lg tracking-tight">
             ProPortrait<span className="text-indigo-600"> AI</span>
@@ -98,12 +98,12 @@ export default function ContactPage() {
           <div className="w-8 h-8" />
         ) : user ? (
           <UserMenu
-            onOpenProfile={() => window.location.href = '/app'}
+            onOpenProfile={() => window.location.href = '/create'}
             onOpenAdmin={() => window.location.href = '/admin'}
           />
         ) : (
           <a
-            href="/app"
+            href="/create"
             className="text-sm font-semibold text-indigo-600 hover:text-indigo-800 transition-colors"
           >
             Start free

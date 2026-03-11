@@ -425,11 +425,9 @@ export default function UserProfileModal({ open, onClose, onApplyPreferences, on
               {(() => {
                 const tierLabel: Record<string, string> = {
                   free: 'Free',
-                  creator: 'Creator',
-                  pro: 'Pro Studio',
-                  max: 'Max Studio',
+                  basic: 'Basic',
+                  plus: 'Plus',
                 };
-                const isSubscription = tier === 'pro' || tier === 'max';
                 return (
                   <>
                     <div className="flex items-center gap-3 p-4 bg-slate-50 rounded-xl border border-slate-200">
@@ -438,8 +436,8 @@ export default function UserProfileModal({ open, onClose, onApplyPreferences, on
                         <div className={`text-lg font-bold ${isPro ? 'text-indigo-600' : 'text-slate-500'}`}>
                           {tierLabel[tier] ?? tier}
                         </div>
-                        {tier === 'creator' && (
-                          <div className="text-xs text-slate-400 mt-0.5">One-time purchase</div>
+                        {tier !== 'free' && (
+                          <div className="text-xs text-slate-400 mt-0.5">One-time purchase • {profile?.downloadCredits ?? 0} credits remaining</div>
                         )}
                       </div>
                       {isPro && (
@@ -449,7 +447,7 @@ export default function UserProfileModal({ open, onClose, onApplyPreferences, on
                       )}
                     </div>
 
-                    {isPro && isSubscription && (
+                    {isPro && (
                       <div className="flex flex-col gap-2">
                         {profile?.stripeCustomerId ? (
                           <>

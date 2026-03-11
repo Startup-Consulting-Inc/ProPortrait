@@ -17,7 +17,7 @@ import PricingModal from './PricingModal';
 import EmailCapture from './EmailCapture';
 import SavedPortraitsModal from './SavedPortraitsModal';
 import ExportSuccessToast from './ExportSuccessToast';
-import BetaFeedbackModal from './BetaFeedbackModal';
+
 import { useAuthContext } from '../contexts/AuthContext';
 import { savePortrait } from '../services/portraits';
 import { capture } from '../services/analytics';
@@ -37,6 +37,50 @@ async function trackExportClient(platform: string) {
     });
   } catch { /* fire-and-forget */ }
 }
+
+// Check download credits (returns remaining credits or null if free user)
+async function checkDownloadCredits(): Promise<{ canDownload: boolean; credits: number; tier: string } | null> {
+  try {
+    const token = await getIdToken();
+    if (!token) return null;
+    
+    const res = await fetch(`${API_BASE}/api/users/me/download-credits`, {
+      headers: { Authorization: `Bearer ${token}` },
+      credentials: 'include',
+    });
+    
+    if (!res.ok) return null;
+    const data = await res.json() as { canDownload: boolean; credits: number; tier: string };
+    return data;
+  } catch {
+    return null;
+  }
+}
+
+// Consume a download credit
+async function consumeDownloadCredit(): Promise<{ success: boolean; remaining?: number; error?: string }> {
+  try {
+    const token = await getIdToken();
+    if (!token) return { success: false, error: 'Not authenticated' };
+    
+    const res = await fetch(`${API_BASE}/api/users/me/consume-download`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ consume: true }),
+      credentials: 'include',
+    });
+    
+    if (!res.ok) {
+      const data = await res.json() as { error?: string };
+      return { success: false, error: data.error || 'Failed to consume credit' };
+    }
+    
+    const data = await res.json() as { success: boolean; remaining: number };
+    return { success: data.success, remaining: data.remaining };
+  } catch {
+    return { success: false, error: 'Network error' };
+  }
+}
 import FeatureTour from './FeatureTour';
 import { useFeatureFlag } from '../hooks/useFeatureFlag';
 import { PLATFORM_PRESETS } from '../lib/platformPresets';
@@ -53,12 +97,14 @@ interface PortraitGeneratorProps {
   onboardingDefaults?: PortraitDefaults;
   externalLibraryOpen?: boolean;
   onExternalLibraryClose?: () => void;
+  onRequiresAuth?: () => void; // Called when auth is needed for download
 }
 
 export default function PortraitGenerator({ 
   onboardingDefaults, 
   externalLibraryOpen, 
-  onExternalLibraryClose 
+  onExternalLibraryClose,
+  onRequiresAuth,
 }: PortraitGeneratorProps) {
   const { isPro, tier, refreshProfile, profile, isFirebaseUser } = useAuthContext();
   const [step, setStep] = useState<Step>(1);
@@ -128,6 +174,8 @@ export default function PortraitGenerator({
   const [hasTransparentBackground, setHasTransparentBackground] = useState(false);
   const [downloadingPlatform, setDownloadingPlatform] = useState<string | null>(null);
   const [showPricingModal, setShowPricingModal] = useState(false);
+  const [pendingDownload, setPendingDownload] = useState<'export' | 'platform' | 'all' | null>(null);
+  const [pendingPlatformId, setPendingPlatformId] = useState<string | null>(null);
   const [showEmailCapture, setShowEmailCapture] = useState(false);
   const [showLibrary, setShowLibrary] = useState(false);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
@@ -135,8 +183,7 @@ export default function PortraitGenerator({
   // Post-export UX
   const [showExportToast, setShowExportToast] = useState(false);
   const [lastExportedFile, setLastExportedFile] = useState('');
-  const [showBetaFeedback, setShowBetaFeedback] = useState(false);
-  const [hasSubmittedFeedback, setHasSubmittedFeedback] = useState(profile?.betaFeedback ? true : false);
+
 
   // Phase 5 — Presets
   const [presetCopied, setPresetCopied] = useState(false);
@@ -184,6 +231,30 @@ export default function PortraitGenerator({
       }
     }
   }, [profile, onboardingDefaults]);
+
+  // Handle deferred sign-in: continue pending download after auth
+  useEffect(() => {
+    if (isFirebaseUser && pendingDownload) {
+      // User just signed in, continue the download flow
+      const type = pendingDownload;
+      const platformId = pendingPlatformId;
+      
+      // Clear pending state
+      setPendingDownload(null);
+      setPendingPlatformId(null);
+      
+      // Small delay to allow profile to load
+      setTimeout(() => {
+        if (type === 'export') {
+          handleExport();
+        } else if (type === 'platform' && platformId) {
+          handlePlatformDownload(platformId);
+        } else if (type === 'all') {
+          handleDownloadAll();
+        }
+      }, 500);
+    }
+  }, [isFirebaseUser, pendingDownload, pendingPlatformId]);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -468,11 +539,59 @@ export default function PortraitGenerator({
     return url;
   };
 
-  const handleExport = () => {
+  // Add watermark to canvas for free users
+  const addWatermark = (ctx: CanvasRenderingContext2D, width: number, height: number) => {
+    const watermarkText = 'ProPortrait.ai';
+    ctx.save();
+    ctx.font = `bold ${Math.max(20, Math.floor(width / 15))}px sans-serif`;
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+    ctx.strokeStyle = 'rgba(0, 0, 0, 0.3)';
+    ctx.lineWidth = 2;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    
+    // Rotate and place watermark diagonally
+    ctx.translate(width / 2, height / 2);
+    ctx.rotate(-Math.PI / 6);
+    ctx.strokeText(watermarkText, 0, 0);
+    ctx.fillText(watermarkText, 0, 0);
+    ctx.restore();
+  };
+
+  const handleExport = async () => {
     const currentImage = getCurrentImage();
     if (!currentImage || !canvasRef.current) return;
-    if (exportFormat === 'png' && !isPro) { alert('PNG export is a Pro feature. Please upgrade or select JPG.'); return; }
-    const baseSize = isPro ? 2048 : 1024;
+    
+    // Deferred sign-in: Check if user is authenticated first
+    if (!isFirebaseUser) {
+      setPendingDownload('export');
+      onRequiresAuth?.();
+      capture('download_auth_required', { type: 'export' });
+      return;
+    }
+    
+    // Check download credits first
+    const credits = await checkDownloadCredits();
+    if (!credits || credits.tier === 'free') {
+      setShowPricingModal(true);
+      capture('download_blocked', { reason: 'free_tier' });
+      return;
+    }
+    if (credits.credits <= 0) {
+      setShowPricingModal(true);
+      capture('download_blocked', { reason: 'no_credits' });
+      return;
+    }
+    
+    // Consume credit before download
+    const consumeResult = await consumeDownloadCredit();
+    if (!consumeResult.success) {
+      alert(consumeResult.error || 'Failed to process download. Please try again.');
+      return;
+    }
+    
+    // All paid tiers get HD (2048px)
+    const baseSize = 2048;
     const [rW, rH] = exportRatio.split(':').map(Number);
     const ratio = rW / rH;
     const width = ratio > 1 ? baseSize : Math.round(baseSize * ratio);
@@ -490,23 +609,56 @@ export default function PortraitGenerator({
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
-      capture('portrait_downloaded', { platform: 'custom', isPro });
+      capture('portrait_downloaded', { platform: 'custom', tier: credits.tier, remaining: consumeResult.remaining });
       void trackExportClient('custom');
+      void refreshProfile(); // Refresh to update credit display
+      
       
       // Show success toast
       setLastExportedFile(fileName);
       setShowExportToast(true);
       
-      // Check if we should show beta feedback (after 3rd export, if beta user and hasn't submitted)
-      const exportCount = (profile?.exportCount ?? 0) + 1;
-      if (exportCount >= 3 && profile?.joinedDuringBeta && !hasSubmittedFeedback && !showBetaFeedback) {
-        // Small delay to let the toast appear first
-        setTimeout(() => setShowBetaFeedback(true), 1500);
-      }
+
     };
   };
 
-  const handlePlatformDownload = (presetId: string) => {
+  const handlePlatformDownload = async (presetId: string) => {
+    // Deferred sign-in: Check if user is authenticated first
+    if (!isFirebaseUser) {
+      setPendingDownload('platform');
+      setPendingPlatformId(presetId);
+      onRequiresAuth?.();
+      capture('download_auth_required', { type: 'platform', platform: presetId });
+      return;
+    }
+    
+    // Check download credits first
+    const credits = await checkDownloadCredits();
+    if (!credits || credits.tier === 'free') {
+      setShowPricingModal(true);
+      capture('download_blocked', { reason: 'free_tier', platform: presetId });
+      return;
+    }
+    if (credits.credits <= 0) {
+      setShowPricingModal(true);
+      capture('download_blocked', { reason: 'no_credits', platform: presetId });
+      return;
+    }
+    
+    // Only Plus tier gets platform downloads
+    if (credits.tier !== 'plus') {
+      setShowPricingModal(true);
+      capture('download_blocked', { reason: 'tier_limit', platform: presetId, tier: credits.tier });
+      return;
+    }
+    
+    // Consume credit before download
+    const consumeResult = await consumeDownloadCredit();
+    if (!consumeResult.success) {
+      alert(consumeResult.error || 'Failed to process download. Please try again.');
+      return;
+    }
+    
     const preset = PLATFORM_PRESETS.find(p => p.id === presetId);
     const currentImage = getCurrentImage();
     if (!preset || !currentImage || !canvasRef.current) return;
@@ -524,22 +676,52 @@ export default function PortraitGenerator({
       a.click();
       document.body.removeChild(a);
       setDownloadingPlatform(null);
-      capture('platform_downloaded', { platform: presetId, isPro });
+      capture('platform_downloaded', { platform: presetId, tier: credits.tier, remaining: consumeResult.remaining });
       void trackExportClient(presetId);
+      void refreshProfile(); // Refresh to update credit display
       
       // Show success toast
       setLastExportedFile(preset.filename);
       setShowExportToast(true);
-      
-      // Check if we should show beta feedback (after 3rd export, if beta user and hasn't submitted)
-      const exportCount = (profile?.exportCount ?? 0) + 1;
-      if (exportCount >= 3 && profile?.joinedDuringBeta && !hasSubmittedFeedback && !showBetaFeedback) {
-        setTimeout(() => setShowBetaFeedback(true), 1500);
-      }
     };
   };
 
   const handleDownloadAll = async () => {
+    // Deferred sign-in: Check if user is authenticated first
+    if (!isFirebaseUser) {
+      setPendingDownload('all');
+      onRequiresAuth?.();
+      capture('download_auth_required', { type: 'all' });
+      return;
+    }
+    
+    // Check download credits first
+    const credits = await checkDownloadCredits();
+    if (!credits || credits.tier === 'free') {
+      setShowPricingModal(true);
+      capture('download_blocked', { reason: 'free_tier', platform: 'all' });
+      return;
+    }
+    if (credits.credits <= 0) {
+      setShowPricingModal(true);
+      capture('download_blocked', { reason: 'no_credits', platform: 'all' });
+      return;
+    }
+    
+    // Only Plus tier gets Download All
+    if (credits.tier !== 'plus') {
+      setShowPricingModal(true);
+      capture('download_blocked', { reason: 'tier_limit', platform: 'all', tier: credits.tier });
+      return;
+    }
+    
+    // Consume credit before download
+    const consumeResult = await consumeDownloadCredit();
+    if (!consumeResult.success) {
+      alert(consumeResult.error || 'Failed to process download. Please try again.');
+      return;
+    }
+    
     const JSZip = (await import('jszip')).default;
     const currentImage = getCurrentImage();
     if (!currentImage || !canvasRef.current) return;
@@ -562,17 +744,13 @@ export default function PortraitGenerator({
     a.click();
     URL.revokeObjectURL(url);
     setDownloadingPlatform(null);
+    capture('all_platforms_downloaded', { tier: credits.tier, remaining: consumeResult.remaining });
     void trackExportClient('all');
+    void refreshProfile(); // Refresh to update credit display
     
     // Show success toast
     setLastExportedFile('proportrait-all-platforms.zip');
     setShowExportToast(true);
-    
-    // Check if we should show beta feedback (after 3rd export, if beta user and hasn't submitted)
-    const exportCount = (profile?.exportCount ?? 0) + 1;
-    if (exportCount >= 3 && profile?.joinedDuringBeta && !hasSubmittedFeedback && !showBetaFeedback) {
-      setTimeout(() => setShowBetaFeedback(true), 1500);
-    }
   };
 
   const handleCopyPreset = () => {
@@ -1525,6 +1703,18 @@ export default function PortraitGenerator({
                     <img src={getCurrentImage()} alt="Export Preview" className="w-full h-full"
                       style={{ objectFit: exportMode === 'fill' ? 'cover' : 'contain', objectPosition: `${cropPosition.x}% ${cropPosition.y}%` }}
                       referrerPolicy="no-referrer" />
+                    {/* Watermark overlay for free users */}
+                    {!isPro && (
+                      <div className="absolute inset-0 pointer-events-none flex items-center justify-center overflow-hidden">
+                        <div className="transform -rotate-12 text-white/40 text-4xl font-bold select-none"
+                          style={{ 
+                            textShadow: '0 2px 4px rgba(0,0,0,0.3)',
+                            fontSize: 'clamp(2rem, 8vw, 4rem)'
+                          }}>
+                          ProPortrait.ai
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -1610,59 +1800,91 @@ export default function PortraitGenerator({
                     </div>
                   </>)}
 
-                  {/* Pro Banner — always visible */}
-                  {!isPro ? (
+                  {/* Download Status / Upgrade Banner */}
+                  {!isFirebaseUser ? (
                     <div className="p-4 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-xl text-white shadow-lg">
                       <div className="flex items-center gap-2 mb-2">
                         <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
-                        <h3 className="font-bold text-sm">Upgrade to Pro</h3>
+                        <h3 className="font-bold text-sm">Ready to Download?</h3>
                       </div>
+                      <p className="text-xs opacity-90 mb-3">
+                        Sign in to unlock your HD portrait. No credit card required to create an account.
+                      </p>
                       <ul className="text-xs space-y-1 mb-3 opacity-90">
-                        <li className="flex items-center gap-1"><Check className="w-3 h-3" /> High Resolution (2048px)</li>
-                        <li className="flex items-center gap-1"><Check className="w-3 h-3" /> PNG Lossless Format</li>
-                        <li className="flex items-center gap-1"><Check className="w-3 h-3" /> All platform exports</li>
+                        <li className="flex items-center gap-1"><Check className="w-3 h-3" /> $4.99 — HD Download</li>
+                        <li className="flex items-center gap-1"><Check className="w-3 h-3" /> $9.99 — All Platforms (ZIP)</li>
                       </ul>
-                      <button onClick={() => setShowPricingModal(true)} className="w-full py-2 bg-white text-indigo-600 rounded-lg text-sm font-bold hover:bg-indigo-50">
-                        See Plans
-                      </button>
+                    </div>
+                  ) : !isPro ? (
+                    <div className="p-4 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-xl text-white shadow-lg">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
+                        <h3 className="font-bold text-sm">Watermarked Preview</h3>
+                      </div>
+                      <p className="text-xs opacity-90 mb-3">
+                        Generate and edit free forever. Pay only when you're ready to download.
+                      </p>
+                      <ul className="text-xs space-y-1 mb-3 opacity-90">
+                        <li className="flex items-center gap-1"><Check className="w-3 h-3" /> $4.99 — HD Download</li>
+                        <li className="flex items-center gap-1"><Check className="w-3 h-3" /> $9.99 — All Platforms (ZIP)</li>
+                      </ul>
                     </div>
                   ) : (
-                    <div className="p-3 bg-green-50 border border-green-200 rounded-xl flex items-center gap-3">
-                      <Star className="w-5 h-5 fill-green-500 text-green-500" />
-                      <div><div className="font-bold text-sm text-green-800">Pro Active</div><div className="text-xs text-green-600">High Res & PNG Unlocked</div></div>
+                    <div className="p-3 bg-green-50 border border-green-200 rounded-xl">
+                      <div className="flex items-center gap-3 mb-2">
+                        <Star className="w-5 h-5 fill-green-500 text-green-500" />
+                        <div>
+                          <div className="font-bold text-sm text-green-800">
+                            {tier === 'plus' ? 'Plus Plan Active' : 'Basic Plan Active'}
+                          </div>
+                          <div className="text-xs text-green-600">HD Downloads Unlocked</div>
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="text-green-700">Download credits:</span>
+                        <span className="font-bold text-green-800 bg-green-100 px-2 py-0.5 rounded-full">
+                          {profile?.downloadCredits ?? 0}
+                        </span>
+                      </div>
                     </div>
                   )}
 
-                  {/* Standard Download — always visible */}
+                  {/* Standard Download Button */}
                   <button onClick={handleExport}
-                    className="w-full py-3.5 bg-indigo-600 text-white rounded-xl font-bold text-sm hover:bg-indigo-700 shadow-lg flex items-center justify-center gap-2">
-                    <Download className="w-4 h-4" /> Download {isPro ? '(Pro)' : '(Free)'}
+                    className={cn(
+                      "w-full py-3.5 rounded-xl font-bold text-sm shadow-lg flex items-center justify-center gap-2 transition-all",
+                      isPro 
+                        ? "bg-indigo-600 text-white hover:bg-indigo-700" 
+                        : "bg-indigo-600 text-white hover:bg-indigo-700"
+                    )}>
+                    <Download className="w-4 h-4" /> 
+                    {!isFirebaseUser ? 'Sign in to Download' : isPro ? 'Download HD Portrait' : 'Unlock Download'}
                   </button>
 
                   {/* Save to Library */}
                   <div className="flex gap-2">
                     <button
-                      onClick={isFirebaseUser && tier !== 'free' ? handleSavePortrait : () => setShowPricingModal(true)}
-                      disabled={saveStatus === 'saving'}
-                      title={!isFirebaseUser ? 'Sign in to save portraits' : tier === 'free' ? 'Upgrade to save portraits' : ''}
+                      onClick={isFirebaseUser ? handleSavePortrait : () => {}}
+                      disabled={saveStatus === 'saving' || !isFirebaseUser}
+                      title={!isFirebaseUser ? 'Sign in to save portraits' : 'Save to your library'}
                       className={cn(
                         'flex-1 py-2.5 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 border transition-all',
                         saveStatus === 'saved'
                           ? 'bg-green-50 border-green-300 text-green-700'
                           : saveStatus === 'error'
                             ? 'bg-red-50 border-red-300 text-red-600'
-                            : tier === 'free' || !isFirebaseUser
-                              ? 'bg-slate-50 border-slate-200 text-slate-400 cursor-pointer hover:border-indigo-300 hover:text-indigo-600'
+                            : !isFirebaseUser
+                              ? 'bg-slate-50 border-slate-200 text-slate-400 cursor-not-allowed'
                               : 'bg-white border-slate-200 text-slate-700 hover:border-indigo-400 hover:bg-indigo-50',
                       )}>
                       {saveStatus === 'saving' && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
                       {saveStatus === 'saved' && <CheckCheck className="w-3.5 h-3.5" />}
                       {saveStatus === 'error' && <span className="w-3.5 h-3.5 text-xs">!</span>}
-                      {saveStatus === 'idle' && (tier === 'free' || !isFirebaseUser ? <Lock className="w-3.5 h-3.5" /> : <Shield className="w-3.5 h-3.5" />)}
+                      {saveStatus === 'idle' && (!isFirebaseUser ? <Lock className="w-3.5 h-3.5" /> : <Shield className="w-3.5 h-3.5" />)}
                       {saveStatus === 'saving' ? 'Saving…' : saveStatus === 'saved' ? 'Saved!' : saveStatus === 'error' ? 'Error' : 'Save'}
-                      {saveStatus === 'idle' && tier === 'creator' && (
+                      {saveStatus === 'idle' && isFirebaseUser && (
                         <span className="text-[10px] text-slate-400 font-normal">
-                          {profile?.saveCount ?? 0}/30
+                          {profile?.saveCount ?? 0}/{tier === 'free' ? 10 : tier === 'basic' ? 50 : 200}
                         </span>
                       )}
                     </button>
@@ -1727,41 +1949,54 @@ export default function PortraitGenerator({
                     <div className="border-t border-slate-200 pt-4">
                       <h3 className="text-sm font-semibold text-slate-900 mb-2 flex items-center gap-2">
                         <Globe className="w-4 h-4 text-indigo-600" /> Platform Export
-                        <span className="text-xs font-normal text-slate-400">Optimized sizes</span>
+                        <span className="text-xs font-normal text-slate-400">Plus plan only</span>
                       </h3>
-                      <div className="space-y-1.5">
-                        {PLATFORM_PRESETS.map((preset) => {
-                          const icons: Record<string, React.ComponentType<{ className?: string }>> = {
-                            linkedin: Linkedin, github: Github, twitter: Twitter,
-                            instagram: Globe, resume: FileText,
-                          };
-                          const Icon = icons[preset.id] || Globe;
-                          return (
-                            <button key={preset.id} onClick={() => handlePlatformDownload(preset.id)}
-                              disabled={!!downloadingPlatform}
-                              className="w-full flex items-center justify-between px-3 py-2 bg-white border border-slate-200 rounded-lg hover:border-indigo-300 hover:bg-indigo-50 transition-all disabled:opacity-50 text-xs">
-                              <div className="flex items-center gap-2">
-                                <Icon className="w-3.5 h-3.5 text-slate-500" />
-                                <span className="font-medium text-slate-700">{preset.name}</span>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <span className="text-slate-400">{preset.description}</span>
-                                {downloadingPlatform === preset.id ? (
-                                  <Loader2 className="w-3.5 h-3.5 text-indigo-500 animate-spin" />
-                                ) : (
-                                  <Download className="w-3.5 h-3.5 text-slate-400" />
-                                )}
-                              </div>
-                            </button>
-                          );
-                        })}
-                      </div>
-                      <button onClick={handleDownloadAll} disabled={!!downloadingPlatform}
-                        className="w-full mt-2 py-2 bg-slate-100 hover:bg-slate-200 border border-slate-200 rounded-lg text-xs font-semibold text-slate-700 flex items-center justify-center gap-2 transition-all disabled:opacity-50">
-                        {downloadingPlatform === 'all'
-                          ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Building ZIP&hellip;</>
-                          : <><Package className="w-3.5 h-3.5" /> Download All Platforms</>}
-                      </button>
+                      {!isPro || tier !== 'plus' ? (
+                        <div className="p-3 bg-slate-50 rounded-lg border border-slate-200 text-center">
+                          <p className="text-xs text-slate-500 mb-2">
+                            Platform exports are included with the Plus plan ($9.99)
+                          </p>
+                          <button onClick={() => setShowPricingModal(true)} className="text-xs text-indigo-600 font-medium hover:text-indigo-700">
+                            Upgrade to Plus →
+                          </button>
+                        </div>
+                      ) : (
+                        <>
+                          <div className="space-y-1.5">
+                            {PLATFORM_PRESETS.map((preset) => {
+                              const icons: Record<string, React.ComponentType<{ className?: string }>> = {
+                                linkedin: Linkedin, github: Github, twitter: Twitter,
+                                instagram: Globe, resume: FileText,
+                              };
+                              const Icon = icons[preset.id] || Globe;
+                              return (
+                                <button key={preset.id} onClick={() => handlePlatformDownload(preset.id)}
+                                  disabled={!!downloadingPlatform}
+                                  className="w-full flex items-center justify-between px-3 py-2 bg-white border border-slate-200 rounded-lg hover:border-indigo-300 hover:bg-indigo-50 transition-all disabled:opacity-50 text-xs">
+                                  <div className="flex items-center gap-2">
+                                    <Icon className="w-3.5 h-3.5 text-slate-500" />
+                                    <span className="font-medium text-slate-700">{preset.name}</span>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-slate-400">{preset.description}</span>
+                                    {downloadingPlatform === preset.id ? (
+                                      <Loader2 className="w-3.5 h-3.5 text-indigo-500 animate-spin" />
+                                    ) : (
+                                      <Download className="w-3.5 h-3.5 text-slate-400" />
+                                    )}
+                                  </div>
+                                </button>
+                              );
+                            })}
+                          </div>
+                          <button onClick={handleDownloadAll} disabled={!!downloadingPlatform}
+                            className="w-full mt-2 py-2 bg-slate-100 hover:bg-slate-200 border border-slate-200 rounded-lg text-xs font-semibold text-slate-700 flex items-center justify-center gap-2 transition-all disabled:opacity-50">
+                            {downloadingPlatform === 'all'
+                              ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Building ZIP&hellip;</>
+                              : <><Package className="w-3.5 h-3.5" /> Download All Platforms</>}
+                          </button>
+                        </>
+                      )}
                     </div>
                   </>)}
                 </div>
@@ -1807,18 +2042,7 @@ export default function PortraitGenerator({
         fileName={lastExportedFile}
       />
       
-      <BetaFeedbackModal
-        show={showBetaFeedback}
-        onClose={() => setShowBetaFeedback(false)}
-        generationCount={profile?.generationCount ?? 0}
-        onSubmitted={(eligible) => {
-          setHasSubmittedFeedback(true);
-          if (eligible) {
-            // Refresh profile to get updated discount status
-            void refreshProfile();
-          }
-        }}
-      />
+
     </div>
   );
 }

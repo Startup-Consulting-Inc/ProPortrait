@@ -1,7 +1,7 @@
 import { FieldValue } from 'firebase-admin/firestore';
 import { adminFirestore } from './firebase.js';
 
-export type Tier = 'free' | 'creator' | 'pro' | 'max';
+export type Tier = 'free' | 'basic' | 'plus';
 export type IcpSegment = 'career' | 'executive' | 'creative_tech' | 'service' | 'artist';
 export type VibePreference = 'polished' | 'warm' | 'bold' | 'creative';
 
@@ -23,10 +23,12 @@ export interface UserDoc {
   isAdmin: boolean;
   tier?: Tier;
   stripeCustomerId?: string;
-  // Generation limits
+  // Generation limits (no longer strictly enforced - free users get unlimited watermarked generations)
   generationCount?: number;
   generationsThisMonth?: number;
   lastResetMonth?: string; // YYYY-MM
+  // Download credits (new pay-per-download model)
+  downloadCredits?: number;
   // Save limits
   saveCount?: number;
   // Default preferences for portrait generation
@@ -112,15 +114,17 @@ export async function firestoreSetTier(
   await adminFirestore().collection('users').doc(uid).set(update, { merge: true });
 }
 
-/** Check generation limits and increment counter. Throws with code if over limit. */
+/** Check generation limits and increment counter. 
+ * New model: Free users get unlimited watermarked generations.
+ * Paid tiers (basic/plus) get higher quality and download credits.
+ */
 export async function checkAndIncrementGeneration(uid: string, doc: UserDoc): Promise<void> {
-  const tier: Tier = doc.tier ?? (doc.isPro ? 'pro' : 'free');
+  const tier: Tier = doc.tier ?? 'free';
   const currentMonth = new Date().toISOString().slice(0, 7); // YYYY-MM
-  const generationCount = doc.generationCount ?? 0;
   let generationsThisMonth = doc.generationsThisMonth ?? 0;
 
-  // Monthly reset for pro/max
-  if ((tier === 'pro' || tier === 'max') && doc.lastResetMonth !== currentMonth) {
+  // Monthly reset for paid tiers
+  if ((tier === 'basic' || tier === 'plus') && doc.lastResetMonth !== currentMonth) {
     generationsThisMonth = 0;
     await adminFirestore().collection('users').doc(uid).update({
       generationsThisMonth: 0,
@@ -128,31 +132,66 @@ export async function checkAndIncrementGeneration(uid: string, doc: UserDoc): Pr
     });
   }
 
-  if (tier === 'free' && generationCount >= 3) {
-    throw Object.assign(new Error('Free plan limit reached (3 portraits). Upgrade to continue.'), { code: 'generation_limit' });
+  // Free tier: unlimited generations (but watermarked, no download)
+  // Basic/Plus: generous limits (1000/month should be effectively unlimited for most)
+  if ((tier === 'basic' || tier === 'plus') && generationsThisMonth >= 1000) {
+    throw Object.assign(new Error('Monthly generation limit reached (1000/month). Contact support if you need more.'), { code: 'generation_limit' });
   }
-  if (tier === 'creator' && generationCount >= 30) {
-    throw Object.assign(new Error('Creator Pass limit reached (30 portraits).'), { code: 'generation_limit' });
+}
+
+/** Check if user has download credits available */
+export async function checkDownloadCredits(uid: string, doc: UserDoc): Promise<{ hasCredits: boolean; credits: number }> {
+  const tier = doc.tier ?? 'free';
+  const credits = doc.downloadCredits ?? 0;
+  
+  // Free users cannot download (watermarked preview only)
+  if (tier === 'free') {
+    return { hasCredits: false, credits: 0 };
   }
-  if (tier === 'pro' && generationsThisMonth >= 100) {
-    throw Object.assign(new Error('Pro monthly limit reached (100/month). Resets next month.'), { code: 'generation_limit' });
+  
+  return { hasCredits: credits > 0, credits };
+}
+
+/** Consume a download credit. Throws if no credits available. */
+export async function consumeDownloadCredit(uid: string, doc: UserDoc): Promise<void> {
+  const tier = doc.tier ?? 'free';
+  const credits = doc.downloadCredits ?? 0;
+  
+  if (tier === 'free') {
+    throw Object.assign(new Error('Free users cannot download. Please upgrade to download your portrait.'), { code: 'download_limit' });
   }
-  if (tier === 'max' && generationsThisMonth >= 500) {
-    throw Object.assign(new Error('Max monthly limit reached (500/month). Resets next month.'), { code: 'generation_limit' });
+  
+  if (credits <= 0) {
+    throw Object.assign(new Error('No download credits remaining. Please purchase more downloads.'), { code: 'download_limit' });
   }
+  
+  await adminFirestore().collection('users').doc(uid).set(
+    { downloadCredits: FieldValue.increment(-1), updatedAt: FieldValue.serverTimestamp() },
+    { merge: true },
+  );
+}
+
+/** Add download credits after purchase */
+export async function addDownloadCredits(uid: string, credits: number): Promise<void> {
+  await adminFirestore().collection('users').doc(uid).set(
+    { downloadCredits: FieldValue.increment(credits), updatedAt: FieldValue.serverTimestamp() },
+    { merge: true },
+  );
 }
 
 // ── Saved Portraits ───────────────────────────────────────────────────────────
 
 export async function checkSaveLimit(uid: string, doc: UserDoc): Promise<void> {
-  const tier: Tier = doc.tier ?? (doc.isPro ? 'pro' : 'free');
-  if (tier === 'free') {
-    throw Object.assign(new Error('Free users cannot save portraits. Upgrade to save.'), { code: 'save_limit' });
+  const tier: Tier = doc.tier ?? 'free';
+  // All tiers (including free) can now save portraits to library
+  // This is now a value-add feature rather than a paywall
+  // Limits only apply to prevent abuse
+  const saveCount = doc.saveCount ?? 0;
+  const maxSaves = tier === 'free' ? 10 : tier === 'basic' ? 50 : 200;
+  
+  if (saveCount >= maxSaves) {
+    throw Object.assign(new Error(`Save limit reached (${maxSaves}). Delete some saved portraits to add more.`), { code: 'save_limit' });
   }
-  if (tier === 'creator' && (doc.saveCount ?? 0) >= 30) {
-    throw Object.assign(new Error('Creator Pass save limit reached (30 saves).'), { code: 'save_limit' });
-  }
-  // pro and max: unlimited
 }
 
 export async function savePortraitDoc(

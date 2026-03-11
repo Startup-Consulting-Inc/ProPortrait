@@ -62,7 +62,7 @@ export default function UserMenu({ onOpenProfile, onOpenAdmin, onOpenLibrary }: 
             <div className="text-xs text-slate-400 truncate">{user.email}</div>
             {isPro && (
               <span className="inline-block mt-1 text-xs font-semibold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full">
-                {tier === 'creator' ? 'Creator' : tier === 'max' ? 'Max' : 'Pro'}
+                {tier === 'basic' ? 'Basic' : tier === 'plus' ? 'Plus' : 'Free'}
               </span>
             )}
           </div>

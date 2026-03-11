@@ -1,15 +1,27 @@
 import { Router, Request, Response } from 'express';
 import Stripe from 'stripe';
 import { getOrCreateSession, setProStatus, SESSION_COOKIE, COOKIE_OPTIONS } from '../lib/session.js';
-import { firestoreSetProStatus, firestoreSetTier, getUserByStripeCustomerId, getUserDoc, isEligibleForBetaDiscount, markBetaDiscountApplied } from '../lib/firestore.js';
+import { firestoreSetProStatus, firestoreSetTier, addDownloadCredits, getUserByStripeCustomerId, getUserDoc } from '../lib/firestore.js';
 import type { Tier } from '../lib/firestore.js';
-import { requireFirebaseAuth } from '../middleware/authMiddleware.js';
 
 const router = Router();
 
 const stripe = process.env.STRIPE_SECRET_KEY
   ? new Stripe(process.env.STRIPE_SECRET_KEY)
   : null;
+
+// Price IDs for the new simplified model
+const PRICE_IDS = {
+  basic: process.env.STRIPE_BASIC_PRICE_ID,      // $4.99 - 1 HD download
+  plus: process.env.STRIPE_PLUS_PRICE_ID,        // $9.99 - 1 HD download + all platforms
+};
+
+// Download credits granted per purchase
+const DOWNLOAD_CREDITS: Record<Tier, number> = {
+  free: 0,
+  basic: 1,
+  plus: 1,
+};
 
 // POST /api/payments/checkout
 router.post('/checkout', async (req: Request, res: Response) => {
@@ -18,8 +30,14 @@ router.post('/checkout', async (req: Request, res: Response) => {
     return;
   }
 
-  const { plan } = req.body as { plan: 'creator' | 'pro' | 'max' };
+  const { plan } = req.body as { plan: 'basic' | 'plus' };
   const appUrl = process.env.APP_URL || 'http://localhost:3000';
+
+  // Validate plan
+  if (plan !== 'basic' && plan !== 'plus') {
+    res.status(400).json({ error: 'Invalid plan. Choose basic or plus.' });
+    return;
+  }
 
   // Build metadata to identify purchaser in webhook
   const firebaseUid = req.auth.uid;
@@ -37,52 +55,21 @@ router.post('/checkout', async (req: Request, res: Response) => {
     metadata.sessionId = newSessionId;
   }
 
-  const checkoutBase: Stripe.Checkout.SessionCreateParams = {
-    success_url: `${appUrl}/app?payment=success`,
-    cancel_url: `${appUrl}/app?payment=cancelled`,
-    metadata,
-    ...(req.auth.email ? { customer_email: req.auth.email } : {}),
-  };
-
-  let priceId: string | undefined;
-  let mode: 'payment' | 'subscription';
-
-  if (plan === 'creator') {
-    priceId = process.env.STRIPE_CREATOR_PRICE_ID ?? process.env.STRIPE_SESSION_PRICE_ID;
-    mode = 'payment';
-  } else if (plan === 'pro') {
-    priceId = process.env.STRIPE_PRO_PRICE_ID;
-    mode = 'subscription';
-  } else if (plan === 'max') {
-    priceId = process.env.STRIPE_MAX_PRICE_ID;
-    mode = 'subscription';
-  } else {
-    res.status(400).json({ error: 'Invalid plan' });
-    return;
-  }
+  const priceId = PRICE_IDS[plan];
 
   if (!priceId) {
     res.status(503).json({ error: `${plan} price not configured`, mock: true });
     return;
   }
 
-  // Check for beta discount eligibility (Pro/Max only)
-  let discounts: Stripe.Checkout.SessionCreateParams['discounts'] | undefined;
-  if ((plan === 'pro' || plan === 'max') && firebaseUid) {
-    const eligibleForBetaDiscount = await isEligibleForBetaDiscount(firebaseUid);
-    if (eligibleForBetaDiscount) {
-      // Apply BETA50 coupon (50% off for 1 year)
-      discounts = [{ coupon: 'BETA50' }];
-      metadata.betaDiscount = 'applied';
-    }
-  }
-
   try {
     const checkout = await stripe.checkout.sessions.create({
-      mode,
+      mode: 'payment', // One-time payment
       line_items: [{ price: priceId, quantity: 1 }],
-      ...(discounts ? { discounts } : {}),
-      ...checkoutBase,
+      success_url: `${appUrl}/app?payment=success&plan=${plan}`,
+      cancel_url: `${appUrl}/app?payment=cancelled`,
+      metadata,
+      ...(req.auth.email ? { customer_email: req.auth.email } : {}),
     });
     res.json({ url: checkout.url });
   } catch (err) {
@@ -121,18 +108,19 @@ router.post('/webhook', async (req: Request, res: Response) => {
     const uid = session.metadata?.firebaseUid;
     const sid = session.metadata?.sessionId;
     const customerId = session.customer as string | undefined;
-    const plan = (session.metadata?.plan ?? 'pro') as Tier;
+    const plan = (session.metadata?.plan ?? 'basic') as Tier;
 
     if (uid) {
-      // Firebase user → persist tier to Firestore
+      // Firebase user → persist tier and add download credits
       await firestoreSetTier(uid, plan, customerId);
-      console.log(`[payments] Tier '${plan}' activated in Firestore for uid ${uid}`);
       
-      // Mark beta discount as applied if it was used
-      if (session.metadata?.betaDiscount === 'applied') {
-        await markBetaDiscountApplied(uid);
-        console.log(`[payments] Beta discount marked as applied for uid ${uid}`);
+      // Add download credits based on plan
+      const credits = DOWNLOAD_CREDITS[plan] ?? 0;
+      if (credits > 0) {
+        await addDownloadCredits(uid, credits);
       }
+      
+      console.log(`[payments] Tier '${plan}' activated with ${credits} credits for uid ${uid}`);
     } else if (sid) {
       // Anonymous session → mark as pro in memory (no tier granularity)
       setProStatus(sid, true, customerId);
@@ -140,24 +128,12 @@ router.post('/webhook', async (req: Request, res: Response) => {
     }
   }
 
-  if (event.type === 'customer.subscription.deleted') {
-    const sub = event.data.object as Stripe.Subscription;
-    const customerId = sub.customer as string;
-
-    const result = await getUserByStripeCustomerId(customerId);
-    if (result) {
-      await firestoreSetTier(result.uid, 'free');
-      console.log(`[payments] Tier revoked (→ free) in Firestore for uid ${result.uid}`);
-    } else {
-      console.log(`[payments] Subscription deleted for customer ${customerId} — no Firestore doc found`);
-    }
-  }
-
   res.json({ received: true });
 });
 
 // POST /api/payments/portal — open Stripe billing portal (Firebase auth required)
-router.post('/portal', requireFirebaseAuth, async (req: Request, res: Response) => {
+// Note: With one-time payments, this is less useful, but kept for customer support
+router.post('/portal', async (req: Request, res: Response) => {
   if (!stripe) {
     res.status(503).json({ error: 'Payment not configured yet' });
     return;
@@ -165,7 +141,7 @@ router.post('/portal', requireFirebaseAuth, async (req: Request, res: Response) 
 
   const doc = await getUserDoc(req.auth.uid!);
   if (!doc?.stripeCustomerId) {
-    res.status(404).json({ error: 'No billing subscription found.' });
+    res.status(404).json({ error: 'No billing history found.' });
     return;
   }
 

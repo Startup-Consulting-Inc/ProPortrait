@@ -8,9 +8,10 @@ interface AuthModalProps {
   onSuccess?: () => void;
   onAccountCreated?: () => void; // Called when a new account is created
   initialTab?: 'signin' | 'create';
+  context?: 'default' | 'download'; // Context for customizing the modal message
 }
 
-export default function AuthModal({ open, onClose, onSuccess, onAccountCreated, initialTab = 'signin' }: AuthModalProps) {
+export default function AuthModal({ open, onClose, onSuccess, onAccountCreated, initialTab = 'signin', context = 'default' }: AuthModalProps) {
   const { signInWithGoogle, signInWithEmail, createAccount } = useAuthContext();
   const [tab, setTab] = useState<'signin' | 'create'>(initialTab);
   const [email, setEmail] = useState('');
@@ -125,6 +126,18 @@ export default function AuthModal({ open, onClose, onSuccess, onAccountCreated, 
             </svg>
           </button>
         </div>
+
+        {/* Contextual Message */}
+        {context === 'download' && (
+          <div className="px-6 pt-4">
+            <div className="bg-indigo-50 border border-indigo-100 rounded-xl p-4 text-center">
+              <h3 className="font-semibold text-indigo-900 mb-1">Almost there!</h3>
+              <p className="text-sm text-indigo-700">
+                Sign in to unlock your HD portrait download. No credit card required for sign up.
+              </p>
+            </div>
+          </div>
+        )}
 
         {/* Tabs */}
         <div className="flex gap-0 px-6 pt-5">
