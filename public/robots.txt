@@ -1,3 +1,28 @@
 User-agent: *
 Allow: /
+Disallow: /app
+Disallow: /admin
+
+# Explicitly allow common AI and search crawlers
+User-agent: GPTBot
+Allow: /
+
+User-agent: ChatGPT-User
+Allow: /
+
+User-agent: Claude-Web
+Allow: /
+
+User-agent: Anthropic-AI
+Allow: /
+
+User-agent: Google-Extended
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: Cohere-AI
+Allow: /
+
 Sitemap: https://portrait.ai-biz.app/sitemap.xml

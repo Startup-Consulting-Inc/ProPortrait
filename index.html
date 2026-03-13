@@ -5,44 +5,64 @@
     <link rel="icon" type="image/png" href="/logo.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>ProPortrait AI — AI Professional Headshots</title>
-    <meta name="description" content="Turn any photo into a professional headshot in seconds. Identity-locked AI preserves your exact look — eye color, skin tone, hair. 16 styles. Platform exports for LinkedIn, GitHub, and more.">
+    <meta name="description" content="AI-powered professional headshot generator. Turn any photo into a studio-quality portrait with identity-locked AI — eye color, skin tone, and hair preserved. Free to try; pay only when you download." />
     <meta name="keywords" content="professional headshots, AI portrait generator, AI headshot, LinkedIn photo, identity preservation">
     <meta name="author" content="ProPortrait AI">
-    <meta name="robots" content="index, follow">
-    <meta name="googlebot" content="index, follow">
+    <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
+    <meta name="googlebot" content="index, follow" />
+    <meta name="referrer" content="no-referrer-when-downgrade" />
 
     <!-- Open Graph -->
     <meta property="og:type" content="website" />
     <meta property="og:url" content="https://portrait.ai-biz.app" />
     <meta property="og:title" content="ProPortrait AI — AI Professional Headshots" />
-    <meta property="og:description" content="Turn any photo into a professional headshot in seconds. Identity-locked AI preserves your look exactly." />
-    <meta property="og:image" content="https://portrait.ai-biz.app/og-image.jpg" />
+    <meta property="og:description" content="AI-powered professional headshot generator. Turn any photo into a studio-quality portrait with identity-locked AI. Free to try; pay only when you download." />
+    <meta property="og:image" content="https://portrait.ai-biz.app/logo-v1.jpg" />
     <meta property="og:site_name" content="ProPortrait AI" />
 
     <!-- Twitter Card -->
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="ProPortrait AI — AI Professional Headshots" />
-    <meta name="twitter:description" content="Turn any photo into a professional headshot in seconds. Identity-locked AI preserves your look exactly." />
-    <meta name="twitter:image" content="https://portrait.ai-biz.app/og-image.jpg" />
+    <meta name="twitter:description" content="AI-powered professional headshot generator. Turn any photo into a studio-quality portrait with identity-locked AI. Free to try; pay only when you download." />
+    <meta name="twitter:image" content="https://portrait.ai-biz.app/logo-v1.jpg" />
 
     <link rel="canonical" href="https://portrait.ai-biz.app" />
 
-    <!-- Structured Data -->
+    <!-- Structured Data: WebSite + Organization + SoftwareApplication -->
     <script type="application/ld+json">
     {
       "@context": "https://schema.org",
-      "@type": "SoftwareApplication",
-      "name": "ProPortrait AI",
-      "description": "AI-powered professional headshot generator with identity-locked portrait generation.",
-      "applicationCategory": "MultimediaApplication",
-      "operatingSystem": "Web",
-      "offers": {
-        "@type": "AggregateOffer",
-        "lowPrice": "0",
-        "highPrice": "99",
-        "priceCurrency": "USD"
-      },
-      "url": "https://portrait.ai-biz.app"
+      "@graph": [
+        {
+          "@type": "WebSite",
+          "@id": "https://portrait.ai-biz.app/#website",
+          "url": "https://portrait.ai-biz.app",
+          "name": "ProPortrait AI",
+          "description": "AI-powered professional headshot generator. Turn any photo into a studio-quality portrait with identity-locked AI — eye color, skin tone, and hair preserved. Free to try; pay only when you download.",
+          "publisher": { "@id": "https://portrait.ai-biz.app/#organization" },
+          "inLanguage": "en"
+        },
+        {
+          "@type": "Organization",
+          "@id": "https://portrait.ai-biz.app/#organization",
+          "name": "ProPortrait AI",
+          "url": "https://portrait.ai-biz.app"
+        },
+        {
+          "@type": "SoftwareApplication",
+          "name": "ProPortrait AI",
+          "description": "AI-powered professional headshot generator with identity-locked portrait generation. Platform exports for LinkedIn, GitHub, and more.",
+          "applicationCategory": "MultimediaApplication",
+          "operatingSystem": "Web",
+          "url": "https://portrait.ai-biz.app",
+          "offers": {
+            "@type": "AggregateOffer",
+            "lowPrice": "0",
+            "highPrice": "9.99",
+            "priceCurrency": "USD"
+          }
+        }
+      ]
     }
     </script>
   </head>
