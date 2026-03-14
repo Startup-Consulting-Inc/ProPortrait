@@ -1,7 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { FieldValue } from 'firebase-admin/firestore';
 import { adminFirestore, adminAuth } from '../lib/firebase.js';
-import { upsertUserDoc, getDailyStats, getUserDoc } from '../lib/firestore.js';
+import { upsertUserDoc, getDailyStats, getUserDoc, addDownloadCredits } from '../lib/firestore.js';
 import { requireAdmin } from '../middleware/authMiddleware.js';
 
 const router = Router();
@@ -189,20 +189,22 @@ router.post('/users/:uid/suspend', requireAdmin, async (req: Request, res: Respo
 // PATCH /api/admin/users/:uid/subscription — manage subscription
 router.patch('/users/:uid/subscription', requireAdmin, async (req: Request, res: Response) => {
   const { uid } = req.params;
-  const { 
-    tier, 
-    isPro, 
+  const {
+    tier,
+    isPro,
     expiresAt,
     stripeCustomerId,
-    note 
-  } = req.body as { 
-    tier?: string; 
+    note,
+    downloadCredits: creditsOverride,
+  } = req.body as {
+    tier?: string;
     isPro?: boolean;
     expiresAt?: string;
     stripeCustomerId?: string;
     note?: string;
+    downloadCredits?: number;
   };
-  
+
   try {
     const update: Record<string, unknown> = {
       updatedAt: FieldValue.serverTimestamp(),
@@ -230,7 +232,15 @@ router.patch('/users/:uid/subscription', requireAdmin, async (req: Request, res:
 
     await upsertUserDoc(uid, update);
 
-    console.log(`[admin] Subscription updated by ${req.auth.email}: ${uid}`, { tier, isPro });
+    // Grant download credits: explicit override, or 1 credit when activating a paid tier
+    const creditsToAdd = creditsOverride !== undefined
+      ? creditsOverride
+      : (tier && tier !== 'free' ? 1 : 0);
+    if (creditsToAdd > 0) {
+      await addDownloadCredits(uid, creditsToAdd);
+    }
+
+    console.log(`[admin] Subscription updated by ${req.auth.email}: ${uid}`, { tier, isPro, creditsToAdd });
     res.json({ ok: true, update });
   } catch (err) {
     console.error('[admin/users/subscription]', err);
