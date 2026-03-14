@@ -1991,7 +1991,7 @@ export default function PortraitGenerator({
                             })}
                           </div>
                           <button onClick={handleDownloadAll} disabled={!!downloadingPlatform}
-                            className="w-full mt-2 py-2 bg-slate-100 hover:bg-slate-200 border border-slate-200 rounded-lg text-xs font-semibold text-slate-700 flex items-center justify-center gap-2 transition-all disabled:opacity-50">
+                            className="w-full mt-2 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold flex items-center justify-center gap-2 transition-all disabled:opacity-50">
                             {downloadingPlatform === 'all'
                               ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Building ZIP&hellip;</>
                               : <><Package className="w-3.5 h-3.5" /> Download All Platforms</>}
