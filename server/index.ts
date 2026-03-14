@@ -346,7 +346,7 @@ app.post('/api/portraits/generate', async (req, res) => {
     mimeType,
     style = 'corporate',
     likenessStrength = 50,
-    numImages = 2,
+    numImages = 1,
     identityLocks = { eyeColor: true, skinTone: true, hairLength: true, hairTexture: false, glasses: false },
     naturalness = 50,
     expressionPreset = 'confident_neutral',
@@ -371,26 +371,33 @@ app.post('/api/portraits/generate', async (req, res) => {
     return;
   }
 
-  const safeNumImages = Math.min(Math.max(parseInt(String(numImages), 10) || 2, 1), 4);
+  const safeNumImages = Math.min(Math.max(parseInt(String(numImages), 10) || 1, 1), 4);
 
   const ai = new GoogleGenAI({ apiKey });
 
-  const finalPrompt = buildCorePrompt({
-    style: style as StyleOption,
-    selectedPersonHint,
-    identityLocks,
-    likenessStrength,
-    expressionPreset: expressionPreset as ExpressionPreset,
-    naturalness,
-    removeBlemishes,
-  });
+  // Build per-slot expressions: slot 0 = user's choice, slots 1-3 cycle through the rest
+  const ALL_EXPRESSIONS: ExpressionPreset[] = ['warm_smile', 'confident', 'serious', 'natural'];
+  const slotExpressions: ExpressionPreset[] = [expressionPreset as ExpressionPreset];
+  for (const expr of ALL_EXPRESSIONS) {
+    if (slotExpressions.length >= safeNumImages) break;
+    if (expr !== expressionPreset) slotExpressions.push(expr);
+  }
 
-  const generateSingle = async (): Promise<string> => {
+  const generateSingle = async (slotExpression: ExpressionPreset): Promise<string> => {
+    const prompt = buildCorePrompt({
+      style: style as StyleOption,
+      selectedPersonHint,
+      identityLocks,
+      likenessStrength,
+      expressionPreset: slotExpression,
+      naturalness,
+      removeBlemishes,
+    });
     const response = await ai.models.generateContent({
       model: GEMINI_MODEL,
       contents: {
         parts: [
-          { text: finalPrompt },
+          { text: prompt },
           { inlineData: { data: imageBase64, mimeType } },
         ],
       },
@@ -449,7 +456,7 @@ app.post('/api/portraits/generate', async (req, res) => {
   };
 
   try {
-    const rawImages = await Promise.all(Array(safeNumImages).fill(null).map(() => generateSingle()));
+    const rawImages = await Promise.all(slotExpressions.map((expr) => generateSingle(expr)));
 
     const finalImages = removeBlemishes
       ? await Promise.all(rawImages.map((b64) => retouchPass(b64)))

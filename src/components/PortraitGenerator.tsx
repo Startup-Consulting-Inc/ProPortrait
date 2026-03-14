@@ -148,7 +148,7 @@ export default function PortraitGenerator({
   const [selectedStyle, setSelectedStyle] = useState<StyleOption>(
     (onboardingDefaults?.style as StyleOption) ?? 'editorial'
   );
-  const variantCountFlag = useFeatureFlag<number>('variant-count', 2);
+  const variantCountFlag = useFeatureFlag<number>('variant-count', 1);
   const [numVariations, setNumVariations] = useState<number>(variantCountFlag);
 
   // Group photo — which person to use
@@ -1212,18 +1212,19 @@ export default function PortraitGenerator({
                   <div>
                     <div className="flex items-center justify-between mb-2">
                       <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Number of Variations</label>
-                      {!isPro && <span className="flex items-center gap-1 text-[10px] font-bold text-amber-600 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded-full"><Lock className="w-2.5 h-2.5" /> Pro: up to 8</span>}
                     </div>
                     <div className="flex gap-2">
-                      {[2, 4].map(num => (
+                      {[1, 2, 4].map(num => (
                         <button key={num} onClick={() => setNumVariations(num)}
-                          className={cn('flex-1 py-2 rounded-lg border text-sm font-medium transition-all relative',
+                          className={cn('flex-1 py-2 rounded-lg border text-sm font-medium transition-all',
                             numVariations === num ? 'border-indigo-600 bg-indigo-50 text-indigo-900' : 'border-slate-200 bg-white dark:bg-slate-700 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:border-indigo-200')}>
-                          {num} Images
-                          {num === 4 && <span className="absolute -top-2 -right-2 bg-green-500 text-white text-[10px] px-1.5 py-0.5 rounded-full font-bold">BEST</span>}
+                          {num === 1 ? '1 Image' : `${num} Images`}
                         </button>
                       ))}
                     </div>
+                    {numVariations > 1 && (
+                      <p className="mt-1.5 text-xs text-slate-400">Each variation uses a different expression</p>
+                    )}
                   </div>
                 </div>
 
