@@ -570,26 +570,26 @@ export default function PortraitGenerator({
       return;
     }
     
-    // Check download credits first
-    const credits = await checkDownloadCredits();
-    if (!credits || credits.tier === 'free') {
+    // Use auth context tier (authoritative) instead of re-fetching
+    if (tier === 'free') {
       setShowPricingModal(true);
       capture('download_blocked', { reason: 'free_tier' });
       return;
     }
-    if (credits.credits <= 0) {
+    const remainingCredits = profile?.downloadCredits ?? 0;
+    if (remainingCredits <= 0) {
       setShowPricingModal(true);
       capture('download_blocked', { reason: 'no_credits' });
       return;
     }
-    
+
     // Consume credit before download
     const consumeResult = await consumeDownloadCredit();
     if (!consumeResult.success) {
       alert(consumeResult.error || 'Failed to process download. Please try again.');
       return;
     }
-    
+
     // All paid tiers get HD (2048px)
     const baseSize = 2048;
     const [rW, rH] = exportRatio.split(':').map(Number);
@@ -609,7 +609,7 @@ export default function PortraitGenerator({
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
-      capture('portrait_downloaded', { platform: 'custom', tier: credits.tier, remaining: consumeResult.remaining });
+      capture('portrait_downloaded', { platform: 'custom', tier, remaining: consumeResult.remaining });
       void trackExportClient('custom');
       void refreshProfile(); // Refresh to update credit display
       
@@ -632,26 +632,25 @@ export default function PortraitGenerator({
       return;
     }
     
-    // Check download credits first
-    const credits = await checkDownloadCredits();
-    if (!credits || credits.tier === 'free') {
+    // Use auth context tier (authoritative) instead of re-fetching
+    if (tier === 'free') {
       setShowPricingModal(true);
       capture('download_blocked', { reason: 'free_tier', platform: presetId });
       return;
     }
-    if (credits.credits <= 0) {
+    const remainingCreditsP = profile?.downloadCredits ?? 0;
+    if (remainingCreditsP <= 0) {
       setShowPricingModal(true);
       capture('download_blocked', { reason: 'no_credits', platform: presetId });
       return;
     }
-    
     // Only Plus tier gets platform downloads
-    if (credits.tier !== 'plus') {
+    if (tier !== 'plus') {
       setShowPricingModal(true);
-      capture('download_blocked', { reason: 'tier_limit', platform: presetId, tier: credits.tier });
+      capture('download_blocked', { reason: 'tier_limit', platform: presetId, tier });
       return;
     }
-    
+
     // Consume credit before download
     const consumeResult = await consumeDownloadCredit();
     if (!consumeResult.success) {
@@ -676,7 +675,7 @@ export default function PortraitGenerator({
       a.click();
       document.body.removeChild(a);
       setDownloadingPlatform(null);
-      capture('platform_downloaded', { platform: presetId, tier: credits.tier, remaining: consumeResult.remaining });
+      capture('platform_downloaded', { platform: presetId, tier, remaining: consumeResult.remaining });
       void trackExportClient(presetId);
       void refreshProfile(); // Refresh to update credit display
       
@@ -695,26 +694,25 @@ export default function PortraitGenerator({
       return;
     }
     
-    // Check download credits first
-    const credits = await checkDownloadCredits();
-    if (!credits || credits.tier === 'free') {
+    // Use auth context tier (authoritative) instead of re-fetching
+    if (tier === 'free') {
       setShowPricingModal(true);
       capture('download_blocked', { reason: 'free_tier', platform: 'all' });
       return;
     }
-    if (credits.credits <= 0) {
+    const remainingCreditsA = profile?.downloadCredits ?? 0;
+    if (remainingCreditsA <= 0) {
       setShowPricingModal(true);
       capture('download_blocked', { reason: 'no_credits', platform: 'all' });
       return;
     }
-    
     // Only Plus tier gets Download All
-    if (credits.tier !== 'plus') {
+    if (tier !== 'plus') {
       setShowPricingModal(true);
-      capture('download_blocked', { reason: 'tier_limit', platform: 'all', tier: credits.tier });
+      capture('download_blocked', { reason: 'tier_limit', platform: 'all', tier });
       return;
     }
-    
+
     // Consume credit before download
     const consumeResult = await consumeDownloadCredit();
     if (!consumeResult.success) {
@@ -744,7 +742,7 @@ export default function PortraitGenerator({
     a.click();
     URL.revokeObjectURL(url);
     setDownloadingPlatform(null);
-    capture('all_platforms_downloaded', { tier: credits.tier, remaining: consumeResult.remaining });
+    capture('all_platforms_downloaded', { tier, remaining: consumeResult.remaining });
     void trackExportClient('all');
     void refreshProfile(); // Refresh to update credit display
     
