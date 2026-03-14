@@ -34,6 +34,7 @@ interface UserDetail {
   editCount: number;
   exportCount: number;
   saveCount: number;
+  downloadCredits: number;
   loginCount: number;
   totalCostUsd: number;
   defaultStyle: string;
@@ -64,9 +65,8 @@ interface AdminUserDetailModalProps {
 
 const TIER_OPTIONS = [
   { value: 'free', label: 'Free', color: 'bg-slate-100 text-slate-700' },
-  { value: 'creator', label: 'Creator', color: 'bg-blue-100 text-blue-700' },
-  { value: 'pro', label: 'Pro', color: 'bg-indigo-100 text-indigo-700' },
-  { value: 'max', label: 'Max', color: 'bg-purple-100 text-purple-700' },
+  { value: 'basic', label: 'Basic', color: 'bg-blue-100 text-blue-700' },
+  { value: 'plus', label: 'Plus', color: 'bg-indigo-100 text-indigo-700' },
 ];
 
 export default function AdminUserDetailModal({
@@ -424,6 +424,32 @@ export default function AdminUserDetailModal({
                         )}
                       </div>
                     )}
+                  </div>
+
+                  {/* Download Credits */}
+                  <div className="bg-slate-50 rounded-xl p-4 border border-slate-200">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h3 className="text-sm font-semibold text-slate-900">Download Credits</h3>
+                        <p className="text-2xl font-bold text-slate-800 mt-1">{user.downloadCredits ?? 0}</p>
+                      </div>
+                      <button
+                        onClick={async () => {
+                          const token = await getIdToken();
+                          await fetch(`${API_BASE}/api/admin/users/${user.uid}/subscription`, {
+                            method: 'PATCH',
+                            headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+                            credentials: 'include',
+                            body: JSON.stringify({ downloadCredits: 1 }),
+                          });
+                          setUser({ ...user, downloadCredits: (user.downloadCredits ?? 0) + 1 });
+                          onUpdate();
+                        }}
+                        className="px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-xs font-medium hover:bg-indigo-700"
+                      >
+                        + Grant 1
+                      </button>
+                    </div>
                   </div>
 
                   {/* Admin Actions */}
