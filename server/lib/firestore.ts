@@ -28,7 +28,9 @@ export interface UserDoc {
   generationsThisMonth?: number;
   lastResetMonth?: string; // YYYY-MM
   // Download credits (new pay-per-download model)
-  downloadCredits?: number;
+  downloadCredits?: number;       // Legacy field — kept for backward compat
+  hdCredits?: number;             // Credits for HD portrait downloads
+  platformCredits?: number;       // Credits for platform-specific/ZIP downloads
   // Save limits
   saveCount?: number;
   // Default preferences for portrait generation
@@ -175,6 +177,22 @@ export async function consumeDownloadCredit(uid: string, doc: UserDoc): Promise<
 export async function addDownloadCredits(uid: string, credits: number): Promise<void> {
   await adminFirestore().collection('users').doc(uid).set(
     { downloadCredits: FieldValue.increment(credits), updatedAt: FieldValue.serverTimestamp() },
+    { merge: true },
+  );
+}
+
+/** Add HD download credits after purchase */
+export async function addHdCredits(uid: string, credits: number): Promise<void> {
+  await adminFirestore().collection('users').doc(uid).set(
+    { hdCredits: FieldValue.increment(credits), updatedAt: FieldValue.serverTimestamp() },
+    { merge: true },
+  );
+}
+
+/** Add platform download credits after purchase */
+export async function addPlatformCredits(uid: string, credits: number): Promise<void> {
+  await adminFirestore().collection('users').doc(uid).set(
+    { platformCredits: FieldValue.increment(credits), updatedAt: FieldValue.serverTimestamp() },
     { merge: true },
   );
 }

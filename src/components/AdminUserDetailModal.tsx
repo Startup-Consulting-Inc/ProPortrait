@@ -34,7 +34,9 @@ interface UserDetail {
   editCount: number;
   exportCount: number;
   saveCount: number;
-  downloadCredits: number;
+  downloadCredits: number;    // Legacy
+  hdCredits: number;
+  platformCredits: number;
   loginCount: number;
   totalCostUsd: number;
   defaultStyle: string;
@@ -426,29 +428,53 @@ export default function AdminUserDetailModal({
                     )}
                   </div>
 
-                  {/* Download Credits */}
-                  <div className="bg-slate-50 rounded-xl p-4 border border-slate-200">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <h3 className="text-sm font-semibold text-slate-900">Download Credits</h3>
-                        <p className="text-2xl font-bold text-slate-800 mt-1">{user.downloadCredits ?? 0}</p>
+                  {/* Credits */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="bg-slate-50 rounded-xl p-4 border border-slate-200">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wide">HD Credits</h3>
+                          <p className="text-2xl font-bold text-slate-800 mt-1">{user.hdCredits ?? 0}</p>
+                        </div>
+                        <button
+                          onClick={async () => {
+                            const token = await getIdToken();
+                            await fetch(`${API_BASE}/api/admin/users/${user.uid}/subscription`, {
+                              method: 'PATCH',
+                              headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+                              credentials: 'include',
+                              body: JSON.stringify({ hdCredits: 1 }),
+                            });
+                            setUser({ ...user, hdCredits: (user.hdCredits ?? 0) + 1 });
+                          }}
+                          className="px-2 py-1 bg-indigo-600 text-white rounded-lg text-xs font-medium hover:bg-indigo-700"
+                        >
+                          +1
+                        </button>
                       </div>
-                      <button
-                        onClick={async () => {
-                          const token = await getIdToken();
-                          await fetch(`${API_BASE}/api/admin/users/${user.uid}/subscription`, {
-                            method: 'PATCH',
-                            headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-                            credentials: 'include',
-                            body: JSON.stringify({ downloadCredits: 1 }),
-                          });
-                          setUser({ ...user, downloadCredits: (user.downloadCredits ?? 0) + 1 });
-                          onUpdate();
-                        }}
-                        className="px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-xs font-medium hover:bg-indigo-700"
-                      >
-                        + Grant 1
-                      </button>
+                    </div>
+                    <div className="bg-slate-50 rounded-xl p-4 border border-slate-200">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Platform Credits</h3>
+                          <p className="text-2xl font-bold text-slate-800 mt-1">{user.platformCredits ?? 0}</p>
+                        </div>
+                        <button
+                          onClick={async () => {
+                            const token = await getIdToken();
+                            await fetch(`${API_BASE}/api/admin/users/${user.uid}/subscription`, {
+                              method: 'PATCH',
+                              headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+                              credentials: 'include',
+                              body: JSON.stringify({ platformCredits: 1 }),
+                            });
+                            setUser({ ...user, platformCredits: (user.platformCredits ?? 0) + 1 });
+                          }}
+                          className="px-2 py-1 bg-indigo-600 text-white rounded-lg text-xs font-medium hover:bg-indigo-700"
+                        >
+                          +1
+                        </button>
+                      </div>
                     </div>
                   </div>
 

@@ -1,7 +1,7 @@
 import { Router, Request, Response } from 'express';
 import Stripe from 'stripe';
 import { getOrCreateSession, setProStatus, SESSION_COOKIE, COOKIE_OPTIONS } from '../lib/session.js';
-import { firestoreSetProStatus, firestoreSetTier, addDownloadCredits, getUserByStripeCustomerId, getUserDoc } from '../lib/firestore.js';
+import { firestoreSetProStatus, firestoreSetTier, addDownloadCredits, addHdCredits, addPlatformCredits, getUserByStripeCustomerId, getUserDoc } from '../lib/firestore.js';
 import type { Tier } from '../lib/firestore.js';
 
 const router = Router();
@@ -10,18 +10,16 @@ const stripe = process.env.STRIPE_SECRET_KEY
   ? new Stripe(process.env.STRIPE_SECRET_KEY)
   : null;
 
-// Price IDs for the new simplified model
+// Price IDs for base plans
 const PRICE_IDS = {
-  basic: process.env.STRIPE_BASIC_PRICE_ID,      // $4.99 - 1 HD download
-  plus: process.env.STRIPE_PLUS_PRICE_ID,        // $9.99 - 1 HD download + all platforms
+  basic: process.env.STRIPE_BASIC_PRICE_ID,                    // $4.99 - 1 HD download
+  plus: process.env.STRIPE_PLUS_PRICE_ID,                      // $9.99 - 1 HD + 1 platform
+  hd_addon: process.env.STRIPE_HD_ADDON_PRICE_ID,              // $4.99 - +1 HD credit
+  platform_single: process.env.STRIPE_PLATFORM_SINGLE_PRICE_ID, // $2.99 - +1 platform credit
+  platform_bundle: process.env.STRIPE_PLATFORM_BUNDLE_PRICE_ID, // $9.99 - +1 HD + +5 platform credits
 };
 
-// Download credits granted per purchase
-const DOWNLOAD_CREDITS: Record<Tier, number> = {
-  free: 0,
-  basic: 1,
-  plus: 1,
-};
+type Plan = Tier | 'hd_addon' | 'platform_single' | 'platform_bundle';
 
 // POST /api/payments/checkout
 router.post('/checkout', async (req: Request, res: Response) => {
@@ -30,12 +28,12 @@ router.post('/checkout', async (req: Request, res: Response) => {
     return;
   }
 
-  const { plan } = req.body as { plan: 'basic' | 'plus' };
+  const { plan } = req.body as { plan: Plan };
   const appUrl = process.env.APP_URL || 'http://localhost:3000';
 
-  // Validate plan
-  if (plan !== 'basic' && plan !== 'plus') {
-    res.status(400).json({ error: 'Invalid plan. Choose basic or plus.' });
+  const validPlans: Plan[] = ['basic', 'plus', 'hd_addon', 'platform_single', 'platform_bundle'];
+  if (!validPlans.includes(plan)) {
+    res.status(400).json({ error: `Invalid plan. Choose one of: ${validPlans.join(', ')}` });
     return;
   }
 
@@ -55,7 +53,7 @@ router.post('/checkout', async (req: Request, res: Response) => {
     metadata.sessionId = newSessionId;
   }
 
-  const priceId = PRICE_IDS[plan];
+  const priceId = (PRICE_IDS as Record<string, string | undefined>)[plan];
 
   if (!priceId) {
     res.status(503).json({ error: `${plan} price not configured`, mock: true });
@@ -108,19 +106,29 @@ router.post('/webhook', async (req: Request, res: Response) => {
     const uid = session.metadata?.firebaseUid;
     const sid = session.metadata?.sessionId;
     const customerId = session.customer as string | undefined;
-    const plan = (session.metadata?.plan ?? 'basic') as Tier;
+    const plan = (session.metadata?.plan ?? 'basic') as Plan;
 
     if (uid) {
-      // Firebase user → persist tier and add download credits
-      await firestoreSetTier(uid, plan, customerId);
-      
-      // Add download credits based on plan
-      const credits = DOWNLOAD_CREDITS[plan] ?? 0;
-      if (credits > 0) {
-        await addDownloadCredits(uid, credits);
+      if (plan === 'basic') {
+        await firestoreSetTier(uid, 'basic', customerId);
+        await addHdCredits(uid, 1);
+        console.log(`[payments] basic activated — hdCredits +1 for uid ${uid}`);
+      } else if (plan === 'plus') {
+        await firestoreSetTier(uid, 'plus', customerId);
+        await addHdCredits(uid, 1);
+        await addPlatformCredits(uid, 1);
+        console.log(`[payments] plus activated — hdCredits +1, platformCredits +1 for uid ${uid}`);
+      } else if (plan === 'hd_addon') {
+        await addHdCredits(uid, 1);
+        console.log(`[payments] hd_addon — hdCredits +1 for uid ${uid}`);
+      } else if (plan === 'platform_single') {
+        await addPlatformCredits(uid, 1);
+        console.log(`[payments] platform_single — platformCredits +1 for uid ${uid}`);
+      } else if (plan === 'platform_bundle') {
+        await addHdCredits(uid, 1);
+        await addPlatformCredits(uid, 5);
+        console.log(`[payments] platform_bundle — hdCredits +1, platformCredits +5 for uid ${uid}`);
       }
-      
-      console.log(`[payments] Tier '${plan}' activated with ${credits} credits for uid ${uid}`);
     } else if (sid) {
       // Anonymous session → mark as pro in memory (no tier granularity)
       setProStatus(sid, true, customerId);

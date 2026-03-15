@@ -11,6 +11,8 @@ export interface AuthState {
   isPro: boolean;
   isAdmin: boolean;
   tier: Tier;
+  hdCredits: number;
+  platformCredits: number;
   isFirebaseUser: boolean;
   signInWithGoogle: () => Promise<void>;
   signInWithEmail: (email: string, password: string) => Promise<void>;
@@ -77,6 +79,9 @@ export function useAuth(): AuthState {
   };
 
   const derivedTier: Tier = profile?.tier ?? 'free';
+  // New credit fields; legacy downloadCredits counts as hdCredits for backward compat
+  const derivedHdCredits = profile?.hdCredits ?? (profile?.downloadCredits ?? 0);
+  const derivedPlatformCredits = profile?.platformCredits ?? 0;
 
   return {
     user,
@@ -85,6 +90,8 @@ export function useAuth(): AuthState {
     isPro: derivedTier !== 'free',
     isAdmin: profile?.isAdmin ?? false,
     tier: derivedTier,
+    hdCredits: derivedHdCredits,
+    platformCredits: derivedPlatformCredits,
     isFirebaseUser: !!user,
     signInWithGoogle: handleSignInWithGoogle,
     signInWithEmail: handleSignInWithEmail,

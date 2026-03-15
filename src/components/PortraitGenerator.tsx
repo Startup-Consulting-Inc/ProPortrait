@@ -14,6 +14,7 @@ import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
 import ComparisonSlider from './ComparisonSlider';
 import GenerationProgress from './GenerationProgress';
 import PricingModal from './PricingModal';
+import BuyCreditsModal from './BuyCreditsModal';
 import EmailCapture from './EmailCapture';
 import SavedPortraitsModal from './SavedPortraitsModal';
 import ExportSuccessToast from './ExportSuccessToast';
@@ -57,24 +58,24 @@ async function checkDownloadCredits(): Promise<{ canDownload: boolean; credits: 
   }
 }
 
-// Consume a download credit
-async function consumeDownloadCredit(): Promise<{ success: boolean; remaining?: number; error?: string }> {
+// Consume a download credit (type: 'hd' | 'platform')
+async function consumeDownloadCredit(type: 'hd' | 'platform'): Promise<{ success: boolean; remaining?: number; error?: string }> {
   try {
     const token = await getIdToken();
     if (!token) return { success: false, error: 'Not authenticated' };
-    
+
     const res = await fetch(`${API_BASE}/api/users/me/consume-download`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ consume: true }),
+      body: JSON.stringify({ consume: true, type }),
       credentials: 'include',
     });
-    
+
     if (!res.ok) {
       const data = await res.json() as { error?: string };
       return { success: false, error: data.error || 'Failed to consume credit' };
     }
-    
+
     const data = await res.json() as { success: boolean; remaining: number };
     return { success: data.success, remaining: data.remaining };
   } catch {
@@ -106,7 +107,7 @@ export default function PortraitGenerator({
   onExternalLibraryClose,
   onRequiresAuth,
 }: PortraitGeneratorProps) {
-  const { isPro, tier, refreshProfile, profile, isFirebaseUser } = useAuthContext();
+  const { isPro, tier, hdCredits, platformCredits, refreshProfile, profile, isFirebaseUser } = useAuthContext();
   const [step, setStep] = useState<Step>(1);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [generatedImages, setGeneratedImages] = useState<string[]>([]);
@@ -174,6 +175,8 @@ export default function PortraitGenerator({
   const [hasTransparentBackground, setHasTransparentBackground] = useState(false);
   const [downloadingPlatform, setDownloadingPlatform] = useState<string | null>(null);
   const [showPricingModal, setShowPricingModal] = useState(false);
+  const [showBuyCreditsModal, setShowBuyCreditsModal] = useState(false);
+  const [buyCreditsReason, setBuyCreditsReason] = useState<'hd' | 'platform'>('hd');
   const [pendingDownload, setPendingDownload] = useState<'export' | 'platform' | 'all' | null>(null);
   const [pendingPlatformId, setPendingPlatformId] = useState<string | null>(null);
   const [showEmailCapture, setShowEmailCapture] = useState(false);
@@ -576,15 +579,15 @@ export default function PortraitGenerator({
       capture('download_blocked', { reason: 'free_tier' });
       return;
     }
-    const remainingCredits = profile?.downloadCredits ?? 0;
-    if (remainingCredits <= 0) {
-      setShowPricingModal(true);
-      capture('download_blocked', { reason: 'no_credits' });
+    if (hdCredits <= 0) {
+      setBuyCreditsReason('hd');
+      setShowBuyCreditsModal(true);
+      capture('download_blocked', { reason: 'no_hd_credits' });
       return;
     }
 
     // Consume credit before download
-    const consumeResult = await consumeDownloadCredit();
+    const consumeResult = await consumeDownloadCredit('hd');
     if (!consumeResult.success) {
       alert(consumeResult.error || 'Failed to process download. Please try again.');
       return;
@@ -638,21 +641,21 @@ export default function PortraitGenerator({
       capture('download_blocked', { reason: 'free_tier', platform: presetId });
       return;
     }
-    const remainingCreditsP = profile?.downloadCredits ?? 0;
-    if (remainingCreditsP <= 0) {
-      setShowPricingModal(true);
-      capture('download_blocked', { reason: 'no_credits', platform: presetId });
-      return;
-    }
     // Only Plus tier gets platform downloads
     if (tier !== 'plus') {
       setShowPricingModal(true);
       capture('download_blocked', { reason: 'tier_limit', platform: presetId, tier });
       return;
     }
+    if (platformCredits <= 0) {
+      setBuyCreditsReason('platform');
+      setShowBuyCreditsModal(true);
+      capture('download_blocked', { reason: 'no_platform_credits', platform: presetId });
+      return;
+    }
 
     // Consume credit before download
-    const consumeResult = await consumeDownloadCredit();
+    const consumeResult = await consumeDownloadCredit('platform');
     if (!consumeResult.success) {
       alert(consumeResult.error || 'Failed to process download. Please try again.');
       return;
@@ -700,21 +703,21 @@ export default function PortraitGenerator({
       capture('download_blocked', { reason: 'free_tier', platform: 'all' });
       return;
     }
-    const remainingCreditsA = profile?.downloadCredits ?? 0;
-    if (remainingCreditsA <= 0) {
-      setShowPricingModal(true);
-      capture('download_blocked', { reason: 'no_credits', platform: 'all' });
-      return;
-    }
     // Only Plus tier gets Download All
     if (tier !== 'plus') {
       setShowPricingModal(true);
       capture('download_blocked', { reason: 'tier_limit', platform: 'all', tier });
       return;
     }
+    if (platformCredits <= 0) {
+      setBuyCreditsReason('platform');
+      setShowBuyCreditsModal(true);
+      capture('download_blocked', { reason: 'no_platform_credits', platform: 'all' });
+      return;
+    }
 
     // Consume credit before download
-    const consumeResult = await consumeDownloadCredit();
+    const consumeResult = await consumeDownloadCredit('platform');
     if (!consumeResult.success) {
       alert(consumeResult.error || 'Failed to process download. Please try again.');
       return;
@@ -2012,6 +2015,11 @@ export default function PortraitGenerator({
         open={showPricingModal}
         onClose={() => setShowPricingModal(false)}
         onProActivated={() => { void refreshProfile(); setShowPricingModal(false); capture('paywall_converted', { plan: 'unknown' }); }}
+      />
+      <BuyCreditsModal
+        open={showBuyCreditsModal}
+        onClose={() => setShowBuyCreditsModal(false)}
+        reason={buyCreditsReason}
       />
       <EmailCapture
         open={showEmailCapture}

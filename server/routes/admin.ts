@@ -1,7 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { FieldValue } from 'firebase-admin/firestore';
 import { adminFirestore, adminAuth } from '../lib/firebase.js';
-import { upsertUserDoc, getDailyStats, getUserDoc, addDownloadCredits } from '../lib/firestore.js';
+import { upsertUserDoc, getDailyStats, getUserDoc, addDownloadCredits, addHdCredits, addPlatformCredits } from '../lib/firestore.js';
 import { requireAdmin } from '../middleware/authMiddleware.js';
 
 const router = Router();
@@ -42,6 +42,8 @@ function serializeUser(doc: FirebaseFirestore.QueryDocumentSnapshot | FirebaseFi
     exportCount: d.exportCount ?? 0,
     saveCount: d.saveCount ?? 0,
     downloadCredits: d.downloadCredits ?? 0,
+    hdCredits: d.hdCredits ?? 0,
+    platformCredits: d.platformCredits ?? 0,
     loginCount: d.loginCount ?? 0,
     totalCostUsd: d.totalCostUsd ?? 0,
     // Preferences
@@ -196,6 +198,8 @@ router.patch('/users/:uid/subscription', requireAdmin, async (req: Request, res:
     stripeCustomerId,
     note,
     downloadCredits: creditsOverride,
+    hdCredits: hdCreditsOverride,
+    platformCredits: platformCreditsOverride,
   } = req.body as {
     tier?: string;
     isPro?: boolean;
@@ -203,6 +207,8 @@ router.patch('/users/:uid/subscription', requireAdmin, async (req: Request, res:
     stripeCustomerId?: string;
     note?: string;
     downloadCredits?: number;
+    hdCredits?: number;
+    platformCredits?: number;
   };
 
   try {
@@ -232,15 +238,25 @@ router.patch('/users/:uid/subscription', requireAdmin, async (req: Request, res:
 
     await upsertUserDoc(uid, update);
 
-    // Grant download credits: explicit override, or 1 credit when activating a paid tier
-    const creditsToAdd = creditsOverride !== undefined
-      ? creditsOverride
-      : (tier && tier !== 'free' ? 1 : 0);
-    if (creditsToAdd > 0) {
-      await addDownloadCredits(uid, creditsToAdd);
+    // Grant credits based on explicit override or tier activation
+    if (hdCreditsOverride !== undefined && hdCreditsOverride > 0) {
+      await addHdCredits(uid, hdCreditsOverride);
+    } else if (creditsOverride !== undefined && creditsOverride > 0) {
+      // Legacy: creditsOverride maps to hdCredits
+      await addHdCredits(uid, creditsOverride);
+    } else if (tier && tier !== 'free') {
+      // Auto-grant on tier change: basic→1 HD, plus→1 HD + 1 platform
+      await addHdCredits(uid, 1);
+      if (tier === 'plus') {
+        await addPlatformCredits(uid, 1);
+      }
     }
 
-    console.log(`[admin] Subscription updated by ${req.auth.email}: ${uid}`, { tier, isPro, creditsToAdd });
+    if (platformCreditsOverride !== undefined && platformCreditsOverride > 0) {
+      await addPlatformCredits(uid, platformCreditsOverride);
+    }
+
+    console.log(`[admin] Subscription updated by ${req.auth.email}: ${uid}`, { tier, isPro, hdCreditsOverride, platformCreditsOverride });
     res.json({ ok: true, update });
   } catch (err) {
     console.error('[admin/users/subscription]', err);

@@ -183,76 +183,98 @@ router.get('/me/download-credits', requireFirebaseAuth, async (req: Request, res
     res.status(404).json({ error: 'User not found.' });
     return;
   }
-  
+
   const tier = doc.tier ?? 'free';
-  const credits = doc.downloadCredits ?? 0;
-  
-  res.json({ 
+  const hdCredits = doc.hdCredits ?? 0;
+  const platformCredits = doc.platformCredits ?? 0;
+  // Legacy fallback: old downloadCredits still counts for HD
+  const legacyCredits = doc.downloadCredits ?? 0;
+
+  res.json({
     tier,
-    credits,
-    canDownload: tier !== 'free' && credits > 0,
+    hdCredits,
+    platformCredits,
+    // Legacy compat
+    credits: hdCredits || legacyCredits,
+    canDownload: tier !== 'free' && (hdCredits > 0 || legacyCredits > 0),
+    canDownloadHd: tier !== 'free' && (hdCredits > 0 || legacyCredits > 0),
+    canDownloadPlatform: tier === 'plus' && (platformCredits > 0 || legacyCredits > 0),
     isFree: tier === 'free',
   });
 });
 
 // POST /api/users/me/consume-download — consume a download credit (called before actual download)
 router.post('/me/consume-download', requireFirebaseAuth, async (req: Request, res: Response) => {
-  const { consume } = req.body as { consume?: boolean };
-  const doc = await getUserDoc(req.auth.uid!);
-  
+  const { consume, type } = req.body as { consume?: boolean; type?: 'hd' | 'platform' };
+  const creditType: 'hd' | 'platform' = type === 'platform' ? 'platform' : 'hd';
+  const uid = req.auth.uid!;
+
+  const doc = await getUserDoc(uid);
   if (!doc) {
     res.status(404).json({ error: 'User not found.' });
     return;
   }
-  
+
   const tier = doc.tier ?? 'free';
-  const credits = doc.downloadCredits ?? 0;
-  
+
   // Free users cannot download
   if (tier === 'free') {
-    res.status(403).json({ 
+    res.status(403).json({
       error: 'Free users cannot download. Please upgrade to download your portrait.',
       code: 'download_limit',
       tier,
-      credits: 0,
     });
     return;
   }
-  
-  // Check if credits available
-  if (credits <= 0) {
-    res.status(403).json({ 
-      error: 'No download credits remaining. Please purchase more downloads.',
-      code: 'download_limit',
-      tier,
-      credits: 0,
-    });
-    return;
-  }
-  
-  // If consume flag is set, actually consume the credit
-  if (consume) {
-    await adminFirestore().collection('users').doc(req.auth.uid!).set(
-      { 
-        downloadCredits: FieldValue.increment(-1), 
-        updatedAt: FieldValue.serverTimestamp() 
-      },
-      { merge: true },
-    );
-    
-    res.json({ 
-      success: true, 
-      consumed: 1,
-      remaining: credits - 1,
-      tier,
-    });
+
+  if (creditType === 'platform') {
+    const platformCredits = doc.platformCredits ?? 0;
+    const legacyCredits = doc.downloadCredits ?? 0;
+    const effective = platformCredits || legacyCredits;
+    if (effective <= 0 || tier !== 'plus') {
+      res.status(403).json({
+        error: 'No platform download credits remaining.',
+        code: 'no_platform_credits',
+        tier,
+        platformCredits,
+      });
+      return;
+    }
+    if (consume) {
+      // Prefer decrementing the new field; fall back to legacy
+      const field = platformCredits > 0 ? 'platformCredits' : 'downloadCredits';
+      await adminFirestore().collection('users').doc(uid).set(
+        { [field]: FieldValue.increment(-1), updatedAt: FieldValue.serverTimestamp() },
+        { merge: true },
+      );
+      res.json({ success: true, consumed: 1, remaining: effective - 1, tier, type: 'platform' });
+    } else {
+      res.json({ canDownload: true, platformCredits: effective, tier });
+    }
   } else {
-    // Just checking - don't consume
-    res.json({ 
-      canDownload: true,
-      credits,
-      tier,
-    });
+    // HD credit
+    const hdCredits = doc.hdCredits ?? 0;
+    const legacyCredits = doc.downloadCredits ?? 0;
+    const effective = hdCredits || legacyCredits;
+    if (effective <= 0) {
+      res.status(403).json({
+        error: 'No HD download credits remaining.',
+        code: 'no_hd_credits',
+        tier,
+        hdCredits,
+      });
+      return;
+    }
+    if (consume) {
+      const field = hdCredits > 0 ? 'hdCredits' : 'downloadCredits';
+      await adminFirestore().collection('users').doc(uid).set(
+        { [field]: FieldValue.increment(-1), updatedAt: FieldValue.serverTimestamp() },
+        { merge: true },
+      );
+      res.json({ success: true, consumed: 1, remaining: effective - 1, tier, type: 'hd' });
+    } else {
+      res.json({ canDownload: true, hdCredits: effective, tier });
+    }
   }
 });
 

@@ -31,7 +31,9 @@ export interface UserProfile {
   generationCount?: number;
   generationsThisMonth?: number;
   exportCount?: number;
-  downloadCredits?: number;
+  downloadCredits?: number;   // Legacy field
+  hdCredits?: number;         // Credits for HD portrait downloads
+  platformCredits?: number;   // Credits for platform-specific/ZIP downloads
   stripeCustomerId?: string;
   defaultStyle?: string;
   defaultExpression?: string;

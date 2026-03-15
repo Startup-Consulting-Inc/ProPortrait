@@ -1,6 +1,6 @@
 # Beta Pricing Strategy
 
-> Strategy document for ProPortrait AI beta period pricing and user rewards
+> Strategy document for ProPortrait AI beta period pricing and user conversion
 > 
 > Status: Planned | Target Implementation: Pre-launch phase
 
@@ -8,417 +8,395 @@
 
 ## Overview
 
-This document outlines the revised beta pricing strategy for ProPortrait AI. The approach focuses on:
+This document outlines the pricing strategy for the ProPortrait AI beta period. The goal is to:
 
-1. **Immediate value** — Beta users get free Creator tier access ($24.99 value)
-2. **Reward engagement** — Active users who provide feedback unlock 50% off Pro/Max for 1 year
-3. **Simple structure** — No separate beta tier, just 4 standard plans
-4. **Data collection** — Incentivize feedback during critical early phase
+1. **Maximize beta signups** by offering free access with generous limits
+2. **Incentivize upgrades** through a 50% 1 years discount for beta users
+3. **Maintain transparency** by showing all pricing options upfront
+4. **Create urgency** with limited-time beta access
 
 ---
 
-## Standard Pricing Structure (4 Tiers)
+## Pricing Structure (5 Tiers)
 
 | Tier | Price | Type | Generation Limit | Key Features | Target User |
 |------|-------|------|------------------|--------------|-------------|
 | **Free** | $0 | Forever | 3 total | Basic styles, 1K exports | Casual try-out |
+| **🧪 Beta** | **$0** | Limited time | 10 total | All styles, 2K exports, saves | Early adopters |
 | **Creator** | $24.99 | One-time | 30 total | All features, 2K, PNG, saves | Occasional users |
 | **Pro** | $29.99/mo | Subscription | 100/month | Unlimited saves, priority | Regular professionals |
 | **Max** | $49.99/mo | Subscription | 500/month | Highest priority, bulk use | Power users/agencies |
 
-### Beta Period Rewards (Not a Separate Tier)
+### Beta Tier Details
 
-**For ALL Beta Signups:**
-> 🎁 **Free Creator Upgrade**
+**Duration:** Limited time (e.g., 30 days or until product launch)
+
+**Limits:**
+- 10 portrait generations
+- All 7 professional styles unlocked
+- 2K resolution exports
+- All export formats (JPG, PNG with transparency)
+- Save up to 10 portraits to library
+- Access to editing studio
+
+**Exclusive Beta Perk:**
+> 💎 **50% off any paid plan forever**
 > 
-> Anyone who signs up during the beta period automatically gets Creator tier features for free.
+> Beta users who upgrade to Creator, Pro, or Max lock in 50% discount for life.
 > 
-> - 30 portrait generations (vs 3 on Free)
-> - All 7 professional styles
-> - 2K resolution exports
-> - Save up to 30 portraits
-> - **Value: $24.99**
-
-**For Active + Feedback Users:**
-> 💎 **50% Off Pro or Max — 1 Year**
-> 
-> Users who actively use the product AND submit feedback unlock a 1-year discount.
-> 
-> - **Pro:** ~~$29.99/mo~~ → **$14.99/mo** (save $180/year)
-> - **Max:** ~~$49.99/mo~~ → **$24.99/mo** (save $300/year)
-> - Valid for 12 months, then reverts to standard pricing
-> - Can be applied anytime during beta or within 30 days after
-
----
-
-## Qualifying for 50% Discount
-
-### Requirements
-
-To unlock the 50% discount, users must:
-
-1. **Sign up during beta period** (automatic Creator upgrade)
-2. **Generate at least 3 portraits** (show active usage)
-3. **Submit feedback** via one of:
-   - In-app feedback form (min 100 characters)
-   - Reply to feedback request email
-   - Direct email to support
-   - Survey completion
-
-### Feedback Should Cover
-
-| Category | Questions |
-|----------|-----------|
-| **Product** | What did you like? What was confusing? |
-| **Quality** | How did your portraits turn out? |
-| **Features** | What features are missing? |
-| **Pricing** | What would you pay for this? |
-| **Bugs** | Any issues encountered? |
-
-### Verification Process
-
-```
-User submits feedback
-    ↓
-System checks: generations >= 3?
-    ↓
-Admin reviews feedback (quality check)
-    ↓
-If approved: Flag user as "feedback_eligible"
-    ↓
-User receives "50% off unlocked" email with coupon code
-```
+> Examples:
+> - Creator: ~~$24.99~~ → **$12.49** (one-time)
+> - Pro: ~~$29.99/mo~~ → **$14.99/mo**
+> - Max: ~~$49.99/mo~~ → **$24.99/mo**
 
 ---
 
 ## User Flow
 
-### New Beta User Journey
+### New User Journey
 
 ```
 Landing Page
     ↓
-Clicks "Get Started" or "Try Free"
+Sees 5-tier pricing (Beta highlighted as "limited time")
     ↓
-Signs up → Account created with tier: 'creator'
+Clicks "Join Beta" (primary CTA)
+    ↓
+Signs up → Account created with tier: 'beta'
     ↓
 Completes onboarding → Directed to /app
     ↓
-Uses product (up to 30 generations)
+Uses up to 10 free generations
     ↓
-Day 3: Feedback request email sent
-    ↓
-Submits feedback → Qualifies for 50% off
-    ↓
-Receives "Discount Unlocked" email with PRO50MAX50 code
-    ↓
-Can upgrade anytime with 50% off for 1 year
+Email sequence begins...
 ```
 
-### Email Sequence
+### Email Sequence for Beta Users
 
 | Day | Subject | Content |
 |-----|---------|---------|
-| 0 | Welcome to ProPortrait AI! | You're upgraded to Creator (free). Start generating. |
-| 3 | Quick question about your portraits | Feedback request + mention of 50% discount unlock |
-| 7 | [If feedback submitted] Your 50% discount is unlocked! | PRO50MAX50 coupon + upgrade CTA |
-| 7 | [If no feedback] Help us improve (and save 50%) | Reminder about feedback = discount |
-| 14 | How are your portraits looking? | Tips + final feedback reminder |
-| 21 | Beta ending soon + your discount | Urgency to use 50% off before window closes |
+| 0 | Welcome to ProPortrait AI Beta! | Getting started tips, beta perks reminder |
+| 3 | How's your experience? | Quick survey, support offer |
+| 7 | Your beta perk: 50% off forever | Upgrade CTA with discount emphasis |
+| 10 | [If not upgraded] Still enjoying ProPortrait? | Feature highlight, upgrade reminder |
+| 14 | [If near beta end] Your beta expires in X days | Urgency, upgrade or downgrade info |
+| 21 | Final days: Lock in 50% off | Last chance messaging |
+
+### Upgrade Flow
+
+```
+Beta user clicks "Upgrade" in app or email
+    ↓
+Sees pricing modal with strikethrough original prices
+    ↓
+Stripe checkout with BETA50 coupon auto-applied
+    ↓
+Payment complete → Tier upgraded
+    ↓
+Confirmation email: "You locked in 50% off forever!"
+```
 
 ---
 
 ## Landing Page Design
 
-### Layout: 4-Card Grid (No Beta Tier)
+### Layout: 5-Card Grid
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │                   SIMPLE, TRANSPARENT PRICING                   │
 │                                                                 │
-│  🎁 FREE CREATOR UPGRADE DURING BETA                            │
-│  Sign up now, get $24.99 Creator tier for free                  │
+│  ┌────────┐  ┌────────────┐  ┌─────────┐  ┌───────┐  ┌──────┐ │
+│  │  FREE  │  │  🧪 BETA   │  │ CREATOR │  │  PRO  │  │ MAX  │ │
+│  │        │  │  FEATURED  │  │         │  │       │  │      │ │
+│  │  $0    │  │    $0      │  │ $24.99  │  │$29.99 │  │$49.99│ │
+│  │        │  │  LIMITED   │  │ one-time│  │ /mo   │  │ /mo  │ │
+│  │ 3 gen  │  │   TIME     │  │ 30 gen  │  │100/mo │  │500/mo│ │
+│  │        │  │  10 gen    │  │         │  │       │  │      │ │
+│  │        │  │ +50% off   │  │         │  │       │  │      │ │
+│  │        │  │  forever   │  │         │  │       │  │      │ │
+│  └────────┘  └────────────┘  └─────────┘  └───────┘  └──────┘ │
 │                                                                 │
-│  ┌────────┐  ┌─────────┐  ┌───────┐  ┌──────┐                  │
-│  │  FREE  │  │ CREATOR │  │  PRO  │  │ MAX  │                  │
-│  │  $0    │  │ $24.99  │  │$29.99 │  │$49.99│                  │
-│  │        │  │one-time │  │ /mo   │  │ /mo  │                  │
-│  │ 3 gen  │  │ 30 gen  │  │100/mo │  │500/mo│                  │
-│  └────────┘  └─────────┘  └───────┘  └──────┘                  │
+│  [Start Free]  [Join Beta]  [Buy Creator] [Start Pro][Start Max]│
 │                                                                 │
-│  [Start Free]  [Upgrade to Creator]  [Start Pro]  [Start Max]   │
-│                                                                 │
-│  💎 Active beta users who share feedback get 50% off Pro/Max    │
-│     for one year ($180-$300 savings)                            │
+│  "Beta users lock in 50% off forever on any paid plan"         │
+│  "After beta: Creator $24.99, Pro $29.99, Max $49.99"          │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
-### Hero Section Messaging
+### Beta Card Design Spec
 
-**Headline:**
-```
-Your best professional photo, without the photoshoot.
-```
+- **Position:** 2nd card (Free → **Beta** → Creator → Pro → Max)
+- **Border:** 2px solid `amber-400`
+- **Background:** `amber-50`
+- **Badge:** "🧪 Limited Beta" pill at top (amber-500 bg, white text)
+- **CTA Button:** Amber background (`amber-500`), white text, bold
 
-**Subheadline:**
-```
-🎁 Beta special: Free Creator access ($24.99 value)
-Generate 30 professional portraits on us. 
-Share feedback, unlock 50% off Pro or Max for a year.
-```
+### Key Copy Elements
 
-**CTA Button:**
+**Hero Badge:**
 ```
-[Start Free — Get Creator Access]
+🧪 Free Beta Access — 50% off when you upgrade
 ```
 
-### Pricing Card Details
-
-**Creator Card (Show as "Free During Beta"):**
+**Beta Card Title:**
 ```
-CREATOR
-~~$24.99~~ → FREE (during beta)
+Beta Access
+```
 
-✓ 30 portrait generations
-✓ All 7 professional styles  
+**Beta Card Price:**
+```
+$0
+during beta period
+```
+
+**Beta Card Features:**
+```
+✓ 10 portrait generations
+✓ All 7 professional styles
 ✓ 2K resolution exports
-✓ Save up to 30 portraits
-✓ All export formats
+✓ All platform formats
+✓ Save up to 10 portraits
+✓ 💎 50% off any upgrade forever
+```
 
-[Get Free Access]
+**Beta Card CTA:**
+```
+Join Beta
+```
 
-💎 Share feedback, unlock 50% off Pro/Max
+**Beta Card Footer:**
+```
+Beta users get 50% off Creator, Pro, or Max forever
 ```
 
 ---
 
 ## Technical Implementation
 
-### Database Schema
+### Database Schema Changes
 
 **UserDoc interface (server/lib/firestore.ts):**
 
 ```typescript
-export type Tier = 'free' | 'creator' | 'pro' | 'max';
+export type Tier = 'free' | 'beta' | 'creator' | 'pro' | 'max';
 
 export interface UserDoc {
   // ... existing fields ...
   
-  tier: Tier;
+  tier?: Tier;
   
   // Beta tracking
   joinedDuringBeta?: boolean;
   betaJoinedAt?: FirebaseFirestore.Timestamp;
-  
-  // Feedback/rewards tracking
-  feedbackSubmitted?: boolean;
-  feedbackSubmittedAt?: FirebaseFirestore.Timestamp;
-  feedbackContent?: string;  // Store their feedback
-  feedbackRewardEligible?: boolean;  // Approved for discount
-  
-  // Discount tracking
-  discountCode?: string;  // e.g., "PRO50" or "MAX50"
-  discountApplied?: boolean;
-  discountExpiresAt?: FirebaseFirestore.Timestamp;  // 1 year from application
+  betaExpiresAt?: FirebaseFirestore.Timestamp; // Optional: for time-limited beta
 }
-```
-
-### New User Signup (During Beta)
-
-**server/routes/users.ts:**
-
-```typescript
-// During first login / signup in beta period
-await adminFirestore().collection('users').doc(uid).set({
-  // ... other fields ...
-  tier: 'creator',  // Auto-upgrade to Creator
-  joinedDuringBeta: true,
-  betaJoinedAt: FieldValue.serverTimestamp(),
-});
 ```
 
 ### Generation Limits
 
-No changes needed — Creator tier limits (30 generations) apply automatically.
-
-### Feedback Collection Endpoint
-
-**New endpoint: POST /api/users/feedback**
+**server/lib/firestore.ts:**
 
 ```typescript
-router.post('/feedback', requireFirebaseAuth, async (req: Request, res: Response) => {
-  const uid = req.auth.uid!;
-  const { content, rating, category } = req.body;
+export async function checkAndIncrementGeneration(uid: string, doc: UserDoc): Promise<void> {
+  const tier: Tier = doc.tier ?? (doc.isPro ? 'pro' : 'free');
+  const generationCount = doc.generationCount ?? 0;
   
-  // Get user doc
-  const userDoc = await getUserDoc(uid);
-  
-  // Check if eligible for reward
-  const hasGeneratedEnough = (userDoc?.generationCount || 0) >= 3;
-  const isBetaUser = userDoc?.joinedDuringBeta;
-  
-  const update: Partial<UserDoc> = {
-    feedbackSubmitted: true,
-    feedbackSubmittedAt: FieldValue.serverTimestamp(),
-    feedbackContent: content,
-  };
-  
-  // Auto-approve if meets criteria, or flag for manual review
-  if (isBetaUser && hasGeneratedEnough && content.length >= 100) {
-    update.feedbackRewardEligible = true;
-    // Send discount email (async)
-    void sendFeedbackRewardEmail(uid);
+  // Check beta expiration if applicable
+  if (tier === 'beta' && doc.betaExpiresAt) {
+    const now = Timestamp.now();
+    if (now.seconds > doc.betaExpiresAt.seconds) {
+      throw Object.assign(
+        new Error('Beta period has ended. Please upgrade to continue.'), 
+        { code: 'beta_expired' }
+      );
+    }
   }
   
-  await upsertUserDoc(uid, update);
+  // Generation limits by tier
+  if (tier === 'free' && generationCount >= 3) {
+    throw Object.assign(
+      new Error('Free plan limit reached (3 portraits). Upgrade to continue.'), 
+      { code: 'generation_limit' }
+    );
+  }
   
-  res.json({ 
-    ok: true, 
-    rewardEligible: update.feedbackRewardEligible || false 
-  });
-});
+  if (tier === 'beta' && generationCount >= 10) {
+    throw Object.assign(
+      new Error('Beta limit reached (10 portraits). Upgrade to continue.'), 
+      { code: 'generation_limit' }
+    );
+  }
+  
+  if (tier === 'creator' && generationCount >= 30) {
+    throw Object.assign(
+      new Error('Creator Pass limit reached (30 portraits).'), 
+      { code: 'generation_limit' }
+    );
+  }
+  
+  // ... pro and max checks remain the same ...
+}
 ```
 
-### Stripe Discount Coupons
+### Stripe Integration
 
-Create two coupons in Stripe:
+**Coupon Setup:**
 
-**Coupon 1: PRO50**
-- **ID:** `PRO50_1YEAR`
+Create in Stripe Dashboard:
+- **Coupon ID:** `BETA50`
 - **Type:** Percentage
 - **Amount:** 50%
-- **Duration:** 12 months (not forever)
-- **Applies to:** Pro plan only
+- **Duration:** Forever
+- **Redemption limit:** (Optional: limit total redemptions)
 
-**Coupon 2: MAX50**
-- **ID:** `MAX50_1YEAR`
-- **Type:** Percentage  
-- **Amount:** 50%
-- **Duration:** 12 months
-- **Applies to:** Max plan only
-
-### Checkout Integration
-
-**server/routes/payments.ts:**
+**Auto-apply at checkout (server/routes/payments.ts):**
 
 ```typescript
 // When creating checkout session
 const userDoc = await getUserDoc(uid);
-
-// Determine which coupon to apply based on selected plan
-const selectedPlan = req.body.plan; // 'pro' or 'max'
-let couponCode: string | undefined;
-
-if (userDoc?.feedbackRewardEligible && userDoc?.joinedDuringBeta) {
-  couponCode = selectedPlan === 'max' ? 'MAX50_1YEAR' : 'PRO50_1YEAR';
-}
+const isBetaUser = userDoc?.tier === 'beta' || userDoc?.joinedDuringBeta;
 
 const sessionParams: Stripe.Checkout.SessionCreateParams = {
   // ... other params ...
-  discounts: couponCode ? [{ coupon: couponCode }] : undefined,
+  discounts: isBetaUser ? [{ coupon: 'BETA50' }] : undefined,
 };
 ```
 
+### User Onboarding Update
+
+**New user signup (server/routes/users.ts):**
+
+```typescript
+// During first login / signup
+await adminFirestore().collection('users').doc(uid).set({
+  // ... other fields ...
+  tier: 'beta',  // Default new users to beta tier
+  joinedDuringBeta: true,
+  betaJoinedAt: FieldValue.serverTimestamp(),
+  // Optionally set expiration:
+  // betaExpiresAt: Timestamp.fromDate(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)),
+});
+```
+
+### Frontend Components
+
+**Pricing Card Component (LandingPage.tsx):**
+
+```tsx
+// Beta tier card
+<div className="flex flex-col p-6 rounded-2xl border-2 border-amber-400 bg-amber-50 relative">
+  {/* Limited Beta Badge */}
+  <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-amber-500 text-white text-xs font-bold px-3 py-1 rounded-full">
+    🧪 Limited Beta
+  </div>
+  
+  {/* Header */}
+  <div className="text-sm font-semibold text-amber-600 uppercase tracking-wide mb-1">
+    Beta Access
+  </div>
+  
+  {/* Price */}
+  <div className="flex items-baseline gap-1 mb-1">
+    <span className="text-4xl font-extrabold text-slate-900">$0</span>
+  </div>
+  <div className="text-xs text-amber-600 font-semibold mb-5">
+    During beta period
+  </div>
+  
+  {/* Features */}
+  <ul className="space-y-2.5 flex-1 mb-6">
+    <li className="flex items-center gap-2 text-sm text-slate-700">
+      <CheckIcon /> 10 portrait generations
+    </li>
+    <li className="flex items-center gap-2 text-sm text-slate-700">
+      <CheckIcon /> All 7 professional styles
+    </li>
+    <li className="flex items-center gap-2 text-sm text-slate-700">
+      <CheckIcon /> 2K resolution exports
+    </li>
+    <li className="flex items-center gap-2 text-sm text-slate-700">
+      <CheckIcon /> All platform formats
+    </li>
+    <li className="flex items-center gap-2 text-sm text-slate-700">
+      <CheckIcon /> Save up to 10 portraits
+    </li>
+    <li className="flex items-center gap-2 text-sm text-slate-700 font-semibold text-amber-700">
+      <DiamondIcon /> 50% off any upgrade forever
+    </li>
+  </ul>
+  
+  {/* CTA */}
+  <button
+    onClick={goToApp}
+    className="w-full bg-amber-500 hover:bg-amber-600 text-white font-bold py-2.5 rounded-xl text-sm transition-colors shadow"
+  >
+    Join Beta
+  </button>
+  
+  {/* Footer note */}
+  <p className="text-xs text-amber-700 mt-3 text-center">
+    Beta users get 50% off Creator, Pro, or Max forever
+  </p>
+</div>
+```
+
 ---
 
-## Reward Eligibility Email
+## Marketing Messaging
 
-**Subject:** Your 50% discount is unlocked! 🎉
+### Primary Headlines
 
+**Option 1 (Value-focused):**
+> Try ProPortrait AI free during beta. Lock in 50% off forever when you upgrade.
+
+**Option 2 (Urgency-focused):**
+> 🧪 Limited beta spots available. Get free access + 50% off for life.
+
+**Option 3 (Simple):**
+> Free beta access. 10 professional portraits. 50% off when you upgrade.
+
+### Supporting Copy
+
+**Hero section:**
 ```
-Hi [Name],
+Join the beta and get:
+✓ 10 free portrait generations
+✓ All professional styles unlocked
+✓ 2K resolution exports
+✓ 50% off any paid plan forever
 
-Thanks for your feedback! We reviewed your suggestions and 
-want to say thanks with a special discount.
-
-🎁 YOU'VE UNLOCKED: 50% off Pro or Max for 1 year
-
-Choose your plan:
-
-Pro Studio
-~~$29.99/mo~~ → $14.99/mo for 12 months
-(Save $180)
-[Upgrade to Pro]
-
-Max Studio  
-~~$49.99/mo~~ → $24.99/mo for 12 months
-(Save $300)
-[Upgrade to Max]
-
-Your discount is valid for 30 days. After upgrading, your 
-50% off applies for the first 12 months.
-
-Questions? Just reply to this email.
-
-Thanks for helping us build ProPortrait AI!
-
-— The ProPortrait Team
+No credit card required.
 ```
 
----
-
-## Admin Dashboard Updates
-
-Add a new section to track beta rewards:
-
+**FAQ entry:**
 ```
-┌─────────────────────────────────────────┐
-│  Beta Users & Feedback                  │
-├─────────────────────────────────────────┤
-│  Total beta signups: 247                │
-│  Feedback submitted: 89 (36%)           │
-│  Reward eligible: 62 (25%)              │
-│  Upgraded with discount: 18 (7%)        │
-└─────────────────────────────────────────┘
+Q: What happens after beta?
+A: You can stay on the free tier (3 generations) or upgrade to any 
+   paid plan with 50% off forever. Beta pricing is our way of saying 
+   thanks to early users.
 ```
 
-**New admin endpoint:** GET /api/admin/beta-users
-
-Returns list of beta users with:
-- Signup date
-- Generations count
-- Feedback status
-- Reward eligibility
-- Upgrade status
-
----
-
-## FAQ
-
-**Q: Do I need a credit card for the free Creator access?**
-> No. Sign up during beta, get Creator features free. No card required.
-
-**Q: What happens to my portraits after beta ends?**
-> Your Creator access continues. Beta users keep their tier.
-
-**Q: How do I get the 50% discount?**
-> Use ProPortrait AI actively (3+ portraits) and submit feedback via the 
-> in-app form or email. We'll review and send your discount code.
-
-**Q: Is the 50% off forever?**
-> No, it's for 12 months. After that, standard pricing applies. You can 
-> cancel anytime.
-
-**Q: What counts as "feedback"?**
-> Any thoughtful input: feature requests, bug reports, quality feedback, 
-> pricing opinions. Minimum ~2-3 sentences so we can actually use it.
-
-**Q: When does beta end?**
-> We'll announce 30 days in advance. All beta perks (free Creator + 
-> discount eligibility) remain available until then.
+**Email subject lines:**
+- "Your beta access is ready (+ 50% off for life)"
+- "10 free portraits waiting for you"
+- "Lock in 50% off before beta ends"
+- "Final days: Your beta expires soon"
 
 ---
 
 ## Success Metrics
 
+Track these KPIs to measure beta strategy effectiveness:
+
 | Metric | Target | Measurement |
 |--------|--------|-------------|
-| Beta signups | 500+ | Total accounts with `joinedDuringBeta: true` |
-| Feedback submission rate | 30%+ | % of beta users who submit feedback |
-| Feedback quality approval | 70%+ | % of feedback approved for discount |
-| Discount redemption rate | 40%+ | % of eligible users who use discount |
-| Upgrade conversion (paid) | 15%+ | % of beta users who upgrade to paid |
-| Cost per feedback | <$5 | (Creator value $25) / (feedback count × upgrade %) |
+| Beta signups | 500+ users | Count of `tier: 'beta'` users |
+| Beta-to-paid conversion | 15-20% | % of beta users who upgrade |
+| Time to upgrade | < 14 days | Average days from signup to paid |
+| 50% discount redemptions | Track usage | Stripe coupon usage stats |
+| Churn after beta | < 10% | Users who don't renew after first month |
+| NPS score | > 50 | Survey beta users |
 
 ---
 
@@ -426,67 +404,82 @@ Returns list of beta users with:
 
 | Risk | Mitigation |
 |------|------------|
-| Low feedback quality | Set minimum length (100 chars), require specific questions |
-| Gaming the system (fake feedback) | Manual review step, IP tracking, generation quality check |
-| Too expensive (giving away Creator) | Cap beta period, limit to first X users, or require feedback for full 30 generations |
-| Users don't upgrade after 1 year | Strong onboarding, habit formation, feature lock-in during first year |
-| Feedback volume overwhelms team | Start with manual review, later automate basic checks |
+| Too many beta users, high cost | Cap total beta spots (e.g., first 1000) or set expiration date |
+| Users wait for beta to end | Emphasize "limited time" and send expiration reminders |
+| 50% discount hurts revenue long-term | Set expectation it's "founder's pricing"; grandfather existing users |
+| Beta users don't convert | Improve email sequence, add personal outreach, extend beta if needed |
+| Abuse of free generations | IP tracking, rate limiting, manual review if suspicious |
 
 ---
 
 ## Implementation Checklist
 
-### Phase 1: Backend
-- [ ] Remove `'beta'` from Tier type (keep only 4 tiers)
-- [ ] Update new user signup: set `tier: 'creator'` during beta
-- [ ] Add feedback fields to UserDoc schema
-- [ ] Create `POST /api/users/feedback` endpoint
-- [ ] Create `GET /api/admin/beta-users` endpoint
-- [ ] Create Stripe coupons: `PRO50_1YEAR`, `MAX50_1YEAR` (12 months)
-- [ ] Update checkout to apply coupons for eligible users
+### Phase 1: Backend Setup
+- [ ] Add `'beta'` to `Tier` type
+- [ ] Add `joinedDuringBeta`, `betaJoinedAt` fields to `UserDoc`
+- [ ] Update `checkAndIncrementGeneration()` with beta limits
+- [ ] Set `tier: 'beta'` as default for new signups
+- [ ] Create `BETA50` coupon in Stripe
+- [ ] Update payment route to auto-apply coupon for beta users
 
-### Phase 2: Frontend
-- [ ] Update LandingPage: remove Beta tier, show 4 cards
-- [ ] Add "Free during beta" messaging on Creator card
-- [ ] Add feedback form component in app (after 2-3 generations)
-- [ ] Show "Feedback submitted" / "Discount unlocked" status in profile
-- [ ] Update PricingModal to show discount for eligible users
+### Phase 2: Frontend Updates
+- [ ] Add Beta tier card to `LandingPage.tsx`
+- [ ] Update `PricingModal.tsx` with beta option
+- [ ] Add beta badge/messaging to hero section
+- [ ] Update upgrade flows to show discount
 
-### Phase 3: Email
-- [ ] Welcome email: "You're upgraded to Creator (free)"
-- [ ] Day 3: Feedback request email
-- [ ] Discount unlocked email (triggered on approval)
-- [ ] Day 14: Reminder to submit feedback
-- [ ] Day 21: Beta ending + discount reminder
+### Phase 3: Email Setup
+- [ ] Configure email sequence (days 0, 3, 7, 14, 21)
+- [ ] Create email templates with 50% off messaging
+- [ ] Set up expiration reminder emails
 
-### Phase 4: Admin
-- [ ] Add Beta Users section to AdminPage
-- [ ] Build feedback review UI (approve/reject)
-- [ ] Export beta user data
+### Phase 4: Analytics
+- [ ] Add tracking for beta signup source
+- [ ] Track conversion funnel: signup → generation → upgrade
+- [ ] Monitor coupon usage in Stripe
+
+---
+
+## Future Considerations
+
+### Post-Beta Transition
+
+When beta period ends:
+
+1. **Current beta users:**
+   - Keep `joinedDuringBeta: true` for discount eligibility
+   - Reset `tier` to `'free'` if not upgraded
+   - Keep 50% discount available indefinitely
+
+2. **New users:**
+   - Default to `'free'` tier
+   - Beta tier no longer available
+   - Regular pricing applies
+
+3. **Messaging:**
+   - "Beta has ended, but early users keep their perks"
+   - Continue honoring 50% discount for all beta alumni
+
+### Potential A/B Tests
+
+- Beta limit: 10 vs 15 generations
+- Beta duration: 30 days vs unlimited until launch
+- Discount: 50% vs 30% vs "first month free"
+- Position: Beta as 2nd card vs featured/centered
 
 ---
 
 ## Summary
 
-### What Changed from Original Plan
+This beta pricing strategy balances:
+- **Generosity** (free access, generous limits) to drive adoption
+- **Incentive** (50% forever) to drive upgrades
+- **Transparency** (all pricing visible) to build trust
+- **Urgency** (limited time) to drive action
 
-| Original | New |
-|----------|-----|
-| 5 tiers (Free, **Beta**, Creator, Pro, Max) | 4 tiers (Free, Creator, Pro, Max) |
-| Beta tier with 10 generations | All beta signups get Creator (30 generations) |
-| Automatic 50% off for all beta users | 50% off only for active users who submit feedback |
-| 50% off forever | 50% off for 1 year only |
-| No engagement requirement | Must generate 3+ portraits + submit feedback |
-
-### Why This Is Better
-
-1. **Simpler** — No confusion about "beta tier" vs other tiers
-2. **More fair** — Rewards engaged users, not just signups
-3. **Better data** — Incentivizes quality feedback collection
-4. **Sustainable** — 1-year discount vs forever is more viable
-5. **Clear value** — Free $25 Creator is concrete and attractive
+The goal is converting beta users into lifelong customers at a sustainable price point.
 
 ---
 
-*Document revised: March 2026*
-*Original beta tier plan replaced with Creator auto-upgrade + feedback rewards*
+*Document created: March 2026*
+*Next review: After first 100 beta signups*
