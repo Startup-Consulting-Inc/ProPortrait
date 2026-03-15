@@ -3,8 +3,6 @@ import { FieldValue } from 'firebase-admin/firestore';
 import { adminFirestore } from './firebase.js';
 
 interface SessionData {
-  isPro: boolean;
-  stripeCustomerId?: string;
   hdCredits: number;
   platformCredits: number;
   createdAt: number;
@@ -15,21 +13,13 @@ const sessions = new Map<string, SessionData>();
 export function getOrCreateSession(id?: string): [string, SessionData] {
   if (id && sessions.has(id)) return [id, sessions.get(id)!];
   const newId = randomUUID();
-  const data: SessionData = { isPro: false, hdCredits: 0, platformCredits: 0, createdAt: Date.now() };
+  const data: SessionData = { hdCredits: 0, platformCredits: 0, createdAt: Date.now() };
   sessions.set(newId, data);
   return [newId, data];
 }
 
 export function getSession(id: string): SessionData | undefined {
   return sessions.get(id);
-}
-
-export function setProStatus(id: string, isPro: boolean, stripeCustomerId?: string) {
-  const session = sessions.get(id);
-  if (session) {
-    session.isPro = isPro;
-    if (stripeCustomerId) session.stripeCustomerId = stripeCustomerId;
-  }
 }
 
 // Reads credits from Firestore — works across all Cloud Run instances

@@ -1,7 +1,6 @@
 import { FieldValue } from 'firebase-admin/firestore';
 import { adminFirestore } from './firebase.js';
 
-export type Tier = 'free' | 'basic' | 'plus';
 export type IcpSegment = 'career' | 'executive' | 'creative_tech' | 'service' | 'artist';
 export type VibePreference = 'polished' | 'warm' | 'bold' | 'creative';
 
@@ -19,9 +18,7 @@ export interface UserDoc {
   email: string;
   displayName: string;
   photoURL?: string;
-  isPro: boolean;
   isAdmin: boolean;
-  tier?: Tier;
   stripeCustomerId?: string;
   // Generation limits (no longer strictly enforced - free users get unlimited watermarked generations)
   generationCount?: number;
@@ -89,89 +86,6 @@ export async function upsertUserDoc(uid: string, data: Partial<UserDoc>): Promis
   );
 }
 
-export async function firestoreSetProStatus(
-  uid: string,
-  isPro: boolean,
-  stripeCustomerId?: string,
-): Promise<void> {
-  const update: Record<string, unknown> = {
-    isPro,
-    updatedAt: FieldValue.serverTimestamp(),
-  };
-  if (stripeCustomerId) update.stripeCustomerId = stripeCustomerId;
-  await adminFirestore().collection('users').doc(uid).set(update, { merge: true });
-}
-
-export async function firestoreSetTier(
-  uid: string,
-  tier: Tier,
-  stripeCustomerId?: string,
-): Promise<void> {
-  const update: Record<string, unknown> = {
-    tier,
-    isPro: tier !== 'free',
-    updatedAt: FieldValue.serverTimestamp(),
-  };
-  if (stripeCustomerId) update.stripeCustomerId = stripeCustomerId;
-  await adminFirestore().collection('users').doc(uid).set(update, { merge: true });
-}
-
-/** Check generation limits and increment counter. 
- * New model: Free users get unlimited watermarked generations.
- * Paid tiers (basic/plus) get higher quality and download credits.
- */
-export async function checkAndIncrementGeneration(uid: string, doc: UserDoc): Promise<void> {
-  const tier: Tier = doc.tier ?? 'free';
-  const currentMonth = new Date().toISOString().slice(0, 7); // YYYY-MM
-  let generationsThisMonth = doc.generationsThisMonth ?? 0;
-
-  // Monthly reset for paid tiers
-  if ((tier === 'basic' || tier === 'plus') && doc.lastResetMonth !== currentMonth) {
-    generationsThisMonth = 0;
-    await adminFirestore().collection('users').doc(uid).update({
-      generationsThisMonth: 0,
-      lastResetMonth: currentMonth,
-    });
-  }
-
-  // Free tier: unlimited generations (but watermarked, no download)
-  // Basic/Plus: generous limits (1000/month should be effectively unlimited for most)
-  if ((tier === 'basic' || tier === 'plus') && generationsThisMonth >= 1000) {
-    throw Object.assign(new Error('Monthly generation limit reached (1000/month). Contact support if you need more.'), { code: 'generation_limit' });
-  }
-}
-
-/** Check if user has download credits available */
-export async function checkDownloadCredits(uid: string, doc: UserDoc): Promise<{ hasCredits: boolean; credits: number }> {
-  const tier = doc.tier ?? 'free';
-  const credits = doc.downloadCredits ?? 0;
-  
-  // Free users cannot download (watermarked preview only)
-  if (tier === 'free') {
-    return { hasCredits: false, credits: 0 };
-  }
-  
-  return { hasCredits: credits > 0, credits };
-}
-
-/** Consume a download credit. Throws if no credits available. */
-export async function consumeDownloadCredit(uid: string, doc: UserDoc): Promise<void> {
-  const tier = doc.tier ?? 'free';
-  const credits = doc.downloadCredits ?? 0;
-  
-  if (tier === 'free') {
-    throw Object.assign(new Error('Free users cannot download. Please upgrade to download your portrait.'), { code: 'download_limit' });
-  }
-  
-  if (credits <= 0) {
-    throw Object.assign(new Error('No download credits remaining. Please purchase more downloads.'), { code: 'download_limit' });
-  }
-  
-  await adminFirestore().collection('users').doc(uid).set(
-    { downloadCredits: FieldValue.increment(-1), updatedAt: FieldValue.serverTimestamp() },
-    { merge: true },
-  );
-}
 
 /** Add download credits after purchase */
 export async function addDownloadCredits(uid: string, credits: number): Promise<void> {
@@ -199,16 +113,10 @@ export async function addPlatformCredits(uid: string, credits: number): Promise<
 
 // ── Saved Portraits ───────────────────────────────────────────────────────────
 
-export async function checkSaveLimit(uid: string, doc: UserDoc): Promise<void> {
-  const tier: Tier = doc.tier ?? 'free';
-  // All tiers (including free) can now save portraits to library
-  // This is now a value-add feature rather than a paywall
-  // Limits only apply to prevent abuse
+export async function checkSaveLimit(_uid: string, doc: UserDoc): Promise<void> {
   const saveCount = doc.saveCount ?? 0;
-  const maxSaves = tier === 'free' ? 10 : tier === 'basic' ? 50 : 200;
-  
-  if (saveCount >= maxSaves) {
-    throw Object.assign(new Error(`Save limit reached (${maxSaves}). Delete some saved portraits to add more.`), { code: 'save_limit' });
+  if (saveCount >= 100) {
+    throw Object.assign(new Error('Save limit reached (100). Delete some saved portraits to add more.'), { code: 'save_limit' });
   }
 }
 
@@ -257,11 +165,10 @@ export async function deleteSavedPortrait(uid: string, portraitId: string): Prom
 
 // ── Usage Tracking ───────────────────────────────────────────────────────────
 
-const COST = { free_generate: 0.08, pro_generate: 0.22, edit: 0.06 };
+const COST = { generate: 0.15, edit: 0.06 };
 
 async function trackDailyStat(
   type: 'generation' | 'edit',
-  isPro: boolean,
   style?: string,
 ): Promise<void> {
   const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
@@ -269,35 +176,31 @@ async function trackDailyStat(
   const update: Record<string, unknown> = {
     date: today,
     [type === 'generation' ? 'generationCount' : 'editCount']: FieldValue.increment(1),
-    totalCostUsd: FieldValue.increment(
-      type === 'generation' ? (isPro ? COST.pro_generate : COST.free_generate) : COST.edit,
-    ),
+    totalCostUsd: FieldValue.increment(type === 'generation' ? COST.generate : COST.edit),
   };
-  if (type === 'generation') {
-    update[isPro ? 'proGenerations' : 'freeGenerations'] = FieldValue.increment(1);
-    if (style) update[`styleBreakdown.${style}`] = FieldValue.increment(1);
+  if (type === 'generation' && style) {
+    update[`styleBreakdown.${style}`] = FieldValue.increment(1);
   }
   await ref.set(update, { merge: true });
 }
 
-export async function trackGeneration(uid: string, style: string, isPro: boolean): Promise<void> {
-  const cost = isPro ? COST.pro_generate : COST.free_generate;
+export async function trackGeneration(uid: string, style: string): Promise<void> {
   const currentMonth = new Date().toISOString().slice(0, 7);
   await adminFirestore().collection('users').doc(uid).set(
     {
       generationCount: FieldValue.increment(1),
       generationsThisMonth: FieldValue.increment(1),
       lastResetMonth: currentMonth,
-      totalCostUsd: FieldValue.increment(cost),
+      totalCostUsd: FieldValue.increment(COST.generate),
       lastActiveAt: FieldValue.serverTimestamp(),
       [`styleUsage.${style}`]: FieldValue.increment(1),
     },
     { merge: true },
   );
-  await trackDailyStat('generation', isPro, style);
+  await trackDailyStat('generation', style);
 }
 
-export async function trackEdit(uid: string, isPro: boolean): Promise<void> {
+export async function trackEdit(uid: string): Promise<void> {
   await adminFirestore().collection('users').doc(uid).set(
     {
       editCount: FieldValue.increment(1),
@@ -306,7 +209,7 @@ export async function trackEdit(uid: string, isPro: boolean): Promise<void> {
     },
     { merge: true },
   );
-  await trackDailyStat('edit', isPro);
+  await trackDailyStat('edit');
 }
 
 export async function trackLogin(uid: string): Promise<void> {

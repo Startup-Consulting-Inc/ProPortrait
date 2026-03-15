@@ -1,6 +1,5 @@
 const COSTS = {
-  free_generate: 0.08,
-  pro_generate: 0.22,
+  generate: 0.15,
   edit: 0.06,
 } as const;
 

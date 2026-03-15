@@ -26,7 +26,7 @@ import type { PortraitDefaults } from './types/onboarding';
 
 function AppContent() {
   const path = window.location.pathname;
-  const { user, loading, isPro, hdCredits, platformCredits, refreshProfile, profile } = useAuthContext();
+  const { user, loading, hdCredits, platformCredits, refreshProfile, profile } = useAuthContext();
 
   // Profile modal
   const [showProfile, setShowProfile] = useState(false);
@@ -49,8 +49,8 @@ function AppContent() {
   // After Stripe redirect with ?payment=success, poll until credits/pro status is reflected
   useEffect(() => {
     if (!paymentPending || loading) return;
-    // For Firebase users: wait for isPro; for anonymous: wait for any credits
-    const hasCredits = user ? isPro : (hdCredits > 0 || platformCredits > 0);
+    // Wait for any credits to appear (works for both Firebase and anonymous users)
+    const hasCredits = hdCredits > 0 || platformCredits > 0;
     if (hasCredits) {
       setPaymentPending(false);
       setProActivated(true);
@@ -69,7 +69,7 @@ function AppContent() {
       }
     }, 2000);
     return () => clearInterval(interval);
-  }, [paymentPending, loading, isPro, hdCredits, platformCredits, user]);
+  }, [paymentPending, loading, hdCredits, platformCredits]);
 
   // Deferred sign-in: /create is now public, only /admin requires auth upfront
   useEffect(() => {
@@ -232,12 +232,12 @@ function AppContent() {
             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
           </svg>
-          Activating your Pro plan…
+          Activating your credits…
         </div>
       )}
       {proActivated && (
         <div className="fixed top-0 inset-x-0 z-50 bg-emerald-600 text-white text-sm text-center py-2.5">
-          Pro plan activated — enjoy 2K portraits and priority generation!
+          Credits added — your download is ready!
         </div>
       )}
       <div

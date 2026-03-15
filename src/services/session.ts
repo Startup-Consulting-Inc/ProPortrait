@@ -1,12 +1,13 @@
 import { getIdToken } from './auth';
 
 interface SessionInfo {
-  isPro: boolean;
   sessionId: string;
   uid?: string;
   email?: string;
   isAdmin?: boolean;
   isFirebaseUser?: boolean;
+  hdCredits?: number;
+  platformCredits?: number;
 }
 
 let cached: SessionInfo | null = null;
@@ -22,7 +23,7 @@ export async function getSessionInfo(): Promise<SessionInfo> {
     cached = await res.json() as SessionInfo;
     return cached;
   } catch {
-    return { isPro: false, sessionId: '' };
+    return { sessionId: '' };
   }
 }
 

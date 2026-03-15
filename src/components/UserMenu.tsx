@@ -8,7 +8,7 @@ interface UserMenuProps {
 }
 
 export default function UserMenu({ onOpenProfile, onOpenAdmin, onOpenLibrary }: UserMenuProps) {
-  const { user, profile, isPro, tier, isAdmin, signOut } = useAuthContext();
+  const { user, profile, isAdmin, hdCredits, signOut } = useAuthContext();
   const [open, setOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -60,9 +60,9 @@ export default function UserMenu({ onOpenProfile, onOpenAdmin, onOpenLibrary }: 
           <div className="px-4 py-3 border-b border-slate-100">
             <div className="font-semibold text-slate-800 text-sm truncate">{displayName}</div>
             <div className="text-xs text-slate-400 truncate">{user.email}</div>
-            {isPro && (
+            {hdCredits > 0 && (
               <span className="inline-block mt-1 text-xs font-semibold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full">
-                {tier === 'basic' ? 'Basic' : tier === 'plus' ? 'Plus' : 'Free'}
+                {hdCredits} HD credit{hdCredits !== 1 ? 's' : ''}
               </span>
             )}
           </div>

@@ -5,6 +5,7 @@ import { getUserDoc, upsertUserDoc, trackLogin, saveOnboardingData, submitBetaFe
 import { consumeSessionCredit, getSessionCredits } from '../lib/session.js';
 import { requireFirebaseAuth } from '../middleware/authMiddleware.js';
 
+
 const router = Router();
 
 // Beta configuration — disabled for public launch
@@ -23,17 +24,15 @@ router.post('/me/first-login', requireFirebaseAuth, async (req: Request, res: Re
 
   if (!existing) {
     const { displayName, photoURL } = req.body as { displayName?: string; photoURL?: string };
-    
-    // Beta users get Plus tier with download credits free
+
+    // Beta users get free download credits
     const isBetaUser = BETA_ACTIVE;
-    
+
     await adminFirestore().collection('users').doc(uid).set({
       email,
       displayName: displayName || email.split('@')[0],
       photoURL: photoURL || null,
-      tier: isBetaUser ? 'plus' : 'free',
-      isPro: isBetaUser, // Plus is a paid tier, so isPro = true during beta
-      downloadCredits: isBetaUser ? 3 : 0, // Beta users get 3 free downloads
+      hdCredits: isBetaUser ? 3 : 0, // Beta users get 3 free HD downloads
       isAdmin,
       // Beta tracking
       joinedDuringBeta: isBetaUser,
@@ -45,7 +44,6 @@ router.post('/me/first-login', requireFirebaseAuth, async (req: Request, res: Re
     // Backfill any fields that may be missing from docs created before schema was finalised
     const patch: Record<string, unknown> = {};
     if (!existing.email) patch.email = email;
-    if (existing.isPro === undefined) patch.isPro = false;
     if (isAdmin && !existing.isAdmin) patch.isAdmin = true;
     if (Object.keys(patch).length > 0) await upsertUserDoc(uid, patch as Partial<import('../lib/firestore.js').UserDoc>);
   }
@@ -182,16 +180,11 @@ router.get('/me/download-credits', async (req: Request, res: Response) => {
   // Anonymous session path — read from Firestore for cross-instance accuracy
   if (req.auth.mode === 'anonymous') {
     const { hdCredits, platformCredits } = await getSessionCredits(req.auth.sessionId!);
-    const tier = hdCredits > 0 || platformCredits > 0 ? 'basic' : 'free';
     res.json({
-      tier,
       hdCredits,
       platformCredits,
-      credits: hdCredits,
-      canDownload: hdCredits > 0,
       canDownloadHd: hdCredits > 0,
       canDownloadPlatform: platformCredits > 0,
-      isFree: tier === 'free',
     });
     return;
   }
@@ -202,22 +195,17 @@ router.get('/me/download-credits', async (req: Request, res: Response) => {
     return;
   }
 
-  const tier = doc.tier ?? 'free';
   const hdCredits = doc.hdCredits ?? 0;
   const platformCredits = doc.platformCredits ?? 0;
   // Legacy fallback: old downloadCredits still counts for HD
   const legacyCredits = doc.downloadCredits ?? 0;
+  const effectiveHd = hdCredits || legacyCredits;
 
   res.json({
-    tier,
-    hdCredits,
+    hdCredits: effectiveHd,
     platformCredits,
-    // Legacy compat
-    credits: hdCredits || legacyCredits,
-    canDownload: tier !== 'free' && (hdCredits > 0 || legacyCredits > 0),
-    canDownloadHd: tier !== 'free' && (hdCredits > 0 || legacyCredits > 0),
-    canDownloadPlatform: tier === 'plus' && (platformCredits > 0 || legacyCredits > 0),
-    isFree: tier === 'free',
+    canDownloadHd: effectiveHd > 0,
+    canDownloadPlatform: platformCredits > 0,
   });
 });
 
@@ -273,27 +261,14 @@ router.post('/me/consume-download', async (req: Request, res: Response) => {
     return;
   }
 
-  const tier = doc.tier ?? 'free';
-
-  // Free users cannot download
-  if (tier === 'free') {
-    res.status(403).json({
-      error: 'Free users cannot download. Please upgrade to download your portrait.',
-      code: 'download_limit',
-      tier,
-    });
-    return;
-  }
-
   if (creditType === 'platform') {
     const platformCredits = doc.platformCredits ?? 0;
     const legacyCredits = doc.downloadCredits ?? 0;
     const effective = platformCredits || legacyCredits;
-    if (effective <= 0 || tier !== 'plus') {
+    if (effective <= 0) {
       res.status(403).json({
         error: 'No platform download credits remaining.',
         code: 'no_platform_credits',
-        tier,
         platformCredits,
       });
       return;
@@ -305,9 +280,9 @@ router.post('/me/consume-download', async (req: Request, res: Response) => {
         { [field]: FieldValue.increment(-1), updatedAt: FieldValue.serverTimestamp() },
         { merge: true },
       );
-      res.json({ success: true, consumed: 1, remaining: effective - 1, tier, type: 'platform' });
+      res.json({ success: true, consumed: 1, remaining: effective - 1, type: 'platform' });
     } else {
-      res.json({ canDownload: true, platformCredits: effective, tier });
+      res.json({ canDownload: true, platformCredits: effective });
     }
   } else {
     // HD credit
@@ -318,7 +293,6 @@ router.post('/me/consume-download', async (req: Request, res: Response) => {
       res.status(403).json({
         error: 'No HD download credits remaining.',
         code: 'no_hd_credits',
-        tier,
         hdCredits,
       });
       return;
@@ -329,9 +303,9 @@ router.post('/me/consume-download', async (req: Request, res: Response) => {
         { [field]: FieldValue.increment(-1), updatedAt: FieldValue.serverTimestamp() },
         { merge: true },
       );
-      res.json({ success: true, consumed: 1, remaining: effective - 1, tier, type: 'hd' });
+      res.json({ success: true, consumed: 1, remaining: effective - 1, type: 'hd' });
     } else {
-      res.json({ canDownload: true, hdCredits: effective, tier });
+      res.json({ canDownload: true, hdCredits: effective });
     }
   }
 });

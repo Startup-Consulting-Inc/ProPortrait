@@ -1,7 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { FieldValue } from 'firebase-admin/firestore';
 import { adminFirestore, adminAuth } from '../lib/firebase.js';
-import { upsertUserDoc, getDailyStats, getUserDoc, addDownloadCredits, addHdCredits, addPlatformCredits } from '../lib/firestore.js';
+import { upsertUserDoc, getDailyStats, getUserDoc, addHdCredits, addPlatformCredits } from '../lib/firestore.js';
 import { requireAdmin } from '../middleware/authMiddleware.js';
 
 const router = Router();
@@ -30,8 +30,6 @@ function serializeUser(doc: FirebaseFirestore.QueryDocumentSnapshot | FirebaseFi
     email: d.email ?? '',
     displayName: d.displayName ?? '',
     photoURL: d.photoURL ?? '',
-    isPro: d.isPro ?? false,
-    tier: (d.tier ?? (d.isPro ? 'pro' : 'free')) as string,
     isAdmin: d.isAdmin ?? false,
     isSuspended: d.isSuspended ?? false,
     stripeCustomerId: d.stripeCustomerId ?? '',
@@ -188,25 +186,19 @@ router.post('/users/:uid/suspend', requireAdmin, async (req: Request, res: Respo
   }
 });
 
-// PATCH /api/admin/users/:uid/subscription — manage subscription
+// PATCH /api/admin/users/:uid/subscription — adjust credits and billing info
 router.patch('/users/:uid/subscription', requireAdmin, async (req: Request, res: Response) => {
   const { uid } = req.params;
   const {
-    tier,
-    isPro,
     expiresAt,
     stripeCustomerId,
     note,
-    downloadCredits: creditsOverride,
     hdCredits: hdCreditsOverride,
     platformCredits: platformCreditsOverride,
   } = req.body as {
-    tier?: string;
-    isPro?: boolean;
     expiresAt?: string;
     stripeCustomerId?: string;
     note?: string;
-    downloadCredits?: number;
     hdCredits?: number;
     platformCredits?: number;
   };
@@ -216,55 +208,30 @@ router.patch('/users/:uid/subscription', requireAdmin, async (req: Request, res:
       updatedAt: FieldValue.serverTimestamp(),
     };
 
-    if (tier !== undefined) {
-      update.tier = tier;
-      update.isPro = tier !== 'free';
-    } else if (isPro !== undefined) {
-      update.isPro = Boolean(isPro);
-      if (!isPro) update.tier = 'free';
-    }
-
     if (expiresAt !== undefined) {
       update.subscriptionExpiresAt = expiresAt ? new Date(expiresAt) : null;
     }
-
     if (stripeCustomerId !== undefined) {
       update.stripeCustomerId = stripeCustomerId;
     }
-
     if (note) {
       update.adminNote = note;
     }
 
     await upsertUserDoc(uid, update);
 
-    // Explicit credit adjustments (can be positive or negative for reduction)
-    const hasExplicitCredits = hdCreditsOverride !== undefined || creditsOverride !== undefined || platformCreditsOverride !== undefined;
-
     if (hdCreditsOverride !== undefined) {
       await addHdCredits(uid, hdCreditsOverride);
-    } else if (creditsOverride !== undefined) {
-      // Legacy downloadCredits field → maps to hdCredits
-      await addHdCredits(uid, creditsOverride);
     }
-
     if (platformCreditsOverride !== undefined) {
       await addPlatformCredits(uid, platformCreditsOverride);
     }
 
-    // Auto-grant on tier change only when no explicit credits were provided
-    if (!hasExplicitCredits && tier && tier !== 'free') {
-      await addHdCredits(uid, 1);
-      if (tier === 'plus') {
-        await addPlatformCredits(uid, 1);
-      }
-    }
-
-    console.log(`[admin] Subscription updated by ${req.auth.email}: ${uid}`, { tier, isPro, hdCreditsOverride, platformCreditsOverride });
+    console.log(`[admin] Credits updated by ${req.auth.email}: ${uid}`, { hdCreditsOverride, platformCreditsOverride });
     res.json({ ok: true, update });
   } catch (err) {
     console.error('[admin/users/subscription]', err);
-    res.status(500).json({ error: 'Failed to update subscription.' });
+    res.status(500).json({ error: 'Failed to update credits.' });
   }
 });
 
@@ -307,22 +274,6 @@ router.get('/stats', requireAdmin, async (_req: Request, res: Response) => {
   } catch (err) {
     console.error('[admin/stats]', err);
     res.status(500).json({ error: 'Failed to fetch stats.' });
-  }
-});
-
-// POST /api/admin/users/:uid/pro — toggle isPro for a user (legacy, use PATCH /subscription)
-router.post('/users/:uid/pro', requireAdmin, async (req: Request, res: Response) => {
-  const { uid } = req.params;
-  const { isPro, tier } = req.body as { isPro: boolean; tier?: string };
-  try {
-    const update: Record<string, unknown> = { isPro: Boolean(isPro) };
-    if (isPro && tier) update.tier = tier;
-    else if (!isPro) update.tier = 'free';
-    await upsertUserDoc(uid, update);
-    res.json({ ok: true });
-  } catch (err) {
-    console.error('[admin/users/pro]', err);
-    res.status(500).json({ error: 'Failed to update pro status.' });
   }
 });
 

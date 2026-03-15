@@ -2,15 +2,13 @@ import { useState, useEffect } from 'react';
 import type { User } from 'firebase/auth';
 import { auth, signInWithGoogle, signInWithEmail, createAccountWithEmail, signOut } from '../services/auth';
 import { notifyFirstLogin, fetchUserProfile } from '../services/user';
-import type { UserProfile, Tier } from '../services/user';
+import type { UserProfile } from '../services/user';
 
 export interface AuthState {
   user: User | null;
   profile: UserProfile | null;
   loading: boolean;
-  isPro: boolean;
   isAdmin: boolean;
-  tier: Tier;
   hdCredits: number;
   platformCredits: number;
   isFirebaseUser: boolean;
@@ -100,7 +98,6 @@ export function useAuth(): AuthState {
     }
   };
 
-  const derivedTier: Tier = profile?.tier ?? 'free';
   // New credit fields; legacy downloadCredits counts as hdCredits for backward compat
   // For anonymous users, use session credits from /api/auth/me
   const derivedHdCredits = user
@@ -114,9 +111,7 @@ export function useAuth(): AuthState {
     user,
     profile,
     loading,
-    isPro: user ? derivedTier !== 'free' : (anonCredits.hdCredits > 0 || anonCredits.platformCredits > 0),
     isAdmin: profile?.isAdmin ?? false,
-    tier: derivedTier,
     hdCredits: derivedHdCredits,
     platformCredits: derivedPlatformCredits,
     isFirebaseUser: !!user,

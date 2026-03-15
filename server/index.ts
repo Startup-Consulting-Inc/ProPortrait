@@ -15,7 +15,7 @@ import adminRouter from './routes/admin.js';
 import { authMiddleware, requireFirebaseAuth } from './middleware/authMiddleware.js';
 import { storePortrait, storePermanentPortrait, getSignedUrlForKey, deleteR2Object } from './lib/storage.js';
 import { trackCost, getDailySpend } from './lib/costTracker.js';
-import { trackGeneration, trackEdit, trackExport, getUserDoc, checkAndIncrementGeneration, checkSaveLimit, savePortraitDoc, getSavedPortraits, deleteSavedPortrait } from './lib/firestore.js';
+import { trackGeneration, trackEdit, trackExport, getUserDoc, checkSaveLimit, savePortraitDoc, getSavedPortraits, deleteSavedPortrait } from './lib/firestore.js';
 import { applyWatermark } from './lib/watermark.js';
 
 // Load API key from .env.local (Vite convention), then .env as fallback
@@ -258,7 +258,7 @@ app.post('/api/portraits/save', requireFirebaseAuth, async (req, res) => {
 
   try {
     const doc = await getUserDoc(uid);
-    await checkSaveLimit(uid, doc ?? { email: '', displayName: '', isPro: req.auth.isPro, isAdmin: false });
+    await checkSaveLimit(uid, doc ?? { email: '', displayName: '', isAdmin: false });
     const { r2Key, imageUrl } = await storePermanentPortrait(imageBase64, uid, mimeType);
     const id = await savePortraitDoc(uid, r2Key, style, title);
     res.json({ id, imageUrl, style, title });
@@ -318,28 +318,9 @@ app.post('/api/portraits/generate', async (req, res) => {
     return;
   }
 
-  // ── Generation limit check ────────────────────────────────────────────────
-  if (req.auth.uid) {
-    try {
-      const userDoc = await getUserDoc(req.auth.uid);
-      await checkAndIncrementGeneration(
-        req.auth.uid,
-        userDoc ?? { email: '', displayName: '', isPro: req.auth.isPro, isAdmin: false },
-      );
-    } catch (err: unknown) {
-      const e = err as Error & { code?: string };
-      if (e.code === 'generation_limit') {
-        res.status(403).json({ error: 'generation_limit', message: e.message });
-        return;
-      }
-      // Firestore failure — allow generation to proceed
-      console.error('[portraits/generate] limit check failed:', err);
-    }
-  }
-
-  const imageSize = req.auth.isPro ? '2K' : '1K';
+  const imageSize = '2K';
   const userId = req.auth.uid ?? req.auth.sessionId ?? 'anon';
-  trackCost(req.auth.isPro ? 'pro_generate' : 'free_generate');
+  trackCost('generate');
 
   const {
     imageBase64,
@@ -462,9 +443,9 @@ app.post('/api/portraits/generate', async (req, res) => {
       ? await Promise.all(rawImages.map((b64) => retouchPass(b64)))
       : rawImages;
 
-    // Apply watermark for free users, then store
+    // No watermark — credit-based model, all generations are full quality
     const watermarkedImages = await Promise.all(
-      finalImages.map((b64) => applyWatermark(b64, req.auth.isPro)),
+      finalImages.map((b64) => applyWatermark(b64, true)),
     );
     const outputMime = 'image/png';
     const images = await Promise.all(
@@ -472,7 +453,7 @@ app.post('/api/portraits/generate', async (req, res) => {
     );
 
     res.json({ images });
-    if (req.auth.uid) void trackGeneration(req.auth.uid, style as string, req.auth.isPro);
+    if (req.auth.uid) void trackGeneration(req.auth.uid, style as string);
   } catch (error) {
     console.error('[server] Error generating portrait:', error);
     res.status(502).json({ error: 'Failed to generate portrait. Please try again.' });
@@ -486,7 +467,7 @@ app.post('/api/portraits/edit', async (req, res) => {
     return;
   }
 
-  const editImageSize = req.auth.isPro ? '2K' : '1K';
+  const editImageSize = '2K';
   trackCost('edit');
 
   const { imageBase64: rawBase64, imageUrl, instruction, regionOnly } = req.body;
@@ -547,7 +528,7 @@ app.post('/api/portraits/edit', async (req, res) => {
       for (const part of candidate.content?.parts ?? []) {
         if (part.inlineData?.data) {
           res.json({ image: `data:${part.inlineData.mimeType || 'image/png'};base64,${part.inlineData.data}` });
-          if (req.auth.uid) void trackEdit(req.auth.uid, req.auth.isPro);
+          if (req.auth.uid) void trackEdit(req.auth.uid);
           return;
         }
       }

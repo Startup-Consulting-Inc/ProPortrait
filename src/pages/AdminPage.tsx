@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useAuthContext } from '../contexts/AuthContext';
 import { getIdToken } from '../services/auth';
 import AdminUserDetailModal from '../components/AdminUserDetailModal';
-import { Search, Crown, Ban, Filter, RefreshCw, Users, BarChart3 } from 'lucide-react';
+import { Search, Ban, Filter, RefreshCw, Users, BarChart3 } from 'lucide-react';
 
 const API_BASE = (import.meta.env.VITE_API_URL as string | undefined) ?? '';
 
@@ -10,8 +10,6 @@ interface AdminUser {
   uid: string;
   email: string;
   displayName: string;
-  isPro: boolean;
-  tier: string;
   isAdmin: boolean;
   isSuspended: boolean;
   createdAt: { seconds: number } | null;
@@ -37,7 +35,6 @@ interface DailyStat {
   proGenerations?: number;
 }
 
-type TierFilter = 'all' | 'free' | 'basic' | 'plus';
 type StatusFilter = 'all' | 'active' | 'suspended';
 
 function relativeTime(seconds: number): string {
@@ -129,7 +126,6 @@ export default function AdminPage() {
 
   // Filters
   const [searchQuery, setSearchQuery] = useState('');
-  const [tierFilter, setTierFilter] = useState<TierFilter>('all');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
 
   const fetchAll = useCallback(async () => {
@@ -153,20 +149,6 @@ export default function AdminPage() {
     }
   }, []);
 
-  const togglePro = async (uid: string, current: boolean, tier = 'pro') => {
-    const token = await getIdToken();
-    await fetch(`${API_BASE}/api/admin/users/${uid}/pro`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      },
-      credentials: 'include',
-      body: JSON.stringify({ isPro: !current, tier }),
-    });
-    setUsers(prev => prev.map(u => u.uid === uid ? { ...u, isPro: !current } : u));
-  };
-
   useEffect(() => {
     if (isAdmin) fetchAll();
   }, [isAdmin, fetchAll]);
@@ -184,36 +166,21 @@ export default function AdminPage() {
         if (!matches) return false;
       }
       
-      // Tier filter
-      if (tierFilter !== 'all' && u.tier !== tierFilter) return false;
-      
       // Status filter
       if (statusFilter === 'suspended' && !u.isSuspended) return false;
       if (statusFilter === 'active' && u.isSuspended) return false;
       
       return true;
     });
-  }, [users, searchQuery, tierFilter, statusFilter]);
+  }, [users, searchQuery, statusFilter]);
 
   // Derived summary
   const today = stats[0];
   const sevenDaysAgo = Math.floor(Date.now() / 1000) - 7 * 86400;
   const activeUsers7d = users.filter(u => u.lastActiveAt && u.lastActiveAt.seconds > sevenDaysAgo).length;
   const totalGen = today?.generationCount ?? 0;
-  const freeGen = today?.freeGenerations ?? 0;
-  const proGen = today?.proGenerations ?? 0;
-  const freePct = totalGen > 0 ? Math.round((freeGen / totalGen) * 100) : 0;
-  const proPct  = totalGen > 0 ? Math.round((proGen  / totalGen) * 100) : 0;
   
-  // Stats by tier
-  const statsByTier = useMemo(() => {
-    return {
-      free: users.filter(u => u.tier === 'free').length,
-      basic: users.filter(u => u.tier === 'basic').length,
-      plus: users.filter(u => u.tier === 'plus').length,
-      suspended: users.filter(u => u.isSuspended).length,
-    };
-  }, [users]);
+  const suspendedCount = useMemo(() => users.filter(u => u.isSuspended).length, [users]);
 
   if (loading) {
     return <div className="min-h-screen flex items-center justify-center text-slate-500">Loading…</div>;
@@ -242,7 +209,7 @@ export default function AdminPage() {
             <div>
               <h1 className="text-2xl font-bold text-slate-900">Admin Dashboard</h1>
               <p className="text-sm text-slate-500 mt-1">
-                {users.length} users · {statsByTier.suspended} suspended
+                {users.length} users · {suspendedCount} suspended
               </p>
             </div>
             <div className="flex gap-3">
@@ -271,16 +238,9 @@ export default function AdminPage() {
               subtext={`${activeUsers7d} active (7d)`}
             />
             <StatCard
-              icon={Crown}
-              label="Paid Users"
-              value={statsByTier.basic + statsByTier.plus}
-              subtext={`${statsByTier.basic} Basic · ${statsByTier.plus} Plus`}
-              color="indigo"
-            />
-            <StatCard
               icon={Ban}
               label="Suspended"
-              value={statsByTier.suspended}
+              value={suspendedCount}
               subtext="Blocked access"
               color="amber"
             />
@@ -288,7 +248,7 @@ export default function AdminPage() {
               icon={BarChart3}
               label="Gen Today"
               value={totalGen}
-              subtext={`${freePct}% free · ${proPct}% pro`}
+              subtext={`${today?.editCount ?? 0} edits`}
             />
             <StatCard
               icon={BarChart3}
@@ -335,16 +295,6 @@ export default function AdminPage() {
                 <div className="flex items-center gap-2">
                   <Filter className="w-4 h-4 text-slate-400" />
                   <select
-                    value={tierFilter}
-                    onChange={(e) => setTierFilter(e.target.value as TierFilter)}
-                    className="px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  >
-                    <option value="all">All Tiers</option>
-                    <option value="free">Free</option>
-                    <option value="basic">Basic</option>
-                    <option value="plus">Plus</option>
-                  </select>
-                  <select
                     value={statusFilter}
                     onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}
                     className="px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
@@ -361,7 +311,6 @@ export default function AdminPage() {
                   <thead className="bg-slate-50 border-b border-slate-200">
                     <tr>
                       <th className="text-left px-4 py-3 font-semibold text-slate-600">User</th>
-                      <th className="text-left px-4 py-3 font-semibold text-slate-600">Tier</th>
                       <th className="text-right px-4 py-3 font-semibold text-slate-600">HD</th>
                       <th className="text-right px-4 py-3 font-semibold text-slate-600">Plat</th>
                       <th className="text-right px-4 py-3 font-semibold text-slate-600">Gen</th>
@@ -389,16 +338,8 @@ export default function AdminPage() {
                           </div>
                         </td>
                         <td className="px-4 py-3">
-                          <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                            u.tier === 'free'  ? 'bg-slate-100 text-slate-600' :
-                            u.tier === 'basic' ? 'bg-blue-100 text-blue-700' :
-                            u.tier === 'plus'  ? 'bg-indigo-100 text-indigo-700' :
-                            'bg-slate-100 text-slate-600'
-                          }`}>
-                            {u.tier?.toUpperCase() || 'FREE'}
-                          </span>
                           {u.isSuspended && (
-                            <span className="ml-2 px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-700">
+                            <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-700">
                               SUSPENDED
                             </span>
                           )}
@@ -428,8 +369,8 @@ export default function AdminPage() {
                     ))}
                     {!fetching && filteredUsers.length === 0 && (
                       <tr>
-                        <td colSpan={7} className="px-4 py-8 text-center text-slate-400">
-                          {searchQuery || tierFilter !== 'all' || statusFilter !== 'all'
+                        <td colSpan={6} className="px-4 py-8 text-center text-slate-400">
+                          {searchQuery || statusFilter !== 'all'
                             ? 'No users match your filters.'
                             : 'No users yet.'}
                         </td>

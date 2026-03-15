@@ -1,8 +1,7 @@
 import { Router, Request, Response } from 'express';
 import Stripe from 'stripe';
-import { setProStatus, addSessionCredits } from '../lib/session.js';
-import { firestoreSetProStatus, firestoreSetTier, addDownloadCredits, addHdCredits, addPlatformCredits, getUserByStripeCustomerId, getUserDoc } from '../lib/firestore.js';
-import type { Tier } from '../lib/firestore.js';
+import { addSessionCredits } from '../lib/session.js';
+import { addHdCredits, addPlatformCredits, getUserDoc } from '../lib/firestore.js';
 
 const router = Router();
 
@@ -10,7 +9,7 @@ const stripe = process.env.STRIPE_SECRET_KEY
   ? new Stripe(process.env.STRIPE_SECRET_KEY)
   : null;
 
-// Price IDs for base plans
+// Price IDs for credit packs
 const PRICE_IDS = {
   basic: process.env.STRIPE_BASIC_PRICE_ID,                    // $4.99 - 1 HD download
   plus: process.env.STRIPE_PLUS_PRICE_ID,                      // $9.99 - 1 HD + 1 platform
@@ -19,7 +18,7 @@ const PRICE_IDS = {
   platform_bundle: process.env.STRIPE_PLATFORM_BUNDLE_PRICE_ID, // $9.99 - +1 HD + +5 platform credits
 };
 
-type Plan = Tier | 'hd_addon' | 'platform_single' | 'platform_bundle';
+type Plan = 'basic' | 'plus' | 'hd_addon' | 'platform_single' | 'platform_bundle';
 
 // POST /api/payments/checkout
 router.post('/checkout', async (req: Request, res: Response) => {
@@ -106,15 +105,19 @@ router.post('/webhook', async (req: Request, res: Response) => {
     const plan = (session.metadata?.plan ?? 'basic') as Plan;
 
     if (uid) {
+      // Persist stripeCustomerId for billing portal access
+      if (customerId) {
+        const { upsertUserDoc } = await import('../lib/firestore.js');
+        await upsertUserDoc(uid, { stripeCustomerId: customerId });
+      }
+
       if (plan === 'basic') {
-        await firestoreSetTier(uid, 'basic', customerId);
         await addHdCredits(uid, 1);
-        console.log(`[payments] basic activated — hdCredits +1 for uid ${uid}`);
+        console.log(`[payments] basic — hdCredits +1 for uid ${uid}`);
       } else if (plan === 'plus') {
-        await firestoreSetTier(uid, 'plus', customerId);
         await addHdCredits(uid, 1);
         await addPlatformCredits(uid, 1);
-        console.log(`[payments] plus activated — hdCredits +1, platformCredits +1 for uid ${uid}`);
+        console.log(`[payments] plus — hdCredits +1, platformCredits +1 for uid ${uid}`);
       } else if (plan === 'hd_addon') {
         await addHdCredits(uid, 1);
         console.log(`[payments] hd_addon — hdCredits +1 for uid ${uid}`);
@@ -144,7 +147,6 @@ router.post('/webhook', async (req: Request, res: Response) => {
         await addSessionCredits(sid, 1, 5);
         console.log(`[payments] platform_bundle — hdCredits +1, platformCredits +5 for session ${sid}`);
       }
-      setProStatus(sid, true, customerId);
     }
   }
 
@@ -152,7 +154,6 @@ router.post('/webhook', async (req: Request, res: Response) => {
 });
 
 // POST /api/payments/portal — open Stripe billing portal (Firebase auth required)
-// Note: With one-time payments, this is less useful, but kept for customer support
 router.post('/portal', async (req: Request, res: Response) => {
   if (!stripe) {
     res.status(503).json({ error: 'Payment not configured yet' });

@@ -3,7 +3,6 @@ import { useAuthContext } from '../contexts/AuthContext';
 import { updateUserProfile, deleteUserAccount, openBillingPortal } from '../services/user';
 import { sendPasswordReset, deleteAccount } from '../services/auth';
 import type { IdentityLocks, StyleOption, ExpressionPreset } from '../services/ai';
-import PricingModal from './PricingModal';
 
 interface UserProfileModalProps {
   open: boolean;
@@ -38,12 +37,11 @@ const EXPRESSIONS: { value: ExpressionPreset; label: string }[] = [
 ];
 
 export default function UserProfileModal({ open, onClose, onApplyPreferences, onRetakeOnboarding }: UserProfileModalProps) {
-  const { user, profile, isPro, tier, refreshProfile } = useAuthContext();
+  const { user, profile, hdCredits, platformCredits, refreshProfile } = useAuthContext();
   const [tab, setTab] = useState<Tab>('profile');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-  const [showPricing, setShowPricing] = useState(false);
 
   // Profile tab state
   const [displayName, setDisplayName] = useState('');
@@ -422,73 +420,21 @@ export default function UserProfileModal({ open, onClose, onApplyPreferences, on
           {/* Billing tab */}
           {tab === 'billing' && (
             <div className="flex flex-col gap-4">
-              {(() => {
-                const tierLabel: Record<string, string> = {
-                  free: 'Free',
-                  basic: 'Basic',
-                  plus: 'Plus',
-                };
-                return (
-                  <>
-                    <div className="flex items-center gap-3 p-4 bg-slate-50 rounded-xl border border-slate-200">
-                      <div>
-                        <div className="text-sm font-medium text-slate-700">Current Plan</div>
-                        <div className={`text-lg font-bold ${isPro ? 'text-indigo-600' : 'text-slate-500'}`}>
-                          {tierLabel[tier] ?? tier}
-                        </div>
-                        {tier !== 'free' && (
-                          <div className="text-xs text-slate-400 mt-0.5">One-time purchase • {profile?.downloadCredits ?? 0} credits remaining</div>
-                        )}
-                      </div>
-                      {isPro && (
-                        <span className="ml-auto text-xs font-semibold text-indigo-600 bg-indigo-50 border border-indigo-100 px-2.5 py-1 rounded-full">
-                          Active
-                        </span>
-                      )}
-                    </div>
-
-                    {isPro && (
-                      <div className="flex flex-col gap-2">
-                        {profile?.stripeCustomerId ? (
-                          <>
-                            <button
-                              onClick={handleBillingPortal}
-                              disabled={saving}
-                              className="w-full border border-slate-200 hover:bg-slate-50 disabled:opacity-50 text-slate-700 font-semibold py-3 rounded-xl transition-colors text-sm"
-                            >
-                              {saving ? 'Opening…' : 'Manage Subscription'}
-                            </button>
-                            <button
-                              onClick={handleBillingPortal}
-                              disabled={saving}
-                              className="w-full border border-red-200 hover:bg-red-50 disabled:opacity-50 text-red-600 font-semibold py-3 rounded-xl transition-colors text-sm"
-                            >
-                              {saving ? 'Opening…' : 'Downgrade / Cancel'}
-                            </button>
-                          </>
-                        ) : (
-                          <p className="text-sm text-slate-500 text-center py-2">
-                            Your plan was activated manually. Contact support to make changes.
-                          </p>
-                        )}
-                      </div>
-                    )}
-                  </>
-                );
-              })()}
-
-              {!isPro && (
-                <div className="flex flex-col gap-3">
-                  <p className="text-sm text-slate-500">
-                    Upgrade to Pro for 2K resolution, priority generation, and persistent preferences.
-                  </p>
-                  <button
-                    onClick={() => setShowPricing(true)}
-                    className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 rounded-xl transition-colors text-sm"
-                  >
-                    Upgrade to Pro Studio
-                  </button>
+              <div className="flex items-center gap-3 p-4 bg-slate-50 rounded-xl border border-slate-200">
+                <div>
+                  <div className="text-sm font-medium text-slate-700">Credits</div>
+                  <div className="text-lg font-bold text-indigo-600">{hdCredits} HD · {platformCredits} Platform</div>
+                  <div className="text-xs text-slate-400 mt-0.5">Pay-per-download · No subscription</div>
                 </div>
+              </div>
+              {profile?.stripeCustomerId && (
+                <button
+                  onClick={handleBillingPortal}
+                  disabled={saving}
+                  className="w-full border border-slate-200 hover:bg-slate-50 disabled:opacity-50 text-slate-700 font-semibold py-3 rounded-xl transition-colors text-sm"
+                >
+                  {saving ? 'Opening…' : 'View Purchase History'}
+                </button>
               )}
             </div>
           )}
@@ -496,11 +442,6 @@ export default function UserProfileModal({ open, onClose, onApplyPreferences, on
       </div>
     </div>
 
-    <PricingModal
-      open={showPricing}
-      onClose={() => setShowPricing(false)}
-      onProActivated={() => { setShowPricing(false); void refreshProfile(); }}
-    />
     </>
   );
 }

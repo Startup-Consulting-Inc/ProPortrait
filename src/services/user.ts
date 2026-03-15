@@ -8,8 +8,6 @@ async function authHeaders(): Promise<Record<string, string>> {
   return { Authorization: `Bearer ${token}` };
 }
 
-export type Tier = 'free' | 'basic' | 'plus';
-
 export interface BetaFeedback {
   submittedAt: string;
   rating: number;
@@ -24,9 +22,7 @@ export interface UserProfile {
   email: string;
   displayName: string;
   photoURL?: string;
-  isPro: boolean;
   isAdmin: boolean;
-  tier?: Tier;
   saveCount?: number;
   generationCount?: number;
   generationsThisMonth?: number;

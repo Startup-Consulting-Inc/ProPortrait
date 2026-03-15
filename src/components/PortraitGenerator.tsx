@@ -13,7 +13,6 @@ import { cn } from '../lib/utils';
 import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
 import ComparisonSlider from './ComparisonSlider';
 import GenerationProgress from './GenerationProgress';
-import PricingModal from './PricingModal';
 import BuyCreditsModal from './BuyCreditsModal';
 import EmailCapture from './EmailCapture';
 import SavedPortraitsModal from './SavedPortraitsModal';
@@ -107,7 +106,7 @@ export default function PortraitGenerator({
   onExternalLibraryClose,
   onRequiresAuth,
 }: PortraitGeneratorProps) {
-  const { isPro, tier, hdCredits, platformCredits, refreshProfile, profile, isFirebaseUser } = useAuthContext();
+  const { hdCredits, platformCredits, refreshProfile, profile, isFirebaseUser } = useAuthContext();
   const [step, setStep] = useState<Step>(1);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [generatedImages, setGeneratedImages] = useState<string[]>([]);
@@ -174,7 +173,6 @@ export default function PortraitGenerator({
   const [cropPosition, setCropPosition] = useState<{ x: number; y: number }>({ x: 50, y: 50 });
   const [hasTransparentBackground, setHasTransparentBackground] = useState(false);
   const [downloadingPlatform, setDownloadingPlatform] = useState<string | null>(null);
-  const [showPricingModal, setShowPricingModal] = useState(false);
   const [showBuyCreditsModal, setShowBuyCreditsModal] = useState(false);
   const [buyCreditsReason, setBuyCreditsReason] = useState<'hd' | 'platform'>('hd');
   const [pendingDownload, setPendingDownload] = useState<'export' | 'platform' | 'all' | null>(null);
@@ -270,10 +268,10 @@ export default function PortraitGenerator({
 
   useEffect(() => { setCropPosition({ x: 50, y: 50 }); }, [exportRatio]);
 
-  // Track paywall impression when reaching Step 4 as free user
+  // Track when user reaches download step without credits
   useEffect(() => {
-    if (step === 4 && !isPro) capture('paywall_shown', { trigger: 'step4' });
-  }, [step, isPro]);
+    if (step === 4 && hdCredits <= 0) capture('paywall_shown', { trigger: 'step4' });
+  }, [step, hdCredits]);
 
   // Feature tour state
   const [showTour, setShowTour] = useState(false);
@@ -341,7 +339,7 @@ export default function PortraitGenerator({
     setHasTransparentBackground(false);
     setCompareMode(false);
     generationStartRef.current = Date.now();
-    capture('generation_started', { style: selectedStyle, numVariations, isPro });
+    capture('generation_started', { style: selectedStyle, numVariations });
 
     try {
       const [header, base64Data] = selectedImage.split(',');
@@ -384,7 +382,7 @@ export default function PortraitGenerator({
       capture('generation_failed', { error: message, durationMs: Date.now() - generationStartRef.current });
       console.error(err);
       if (message.includes('generation_limit') || message.includes('limit reached')) {
-        setShowPricingModal(true);
+        setError('Generation limit reached. Please contact support.');
       } else {
         setError('Failed to generate portrait. Please try again.');
       }
@@ -409,8 +407,7 @@ export default function PortraitGenerator({
     } catch (err: unknown) {
       const e = err as Error & { code?: string };
       if (e.code === 'save_limit') {
-        setShowPricingModal(true);
-        setSaveStatus('idle');
+        setSaveStatus('error');
       } else {
         setSaveStatus('error');
         setTimeout(() => setSaveStatus('idle'), 3000);
@@ -573,12 +570,6 @@ export default function PortraitGenerator({
       return;
     }
 
-    // Use auth context tier (authoritative) instead of re-fetching
-    if (isFirebaseUser && tier === 'free') {
-      setShowPricingModal(true);
-      capture('download_blocked', { reason: 'free_tier' });
-      return;
-    }
     if (hdCredits <= 0) {
       setBuyCreditsReason('hd');
       setShowBuyCreditsModal(true);
@@ -612,7 +603,7 @@ export default function PortraitGenerator({
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
-      capture('portrait_downloaded', { platform: 'custom', tier, remaining: consumeResult.remaining });
+      capture('portrait_downloaded', { platform: 'custom', remaining: consumeResult.remaining });
       void trackExportClient('custom');
       void refreshProfile(); // Refresh to update credit display
       
@@ -635,18 +626,6 @@ export default function PortraitGenerator({
       return;
     }
 
-    // Use auth context tier (authoritative) instead of re-fetching
-    if (isFirebaseUser && tier === 'free') {
-      setShowPricingModal(true);
-      capture('download_blocked', { reason: 'free_tier', platform: presetId });
-      return;
-    }
-    // Only Plus tier (or anon with credits) gets platform downloads
-    if (isFirebaseUser && tier !== 'plus') {
-      setShowPricingModal(true);
-      capture('download_blocked', { reason: 'tier_limit', platform: presetId, tier });
-      return;
-    }
     if (platformCredits <= 0) {
       setBuyCreditsReason('platform');
       setShowBuyCreditsModal(true);
@@ -678,7 +657,7 @@ export default function PortraitGenerator({
       a.click();
       document.body.removeChild(a);
       setDownloadingPlatform(null);
-      capture('platform_downloaded', { platform: presetId, tier, remaining: consumeResult.remaining });
+      capture('platform_downloaded', { platform: presetId, remaining: consumeResult.remaining });
       void trackExportClient(presetId);
       void refreshProfile(); // Refresh to update credit display
       
@@ -697,18 +676,6 @@ export default function PortraitGenerator({
       return;
     }
 
-    // Use auth context tier (authoritative) instead of re-fetching
-    if (isFirebaseUser && tier === 'free') {
-      setShowPricingModal(true);
-      capture('download_blocked', { reason: 'free_tier', platform: 'all' });
-      return;
-    }
-    // Only Plus tier (or anon with credits) gets Download All
-    if (isFirebaseUser && tier !== 'plus') {
-      setShowPricingModal(true);
-      capture('download_blocked', { reason: 'tier_limit', platform: 'all', tier });
-      return;
-    }
     if (platformCredits <= 0) {
       setBuyCreditsReason('platform');
       setShowBuyCreditsModal(true);
@@ -745,7 +712,7 @@ export default function PortraitGenerator({
     a.click();
     URL.revokeObjectURL(url);
     setDownloadingPlatform(null);
-    capture('all_platforms_downloaded', { tier, remaining: consumeResult.remaining });
+    capture('all_platforms_downloaded', { remaining: consumeResult.remaining });
     void trackExportClient('all');
     void refreshProfile(); // Refresh to update credit display
     
@@ -1243,7 +1210,7 @@ export default function PortraitGenerator({
                             ? 'border-indigo-600 bg-indigo-50 text-indigo-900'
                             : 'border-slate-200 bg-white text-slate-500 hover:border-indigo-200')}>
                         {preset === 'natural' ? '🌿 Natural' : preset === 'polished' ? '✨ Polished' : '📸 Studio'}
-                        {preset === 'studio' && !isPro && (
+                        {false && (
                           <span className="absolute -top-2 -right-2 flex items-center gap-0.5 text-[9px] font-bold text-amber-600 bg-amber-50 border border-amber-200 px-1 py-0.5 rounded-full leading-none">
                             <Lock className="w-2 h-2" /> PRO
                           </span>
@@ -1612,11 +1579,10 @@ export default function PortraitGenerator({
 
                                 {/* Transparent — Pro */}
                                 <button
-                                  onClick={() => { if (!isPro) { setShowPricingModal(true); return; } handleEdit('Remove the background completely and make it transparent.'); }}
+                                  onClick={() => { handleEdit('Remove the background completely and make it transparent.'); }}
                                   className="flex items-center gap-2 py-1.5 px-2 bg-white hover:bg-indigo-50 border border-slate-200 hover:border-indigo-300 rounded-lg transition-all w-full text-left">
                                   <span className="text-sm">🔲</span>
                                   <span className="text-[10px] font-medium text-slate-700">Transparent</span>
-                                  {!isPro && <span className="ml-auto flex items-center gap-0.5 text-[9px] font-bold text-amber-600 bg-amber-50 border border-amber-200 px-1 py-0.5 rounded-full leading-none shrink-0"><Lock className="w-2 h-2" /> PRO</span>}
                                 </button>
                               </>
                             )}
@@ -1705,8 +1671,8 @@ export default function PortraitGenerator({
                     <img src={getCurrentImage()} alt="Export Preview" className="w-full h-full"
                       style={{ objectFit: exportMode === 'fill' ? 'cover' : 'contain', objectPosition: `${cropPosition.x}% ${cropPosition.y}%` }}
                       referrerPolicy="no-referrer" />
-                    {/* Watermark overlay for free users */}
-                    {!isPro && (
+                    {/* No watermark — credit-based model */}
+                    {false && (
                       <div className="absolute inset-0 pointer-events-none flex items-center justify-center overflow-hidden">
                         <div className="transform -rotate-12 text-white/40 text-4xl font-bold select-none"
                           style={{ 
@@ -1788,10 +1754,10 @@ export default function PortraitGenerator({
                             disabled={hasTransparentBackground && fmt === 'jpg'}
                             className={cn('py-2 px-3 rounded-lg border text-sm font-medium transition-all uppercase relative overflow-hidden',
                               exportFormat === fmt ? 'border-indigo-600 bg-indigo-50 text-indigo-900' : 'border-slate-200 bg-white text-slate-600',
-                              fmt === 'png' && !isPro && 'opacity-70',
+                              false && 'opacity-70',
                               hasTransparentBackground && fmt === 'jpg' && 'opacity-30 cursor-not-allowed')}>
                             {fmt}
-                            {fmt === 'png' && !isPro && !hasTransparentBackground && (
+                            {false && !hasTransparentBackground && (
                               <div className="absolute inset-0 bg-slate-100/50 flex items-center justify-center backdrop-blur-[1px]">
                                 <Lock className="w-3.5 h-3.5 text-slate-500" />
                               </div>
@@ -1827,11 +1793,27 @@ export default function PortraitGenerator({
                         </button>
                       </div>
                     </div>
-                  ) : !isFirebaseUser ? null : !isPro ? (
+                  ) : hdCredits > 0 ? (
+                    <div className="p-3 bg-green-50 border border-green-200 rounded-xl">
+                      <div className="flex items-center gap-3 mb-2">
+                        <Star className="w-5 h-5 fill-green-500 text-green-500" />
+                        <div>
+                          <div className="font-bold text-sm text-green-800">HD Download Ready</div>
+                          <div className="text-xs text-green-600">Credit will be used on download</div>
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="text-green-700">HD credits:</span>
+                        <span className="font-bold text-green-800 bg-green-100 px-2 py-0.5 rounded-full">
+                          {hdCredits}
+                        </span>
+                      </div>
+                    </div>
+                  ) : (
                     <div className="p-4 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-xl text-white shadow-lg">
                       <div className="flex items-center gap-2 mb-2">
                         <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
-                        <h3 className="font-bold text-sm">Watermarked Preview</h3>
+                        <h3 className="font-bold text-sm">Ready to Download?</h3>
                       </div>
                       <p className="text-xs opacity-90 mb-3">
                         Generate and edit free forever. Pay only when you're ready to download.
@@ -1841,36 +1823,13 @@ export default function PortraitGenerator({
                         <li className="flex items-center gap-1"><Check className="w-3 h-3" /> $9.99 — All Platforms (ZIP)</li>
                       </ul>
                     </div>
-                  ) : (
-                    <div className="p-3 bg-green-50 border border-green-200 rounded-xl">
-                      <div className="flex items-center gap-3 mb-2">
-                        <Star className="w-5 h-5 fill-green-500 text-green-500" />
-                        <div>
-                          <div className="font-bold text-sm text-green-800">
-                            {tier === 'plus' ? 'Plus Plan Active' : 'Basic Plan Active'}
-                          </div>
-                          <div className="text-xs text-green-600">HD Downloads Unlocked</div>
-                        </div>
-                      </div>
-                      <div className="flex items-center justify-between text-xs">
-                        <span className="text-green-700">Download credits:</span>
-                        <span className="font-bold text-green-800 bg-green-100 px-2 py-0.5 rounded-full">
-                          {profile?.downloadCredits ?? 0}
-                        </span>
-                      </div>
-                    </div>
                   )}
 
                   {/* Standard Download Button */}
                   <button onClick={handleExport}
-                    className={cn(
-                      "w-full py-3.5 rounded-xl font-bold text-sm shadow-lg flex items-center justify-center gap-2 transition-all",
-                      isPro 
-                        ? "bg-indigo-600 text-white hover:bg-indigo-700" 
-                        : "bg-indigo-600 text-white hover:bg-indigo-700"
-                    )}>
-                    <Download className="w-4 h-4" /> 
-                    {!isFirebaseUser && hdCredits <= 0 ? 'Buy & Download' : isPro || hdCredits > 0 ? 'Download HD Portrait' : 'Unlock Download'}
+                    className="w-full py-3.5 rounded-xl font-bold text-sm shadow-lg flex items-center justify-center gap-2 transition-all bg-indigo-600 text-white hover:bg-indigo-700">
+                    <Download className="w-4 h-4" />
+                    {hdCredits > 0 ? 'Download HD Portrait' : 'Buy & Download'}
                   </button>
 
                   {/* Save to Library */}
@@ -1896,7 +1855,7 @@ export default function PortraitGenerator({
                       {saveStatus === 'saving' ? 'Saving…' : saveStatus === 'saved' ? 'Saved!' : saveStatus === 'error' ? 'Error' : 'Save'}
                       {saveStatus === 'idle' && isFirebaseUser && (
                         <span className="text-[10px] text-slate-400 font-normal">
-                          {profile?.saveCount ?? 0}/{tier === 'free' ? 10 : tier === 'basic' ? 50 : 200}
+                          {profile?.saveCount ?? 0}/100
                         </span>
                       )}
                     </button>
@@ -1961,18 +1920,8 @@ export default function PortraitGenerator({
                     <div className="border-t border-slate-200 pt-4">
                       <h3 className="text-sm font-semibold text-slate-900 mb-2 flex items-center gap-2">
                         <Globe className="w-4 h-4 text-indigo-600" /> Platform Export
-                        <span className="text-xs font-normal text-slate-400">Plus plan only</span>
                       </h3>
-                      {!isPro || tier !== 'plus' ? (
-                        <div className="p-3 bg-slate-50 rounded-lg border border-slate-200 text-center">
-                          <p className="text-xs text-slate-500 mb-2">
-                            Platform exports are included with the Plus plan ($9.99)
-                          </p>
-                          <button onClick={() => setShowPricingModal(true)} className="text-xs text-indigo-600 font-medium hover:text-indigo-700">
-                            Upgrade to Plus →
-                          </button>
-                        </div>
-                      ) : (
+                      {(
                         <>
                           <div className="space-y-1.5">
                             {PLATFORM_PRESETS.map((preset) => {
@@ -2021,11 +1970,6 @@ export default function PortraitGenerator({
         </AnimatePresence>
       </div>
 
-      <PricingModal
-        open={showPricingModal}
-        onClose={() => setShowPricingModal(false)}
-        onProActivated={() => { void refreshProfile(); setShowPricingModal(false); capture('paywall_converted', { plan: 'unknown' }); }}
-      />
       <BuyCreditsModal
         open={showBuyCreditsModal}
         onClose={() => setShowBuyCreditsModal(false)}
@@ -2056,7 +2000,7 @@ export default function PortraitGenerator({
         onClose={() => setShowExportToast(false)}
         onSave={handleSavePortrait}
         isSaved={saveStatus === 'saved'}
-        canSave={isFirebaseUser && tier !== 'free'}
+        canSave={isFirebaseUser}
         fileName={lastExportedFile}
       />
       

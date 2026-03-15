@@ -5,7 +5,7 @@ const router = Router();
 
 // GET /api/auth/me — reads from req.auth (populated by authMiddleware)
 router.get('/me', async (req: Request, res: Response) => {
-  const { isPro, uid, email, isAdmin, sessionId, mode } = req.auth;
+  const { uid, email, isAdmin, sessionId, mode } = req.auth;
   let hdCredits = req.auth.hdCredits ?? 0;
   let platformCredits = req.auth.platformCredits ?? 0;
 
@@ -22,7 +22,6 @@ router.get('/me', async (req: Request, res: Response) => {
   }
 
   res.json({
-    isPro,
     sessionId,
     uid,
     email,
