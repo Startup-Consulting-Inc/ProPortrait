@@ -22,6 +22,7 @@ import { AuthProvider, useAuthContext } from './contexts/AuthContext';
 import AppFooter from './components/AppFooter';
 import { shouldShowOnboarding } from './services/onboarding';
 import { useInactivityTimeout } from './hooks/useInactivityTimeout';
+import { getPaymentCommunicator } from './services/paymentComm';
 import type { PortraitDefaults } from './types/onboarding';
 
 function AppContent() {
@@ -49,6 +50,21 @@ function AppContent() {
   // After Stripe redirect with ?payment=success, poll until credits/pro status is reflected
   useEffect(() => {
     if (!paymentPending || loading) return;
+    
+    // Get plan from URL for cross-tab communication
+    const params = new URLSearchParams(window.location.search);
+    const plan = params.get('plan') || 'unknown';
+    
+    // Broadcast payment completion to other tabs (the original portrait tab)
+    // This ensures the Export Portrait page detects the payment immediately
+    const comm = getPaymentCommunicator();
+    const sessionId = `plan_${plan}_${Date.now()}`;
+    comm.notifyPaymentCompleted(sessionId, plan);
+    
+    // Auto-close this tab (payment success page) after broadcasting
+    // This returns the user to the original Export Portrait tab
+    comm.autoCloseAfterBroadcast(1000);
+    
     // Wait for any credits to appear (works for both Firebase and anonymous users)
     const hasCredits = hdCredits > 0 || platformCredits > 0;
     if (hasCredits) {
@@ -69,7 +85,26 @@ function AppContent() {
       }
     }, 2000);
     return () => clearInterval(interval);
-  }, [paymentPending, loading, hdCredits, platformCredits]);
+  }, [paymentPending, loading, hdCredits, platformCredits, refreshProfile]);
+
+  // Check for pending payment status from other tabs on mount (for non-payment pages)
+  useEffect(() => {
+    // Skip if we're on the payment success page (handled by other effect)
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('payment') === 'success') return;
+    
+    const comm = getPaymentCommunicator();
+    const pendingStatus = comm.checkPendingStatus();
+    if (pendingStatus && pendingStatus.status === 'completed') {
+      // Payment was completed in another tab
+      comm.clearStatus();
+      // Trigger a profile refresh to get the new credits
+      void refreshProfile();
+      // Show success notification
+      setProActivated(true);
+      setTimeout(() => setProActivated(false), 6000);
+    }
+  }, [refreshProfile]);
 
   // Deferred sign-in: /create is now public, only /admin requires auth upfront
   useEffect(() => {

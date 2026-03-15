@@ -84,6 +84,7 @@ async function consumeDownloadCredit(type: 'hd' | 'platform'): Promise<{ success
 import FeatureTour from './FeatureTour';
 import { useFeatureFlag } from '../hooks/useFeatureFlag';
 import { PLATFORM_PRESETS } from '../lib/platformPresets';
+import { getPaymentCommunicator } from '../services/paymentComm';
 
 type EditMode = 'clothes' | 'background' | 'region' | null;
 type Step = 1 | 2 | 3 | 4;
@@ -256,6 +257,40 @@ export default function PortraitGenerator({
       }, 500);
     }
   }, [isFirebaseUser, pendingDownload, pendingPlatformId]);
+
+  // Listen for payment completion from other tabs (payment flow)
+  useEffect(() => {
+    const comm = getPaymentCommunicator();
+    
+    const unsubscribe = comm.onMessage((message) => {
+      if (message.type === 'PAYMENT_COMPLETED') {
+        // Payment completed in another tab, refresh credits
+        void refreshProfile();
+        
+        // If there's a pending download, trigger it after credits are refreshed
+        if (pendingDownload) {
+          const type = pendingDownload;
+          const platformId = pendingPlatformId;
+          
+          setPendingDownload(null);
+          setPendingPlatformId(null);
+          
+          // Small delay to allow credits to be available
+          setTimeout(() => {
+            if (type === 'export') {
+              handleExport();
+            } else if (type === 'platform' && platformId) {
+              handlePlatformDownload(platformId);
+            } else if (type === 'all') {
+              handleDownloadAll();
+            }
+          }, 1000);
+        }
+      }
+    });
+    
+    return unsubscribe;
+  }, [refreshProfile, pendingDownload, pendingPlatformId]);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -572,6 +607,7 @@ export default function PortraitGenerator({
 
     if (hdCredits <= 0) {
       setBuyCreditsReason('hd');
+      setPendingDownload('export'); // Track for auto-download after payment
       setShowBuyCreditsModal(true);
       capture('download_blocked', { reason: 'no_hd_credits' });
       return;
@@ -628,6 +664,8 @@ export default function PortraitGenerator({
 
     if (platformCredits <= 0) {
       setBuyCreditsReason('platform');
+      setPendingDownload('platform');
+      setPendingPlatformId(presetId);
       setShowBuyCreditsModal(true);
       capture('download_blocked', { reason: 'no_platform_credits', platform: presetId });
       return;
@@ -678,6 +716,7 @@ export default function PortraitGenerator({
 
     if (platformCredits <= 0) {
       setBuyCreditsReason('platform');
+      setPendingDownload('all');
       setShowBuyCreditsModal(true);
       capture('download_blocked', { reason: 'no_platform_credits', platform: 'all' });
       return;
@@ -1972,9 +2011,38 @@ export default function PortraitGenerator({
 
       <BuyCreditsModal
         open={showBuyCreditsModal}
-        onClose={() => setShowBuyCreditsModal(false)}
+        onClose={() => {
+          setShowBuyCreditsModal(false);
+          // Clear pending download if modal is closed without payment
+          setPendingDownload(null);
+          setPendingPlatformId(null);
+        }}
         reason={buyCreditsReason}
-        onPaymentDetected={() => { void refreshProfile(); setShowBuyCreditsModal(false); }}
+        onPaymentDetected={() => {
+          void refreshProfile();
+          setShowBuyCreditsModal(false);
+          
+          // Auto-trigger the download that was pending
+          if (pendingDownload) {
+            const type = pendingDownload;
+            const platformId = pendingPlatformId;
+            
+            // Clear pending state
+            setPendingDownload(null);
+            setPendingPlatformId(null);
+            
+            // Small delay to allow credits to be available
+            setTimeout(() => {
+              if (type === 'export') {
+                handleExport();
+              } else if (type === 'platform' && platformId) {
+                handlePlatformDownload(platformId);
+              } else if (type === 'all') {
+                handleDownloadAll();
+              }
+            }, 800);
+          }
+        }}
       />
       <EmailCapture
         open={showEmailCapture}

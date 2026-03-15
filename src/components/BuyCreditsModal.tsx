@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { X, Download, Package, Layers, Loader2, Star, CheckCircle2, ExternalLink } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { getIdToken } from '../services/auth';
+import { getPaymentCommunicator } from '../services/paymentComm';
 
 const API_BASE = (import.meta.env.VITE_API_URL as string | undefined) ?? '';
 
@@ -65,6 +66,8 @@ export default function BuyCreditsModal({ open, onClose, reason, onPaymentDetect
   const [notDetectedYet, setNotDetectedYet] = useState(false);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const prevCreditsRef = useRef<{ hd: number; platform: number } | null>(null);
+  const currentPlanRef = useRef<AddOnPlan | null>(null);
+  const unsubscribeRef = useRef<(() => void) | null>(null);
 
   // Stop polling when modal closes
   useEffect(() => {
@@ -74,11 +77,21 @@ export default function BuyCreditsModal({ open, onClose, reason, onPaymentDetect
       setPaymentConfirmed(false);
       setLoading(null);
       setStripeUnavailable(false);
+      // Clean up cross-tab listener
+      if (unsubscribeRef.current) {
+        unsubscribeRef.current();
+        unsubscribeRef.current = null;
+      }
     }
   }, [open]);
 
   // Cleanup on unmount
-  useEffect(() => () => stopPolling(), []);
+  useEffect(() => () => {
+    stopPolling();
+    if (unsubscribeRef.current) {
+      unsubscribeRef.current();
+    }
+  }, []);
 
   function stopPolling() {
     if (pollRef.current) {
@@ -111,18 +124,56 @@ export default function BuyCreditsModal({ open, onClose, reason, onPaymentDetect
       const current = await fetchSessionCredits();
       const prev = prevCreditsRef.current!;
       if (current.hd > prev.hd || current.platform > prev.platform) {
-        stopPolling();
-        setPaymentConfirmed(true);
-        setTimeout(() => {
-          onPaymentDetected?.();
-          onClose();
-        }, 1500);
+        handlePaymentSuccess();
       }
-    }, 3000);
+    }, 2000); // Poll every 2 seconds for faster detection
+  }
+
+  function handlePaymentSuccess() {
+    stopPolling();
+    setPaymentConfirmed(true);
+    
+    // Clear any pending status from localStorage
+    getPaymentCommunicator().clearStatus();
+    
+    setTimeout(() => {
+      onPaymentDetected?.();
+      onClose();
+    }, 1500);
+  }
+
+  function setupCrossTabListener(plan: AddOnPlan) {
+    const comm = getPaymentCommunicator();
+    
+    // Unsubscribe any existing listener
+    if (unsubscribeRef.current) {
+      unsubscribeRef.current();
+    }
+    
+    // Subscribe to cross-tab payment messages
+    unsubscribeRef.current = comm.onMessage((message) => {
+      if (message.type === 'PAYMENT_COMPLETED') {
+        // Verify this is for our plan (or accept any completion during waiting state)
+        if (waitingForPayment && !paymentConfirmed) {
+          console.log('[BuyCreditsModal] Payment detected from other tab:', message);
+          handlePaymentSuccess();
+        }
+      }
+    });
+
+    // Also check if payment already completed (page refresh scenario)
+    const pendingStatus = comm.checkPendingStatus();
+    if (pendingStatus && pendingStatus.status === 'completed') {
+      console.log('[BuyCreditsModal] Found pending completed payment:', pendingStatus);
+      // Clear it so we don't re-trigger on next load
+      comm.clearStatus();
+      handlePaymentSuccess();
+    }
   }
 
   const handleSelect = async (plan: AddOnPlan) => {
     setLoading(plan);
+    currentPlanRef.current = plan;
     try {
       const token = await getIdToken();
       const res = await fetch(`${API_BASE}/api/payments/checkout`, {
@@ -134,7 +185,7 @@ export default function BuyCreditsModal({ open, onClose, reason, onPaymentDetect
         body: JSON.stringify({ plan }),
         credentials: 'include',
       });
-      const data = await res.json() as { url?: string; error?: string; mock?: boolean };
+      const data = await res.json() as { url?: string; error?: string; mock?: boolean; sessionId?: string };
 
       if (data.mock || !data.url) {
         setStripeUnavailable(true);
@@ -142,10 +193,22 @@ export default function BuyCreditsModal({ open, onClose, reason, onPaymentDetect
         return;
       }
 
+      // Get session ID for cross-tab communication
+      // Try to get it from response, or use a generated one
+      const sessionId = data.sessionId || `plan_${plan}_${Date.now()}`;
+      
+      // Broadcast that payment is starting
+      getPaymentCommunicator().notifyPaymentStarted(sessionId, plan);
+
       // Open Stripe in a new tab — do NOT navigate away (portrait would be lost)
       window.open(data.url, '_blank');
       setLoading(null);
       setWaitingForPayment(true);
+      
+      // Set up cross-tab listener for payment completion
+      setupCrossTabListener(plan);
+      
+      // Also start polling as fallback
       void startPolling();
     } catch {
       setStripeUnavailable(true);
