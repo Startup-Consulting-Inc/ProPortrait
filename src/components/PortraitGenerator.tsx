@@ -2030,6 +2030,7 @@ export default function PortraitGenerator({
         open={showBuyCreditsModal}
         onClose={() => setShowBuyCreditsModal(false)}
         reason={buyCreditsReason}
+        onPaymentDetected={() => { void refreshProfile(); setShowBuyCreditsModal(false); }}
       />
       <EmailCapture
         open={showEmailCapture}

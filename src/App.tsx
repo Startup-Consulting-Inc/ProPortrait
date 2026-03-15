@@ -76,9 +76,9 @@ function AppContent() {
     if (!loading && !user && path === '/admin') {
       setShowAuth(true);
     }
-    // Redirect legacy /app URLs to /create
+    // Redirect legacy /app URLs to /create (preserve query params e.g. ?payment=success)
     if (path === '/app') {
-      window.location.href = '/create';
+      window.location.href = '/create' + window.location.search;
     }
   }, [loading, user, path]);
 

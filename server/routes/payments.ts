@@ -64,8 +64,8 @@ router.post('/checkout', async (req: Request, res: Response) => {
     const checkout = await stripe.checkout.sessions.create({
       mode: 'payment', // One-time payment
       line_items: [{ price: priceId, quantity: 1 }],
-      success_url: `${appUrl}/app?payment=success&plan=${plan}`,
-      cancel_url: `${appUrl}/app?payment=cancelled`,
+      success_url: `${appUrl}/create?payment=success&plan=${plan}`,
+      cancel_url: `${appUrl}/create?payment=cancelled`,
       metadata,
       ...(req.auth.email ? { customer_email: req.auth.email } : {}),
     });
