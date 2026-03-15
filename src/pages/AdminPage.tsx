@@ -362,7 +362,6 @@ export default function AdminPage() {
                     <tr>
                       <th className="text-left px-4 py-3 font-semibold text-slate-600">User</th>
                       <th className="text-left px-4 py-3 font-semibold text-slate-600">Tier</th>
-                      <th className="text-left px-4 py-3 font-semibold text-slate-600">Joined</th>
                       <th className="text-right px-4 py-3 font-semibold text-slate-600">HD</th>
                       <th className="text-right px-4 py-3 font-semibold text-slate-600">Plat</th>
                       <th className="text-right px-4 py-3 font-semibold text-slate-600">Gen</th>
@@ -429,7 +428,7 @@ export default function AdminPage() {
                     ))}
                     {!fetching && filteredUsers.length === 0 && (
                       <tr>
-                        <td colSpan={8} className="px-4 py-8 text-center text-slate-400">
+                        <td colSpan={7} className="px-4 py-8 text-center text-slate-400">
                           {searchQuery || tierFilter !== 'all' || statusFilter !== 'all'
                             ? 'No users match your filters.'
                             : 'No users yet.'}
