@@ -61,6 +61,8 @@ export default function BuyCreditsModal({ open, onClose, reason, onPaymentDetect
   const [stripeUnavailable, setStripeUnavailable] = useState(false);
   const [waitingForPayment, setWaitingForPayment] = useState(false);
   const [paymentConfirmed, setPaymentConfirmed] = useState(false);
+  const [checkingManually, setCheckingManually] = useState(false);
+  const [notDetectedYet, setNotDetectedYet] = useState(false);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const prevCreditsRef = useRef<{ hd: number; platform: number } | null>(null);
 
@@ -152,9 +154,12 @@ export default function BuyCreditsModal({ open, onClose, reason, onPaymentDetect
   };
 
   const handleManualConfirm = async () => {
+    setCheckingManually(true);
+    setNotDetectedYet(false);
     stopPolling();
     const current = await fetchSessionCredits();
     const prev = prevCreditsRef.current ?? { hd: 0, platform: 0 };
+    setCheckingManually(false);
     if (current.hd > prev.hd || current.platform > prev.platform) {
       setPaymentConfirmed(true);
       setTimeout(() => {
@@ -162,7 +167,8 @@ export default function BuyCreditsModal({ open, onClose, reason, onPaymentDetect
         onClose();
       }, 1200);
     } else {
-      // Credits not yet reflected — re-start polling and nudge user
+      // Credits not yet reflected — show message and keep polling
+      setNotDetectedYet(true);
       void startPolling();
     }
   };
@@ -211,10 +217,19 @@ export default function BuyCreditsModal({ open, onClose, reason, onPaymentDetect
                 </div>
                 <button
                   onClick={handleManualConfirm}
-                  className="px-6 py-2.5 bg-indigo-600 text-white rounded-xl font-semibold text-sm hover:bg-indigo-700 transition-colors"
+                  disabled={checkingManually}
+                  className="px-6 py-2.5 bg-indigo-600 text-white rounded-xl font-semibold text-sm hover:bg-indigo-700 transition-colors disabled:opacity-60 disabled:cursor-not-allowed flex items-center gap-2"
                 >
-                  I've completed my payment →
+                  {checkingManually
+                    ? <><Loader2 className="w-4 h-4 animate-spin" /> Checking…</>
+                    : "I've completed my payment →"
+                  }
                 </button>
+                {notDetectedYet && (
+                  <p className="text-xs text-amber-600 text-center max-w-xs">
+                    Payment not detected yet — please wait a moment and try again. It may take up to 30 seconds.
+                  </p>
+                )}
               </>
             )}
           </div>

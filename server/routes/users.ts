@@ -2,7 +2,7 @@ import { Router, Request, Response } from 'express';
 import { FieldValue } from 'firebase-admin/firestore';
 import { adminAuth, adminFirestore } from '../lib/firebase.js';
 import { getUserDoc, upsertUserDoc, trackLogin, saveOnboardingData, submitBetaFeedback, type OnboardingData, type FeedbackSubmission } from '../lib/firestore.js';
-import { consumeSessionCredit } from '../lib/session.js';
+import { consumeSessionCredit, getSessionCredits } from '../lib/session.js';
 import { requireFirebaseAuth } from '../middleware/authMiddleware.js';
 
 const router = Router();
@@ -179,11 +179,10 @@ router.post('/me/feedback', requireFirebaseAuth, async (req: Request, res: Respo
 
 // GET /api/users/me/download-credits — check remaining download credits
 router.get('/me/download-credits', async (req: Request, res: Response) => {
-  // Anonymous session path
+  // Anonymous session path — read from Firestore for cross-instance accuracy
   if (req.auth.mode === 'anonymous') {
-    const hdCredits = req.auth.hdCredits ?? 0;
-    const platformCredits = req.auth.platformCredits ?? 0;
-    const tier = req.auth.tier;
+    const { hdCredits, platformCredits } = await getSessionCredits(req.auth.sessionId!);
+    const tier = hdCredits > 0 || platformCredits > 0 ? 'basic' : 'free';
     res.json({
       tier,
       hdCredits,
@@ -227,11 +226,10 @@ router.post('/me/consume-download', async (req: Request, res: Response) => {
   const { consume, type } = req.body as { consume?: boolean; type?: 'hd' | 'platform' };
   const creditType: 'hd' | 'platform' = type === 'platform' ? 'platform' : 'hd';
 
-  // Anonymous session path
+  // Anonymous session path — read from Firestore for cross-instance accuracy
   if (req.auth.mode === 'anonymous') {
     const sessionId = req.auth.sessionId!;
-    const hdCredits = req.auth.hdCredits ?? 0;
-    const platformCredits = req.auth.platformCredits ?? 0;
+    const { hdCredits, platformCredits } = await getSessionCredits(sessionId);
 
     if (creditType === 'platform') {
       if (platformCredits <= 0) {

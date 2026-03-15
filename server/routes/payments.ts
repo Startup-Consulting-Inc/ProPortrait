@@ -130,21 +130,21 @@ router.post('/webhook', async (req: Request, res: Response) => {
         console.log(`[payments] platform_bundle — hdCredits +1, platformCredits +5 for uid ${uid}`);
       }
     } else if (sid) {
-      // Anonymous session → grant credits per plan
+      // Anonymous session → grant credits per plan (persisted to Firestore for cross-instance access)
       if (plan === 'basic') {
-        addSessionCredits(sid, 1, 0);
+        await addSessionCredits(sid, 1, 0);
         console.log(`[payments] basic — hdCredits +1 for session ${sid}`);
       } else if (plan === 'plus') {
-        addSessionCredits(sid, 1, 1);
+        await addSessionCredits(sid, 1, 1);
         console.log(`[payments] plus — hdCredits +1, platformCredits +1 for session ${sid}`);
       } else if (plan === 'hd_addon') {
-        addSessionCredits(sid, 1, 0);
+        await addSessionCredits(sid, 1, 0);
         console.log(`[payments] hd_addon — hdCredits +1 for session ${sid}`);
       } else if (plan === 'platform_single') {
-        addSessionCredits(sid, 0, 1);
+        await addSessionCredits(sid, 0, 1);
         console.log(`[payments] platform_single — platformCredits +1 for session ${sid}`);
       } else if (plan === 'platform_bundle') {
-        addSessionCredits(sid, 1, 5);
+        await addSessionCredits(sid, 1, 5);
         console.log(`[payments] platform_bundle — hdCredits +1, platformCredits +5 for session ${sid}`);
       }
       setProStatus(sid, true, customerId);
