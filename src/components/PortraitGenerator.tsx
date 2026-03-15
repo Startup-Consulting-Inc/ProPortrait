@@ -57,6 +57,23 @@ async function checkDownloadCredits(): Promise<{ canDownload: boolean; credits: 
   }
 }
 
+// Get fresh session credits directly from server (avoids stale React state)
+async function getFreshSessionCredits(): Promise<{ hdCredits: number; platformCredits: number }> {
+  try {
+    const res = await fetch(`${API_BASE}/api/auth/me`, { credentials: 'include' });
+    if (res.ok) {
+      const data = await res.json() as { hdCredits?: number; platformCredits?: number };
+      return {
+        hdCredits: data.hdCredits ?? 0,
+        platformCredits: data.platformCredits ?? 0,
+      };
+    }
+  } catch (e) {
+    console.error('[getFreshSessionCredits] Error:', e);
+  }
+  return { hdCredits: 0, platformCredits: 0 };
+}
+
 // Consume a download credit (type: 'hd' | 'platform')
 async function consumeDownloadCredit(type: 'hd' | 'platform'): Promise<{ success: boolean; remaining?: number; error?: string }> {
   try {
@@ -646,15 +663,18 @@ export default function PortraitGenerator({
     const currentImage = getCurrentImage();
     if (!currentImage || !canvasRef.current) return;
     
+    // Get FRESH credits from server (not stale React state)
+    const freshCredits = await getFreshSessionCredits();
+    
     // Deferred sign-in: Check if user is authenticated first (only if no session credits)
-    if (!isFirebaseUser && hdCredits <= 0) {
+    if (!isFirebaseUser && freshCredits.hdCredits <= 0) {
       setPendingDownload('export');
       onRequiresAuth?.();
       capture('download_auth_required', { type: 'export' });
       return;
     }
 
-    if (hdCredits <= 0) {
+    if (freshCredits.hdCredits <= 0) {
       setBuyCreditsReason('hd');
       setPendingDownload('export'); // Track for auto-download after payment
       setShowBuyCreditsModal(true);
@@ -702,8 +722,11 @@ export default function PortraitGenerator({
   };
 
   const handlePlatformDownload = async (presetId: string) => {
+    // Get FRESH credits from server (not stale React state)
+    const freshCredits = await getFreshSessionCredits();
+    
     // Deferred sign-in: Check if user is authenticated first (only if no session credits)
-    if (!isFirebaseUser && platformCredits <= 0) {
+    if (!isFirebaseUser && freshCredits.platformCredits <= 0) {
       setPendingDownload('platform');
       setPendingPlatformId(presetId);
       onRequiresAuth?.();
@@ -711,7 +734,7 @@ export default function PortraitGenerator({
       return;
     }
 
-    if (platformCredits <= 0) {
+    if (freshCredits.platformCredits <= 0) {
       setBuyCreditsReason('platform');
       setPendingDownload('platform');
       setPendingPlatformId(presetId);
@@ -755,15 +778,18 @@ export default function PortraitGenerator({
   };
 
   const handleDownloadAll = async () => {
+    // Get FRESH credits from server (not stale React state)
+    const freshCredits = await getFreshSessionCredits();
+    
     // Deferred sign-in: Check if user is authenticated first (only if no session credits)
-    if (!isFirebaseUser && platformCredits <= 0) {
+    if (!isFirebaseUser && freshCredits.platformCredits <= 0) {
       setPendingDownload('all');
       onRequiresAuth?.();
       capture('download_auth_required', { type: 'all' });
       return;
     }
 
-    if (platformCredits <= 0) {
+    if (freshCredits.platformCredits <= 0) {
       setBuyCreditsReason('platform');
       setPendingDownload('all');
       setShowBuyCreditsModal(true);
