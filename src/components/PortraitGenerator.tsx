@@ -565,16 +565,16 @@ export default function PortraitGenerator({
     const currentImage = getCurrentImage();
     if (!currentImage || !canvasRef.current) return;
     
-    // Deferred sign-in: Check if user is authenticated first
-    if (!isFirebaseUser) {
+    // Deferred sign-in: Check if user is authenticated first (only if no session credits)
+    if (!isFirebaseUser && hdCredits <= 0) {
       setPendingDownload('export');
       onRequiresAuth?.();
       capture('download_auth_required', { type: 'export' });
       return;
     }
-    
+
     // Use auth context tier (authoritative) instead of re-fetching
-    if (tier === 'free') {
+    if (isFirebaseUser && tier === 'free') {
       setShowPricingModal(true);
       capture('download_blocked', { reason: 'free_tier' });
       return;
@@ -626,23 +626,23 @@ export default function PortraitGenerator({
   };
 
   const handlePlatformDownload = async (presetId: string) => {
-    // Deferred sign-in: Check if user is authenticated first
-    if (!isFirebaseUser) {
+    // Deferred sign-in: Check if user is authenticated first (only if no session credits)
+    if (!isFirebaseUser && platformCredits <= 0) {
       setPendingDownload('platform');
       setPendingPlatformId(presetId);
       onRequiresAuth?.();
       capture('download_auth_required', { type: 'platform', platform: presetId });
       return;
     }
-    
+
     // Use auth context tier (authoritative) instead of re-fetching
-    if (tier === 'free') {
+    if (isFirebaseUser && tier === 'free') {
       setShowPricingModal(true);
       capture('download_blocked', { reason: 'free_tier', platform: presetId });
       return;
     }
-    // Only Plus tier gets platform downloads
-    if (tier !== 'plus') {
+    // Only Plus tier (or anon with credits) gets platform downloads
+    if (isFirebaseUser && tier !== 'plus') {
       setShowPricingModal(true);
       capture('download_blocked', { reason: 'tier_limit', platform: presetId, tier });
       return;
@@ -689,22 +689,22 @@ export default function PortraitGenerator({
   };
 
   const handleDownloadAll = async () => {
-    // Deferred sign-in: Check if user is authenticated first
-    if (!isFirebaseUser) {
+    // Deferred sign-in: Check if user is authenticated first (only if no session credits)
+    if (!isFirebaseUser && platformCredits <= 0) {
       setPendingDownload('all');
       onRequiresAuth?.();
       capture('download_auth_required', { type: 'all' });
       return;
     }
-    
+
     // Use auth context tier (authoritative) instead of re-fetching
-    if (tier === 'free') {
+    if (isFirebaseUser && tier === 'free') {
       setShowPricingModal(true);
       capture('download_blocked', { reason: 'free_tier', platform: 'all' });
       return;
     }
-    // Only Plus tier gets Download All
-    if (tier !== 'plus') {
+    // Only Plus tier (or anon with credits) gets Download All
+    if (isFirebaseUser && tier !== 'plus') {
       setShowPricingModal(true);
       capture('download_blocked', { reason: 'tier_limit', platform: 'all', tier });
       return;
@@ -1803,21 +1803,31 @@ export default function PortraitGenerator({
                   </>)}
 
                   {/* Download Status / Upgrade Banner */}
-                  {!isFirebaseUser ? (
+                  {!isFirebaseUser && hdCredits <= 0 && platformCredits <= 0 ? (
                     <div className="p-4 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-xl text-white shadow-lg">
                       <div className="flex items-center gap-2 mb-2">
                         <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
                         <h3 className="font-bold text-sm">Ready to Download?</h3>
                       </div>
                       <p className="text-xs opacity-90 mb-3">
-                        Sign in to unlock your HD portrait. No credit card required to create an account.
+                        Sign in to save portraits, or buy once and download now.
                       </p>
-                      <ul className="text-xs space-y-1 mb-3 opacity-90">
-                        <li className="flex items-center gap-1"><Check className="w-3 h-3" /> $4.99 — HD Download</li>
-                        <li className="flex items-center gap-1"><Check className="w-3 h-3" /> $9.99 — All Platforms (ZIP)</li>
-                      </ul>
+                      <div className="flex flex-col gap-2">
+                        <button
+                          onClick={() => onRequiresAuth?.()}
+                          className="w-full py-2 bg-white/20 hover:bg-white/30 border border-white/40 rounded-lg text-xs font-semibold transition-colors"
+                        >
+                          Sign In / Sign Up — save portraits
+                        </button>
+                        <button
+                          onClick={() => { setBuyCreditsReason('hd'); setShowBuyCreditsModal(true); }}
+                          className="w-full py-2 bg-white text-indigo-700 hover:bg-white/90 rounded-lg text-xs font-bold transition-colors"
+                        >
+                          Buy &amp; Download — no account needed
+                        </button>
+                      </div>
                     </div>
-                  ) : !isPro ? (
+                  ) : !isFirebaseUser ? null : !isPro ? (
                     <div className="p-4 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-xl text-white shadow-lg">
                       <div className="flex items-center gap-2 mb-2">
                         <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
@@ -1860,7 +1870,7 @@ export default function PortraitGenerator({
                         : "bg-indigo-600 text-white hover:bg-indigo-700"
                     )}>
                     <Download className="w-4 h-4" /> 
-                    {!isFirebaseUser ? 'Sign in to Download' : isPro ? 'Download HD Portrait' : 'Unlock Download'}
+                    {!isFirebaseUser && hdCredits <= 0 ? 'Buy & Download' : isPro || hdCredits > 0 ? 'Download HD Portrait' : 'Unlock Download'}
                   </button>
 
                   {/* Save to Library */}

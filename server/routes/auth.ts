@@ -4,7 +4,7 @@ const router = Router();
 
 // GET /api/auth/me — reads from req.auth (populated by authMiddleware)
 router.get('/me', (req: Request, res: Response) => {
-  const { isPro, uid, email, isAdmin, sessionId, mode } = req.auth;
+  const { isPro, uid, email, isAdmin, sessionId, mode, hdCredits, platformCredits } = req.auth;
   res.json({
     isPro,
     sessionId,
@@ -12,6 +12,8 @@ router.get('/me', (req: Request, res: Response) => {
     email,
     isAdmin,
     isFirebaseUser: mode === 'firebase',
+    hdCredits: hdCredits ?? 0,
+    platformCredits: platformCredits ?? 0,
   });
 });
 

@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express';
 import Stripe from 'stripe';
-import { getOrCreateSession, setProStatus, SESSION_COOKIE, COOKIE_OPTIONS } from '../lib/session.js';
+import { getOrCreateSession, setProStatus, addSessionCredits, SESSION_COOKIE, COOKIE_OPTIONS } from '../lib/session.js';
 import { firestoreSetProStatus, firestoreSetTier, addDownloadCredits, addHdCredits, addPlatformCredits, getUserByStripeCustomerId, getUserDoc } from '../lib/firestore.js';
 import type { Tier } from '../lib/firestore.js';
 
@@ -130,9 +130,24 @@ router.post('/webhook', async (req: Request, res: Response) => {
         console.log(`[payments] platform_bundle — hdCredits +1, platformCredits +5 for uid ${uid}`);
       }
     } else if (sid) {
-      // Anonymous session → mark as pro in memory (no tier granularity)
+      // Anonymous session → grant credits per plan
+      if (plan === 'basic') {
+        addSessionCredits(sid, 1, 0);
+        console.log(`[payments] basic — hdCredits +1 for session ${sid}`);
+      } else if (plan === 'plus') {
+        addSessionCredits(sid, 1, 1);
+        console.log(`[payments] plus — hdCredits +1, platformCredits +1 for session ${sid}`);
+      } else if (plan === 'hd_addon') {
+        addSessionCredits(sid, 1, 0);
+        console.log(`[payments] hd_addon — hdCredits +1 for session ${sid}`);
+      } else if (plan === 'platform_single') {
+        addSessionCredits(sid, 0, 1);
+        console.log(`[payments] platform_single — platformCredits +1 for session ${sid}`);
+      } else if (plan === 'platform_bundle') {
+        addSessionCredits(sid, 1, 5);
+        console.log(`[payments] platform_bundle — hdCredits +1, platformCredits +5 for session ${sid}`);
+      }
       setProStatus(sid, true, customerId);
-      console.log(`[payments] Pro activated for session ${sid}`);
     }
   }
 

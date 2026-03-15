@@ -24,7 +24,20 @@ export interface AuthState {
 export function useAuth(): AuthState {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [anonCredits, setAnonCredits] = useState<{ hdCredits: number; platformCredits: number }>({ hdCredits: 0, platformCredits: 0 });
   const [loading, setLoading] = useState(true);
+
+  const loadAnonCredits = async () => {
+    try {
+      const res = await fetch('/api/auth/me', { credentials: 'include' });
+      if (res.ok) {
+        const data = await res.json() as { hdCredits?: number; platformCredits?: number };
+        setAnonCredits({ hdCredits: data.hdCredits ?? 0, platformCredits: data.platformCredits ?? 0 });
+      }
+    } catch {
+      // ignore
+    }
+  };
 
   const loadProfile = async () => {
     try {
@@ -50,6 +63,7 @@ export function useAuth(): AuthState {
         }
       } else {
         setProfile(null);
+        await loadAnonCredits();
       }
       setLoading(false);
     });
@@ -78,16 +92,29 @@ export function useAuth(): AuthState {
     window.location.href = '/';
   };
 
+  const refreshProfile = async () => {
+    if (user) {
+      await loadProfile();
+    } else {
+      await loadAnonCredits();
+    }
+  };
+
   const derivedTier: Tier = profile?.tier ?? 'free';
   // New credit fields; legacy downloadCredits counts as hdCredits for backward compat
-  const derivedHdCredits = profile?.hdCredits ?? (profile?.downloadCredits ?? 0);
-  const derivedPlatformCredits = profile?.platformCredits ?? 0;
+  // For anonymous users, use session credits from /api/auth/me
+  const derivedHdCredits = user
+    ? (profile?.hdCredits ?? (profile?.downloadCredits ?? 0))
+    : anonCredits.hdCredits;
+  const derivedPlatformCredits = user
+    ? (profile?.platformCredits ?? 0)
+    : anonCredits.platformCredits;
 
   return {
     user,
     profile,
     loading,
-    isPro: derivedTier !== 'free',
+    isPro: user ? derivedTier !== 'free' : (anonCredits.hdCredits > 0 || anonCredits.platformCredits > 0),
     isAdmin: profile?.isAdmin ?? false,
     tier: derivedTier,
     hdCredits: derivedHdCredits,
@@ -97,6 +124,6 @@ export function useAuth(): AuthState {
     signInWithEmail: handleSignInWithEmail,
     createAccount: handleCreateAccount,
     signOut: handleSignOut,
-    refreshProfile: loadProfile,
+    refreshProfile,
   };
 }

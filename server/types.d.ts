@@ -6,7 +6,9 @@ declare namespace Express {
       email?: string;
       isPro: boolean;
       isAdmin: boolean;
-      tier: 'free' | 'creator' | 'pro' | 'max';
+      tier: 'free' | 'basic' | 'plus';
+      hdCredits?: number;
+      platformCredits?: number;
       sessionId?: string; // anonymous only
     };
   }

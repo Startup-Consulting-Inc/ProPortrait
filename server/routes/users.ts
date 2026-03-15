@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import { FieldValue } from 'firebase-admin/firestore';
 import { adminAuth, adminFirestore } from '../lib/firebase.js';
 import { getUserDoc, upsertUserDoc, trackLogin, saveOnboardingData, submitBetaFeedback, type OnboardingData, type FeedbackSubmission } from '../lib/firestore.js';
+import { consumeSessionCredit } from '../lib/session.js';
 import { requireFirebaseAuth } from '../middleware/authMiddleware.js';
 
 const router = Router();
@@ -177,7 +178,25 @@ router.post('/me/feedback', requireFirebaseAuth, async (req: Request, res: Respo
 });
 
 // GET /api/users/me/download-credits — check remaining download credits
-router.get('/me/download-credits', requireFirebaseAuth, async (req: Request, res: Response) => {
+router.get('/me/download-credits', async (req: Request, res: Response) => {
+  // Anonymous session path
+  if (req.auth.mode === 'anonymous') {
+    const hdCredits = req.auth.hdCredits ?? 0;
+    const platformCredits = req.auth.platformCredits ?? 0;
+    const tier = req.auth.tier;
+    res.json({
+      tier,
+      hdCredits,
+      platformCredits,
+      credits: hdCredits,
+      canDownload: hdCredits > 0,
+      canDownloadHd: hdCredits > 0,
+      canDownloadPlatform: platformCredits > 0,
+      isFree: tier === 'free',
+    });
+    return;
+  }
+
   const doc = await getUserDoc(req.auth.uid!);
   if (!doc) {
     res.status(404).json({ error: 'User not found.' });
@@ -204,11 +223,52 @@ router.get('/me/download-credits', requireFirebaseAuth, async (req: Request, res
 });
 
 // POST /api/users/me/consume-download — consume a download credit (called before actual download)
-router.post('/me/consume-download', requireFirebaseAuth, async (req: Request, res: Response) => {
+router.post('/me/consume-download', async (req: Request, res: Response) => {
   const { consume, type } = req.body as { consume?: boolean; type?: 'hd' | 'platform' };
   const creditType: 'hd' | 'platform' = type === 'platform' ? 'platform' : 'hd';
-  const uid = req.auth.uid!;
 
+  // Anonymous session path
+  if (req.auth.mode === 'anonymous') {
+    const sessionId = req.auth.sessionId!;
+    const hdCredits = req.auth.hdCredits ?? 0;
+    const platformCredits = req.auth.platformCredits ?? 0;
+
+    if (creditType === 'platform') {
+      if (platformCredits <= 0) {
+        res.status(403).json({ error: 'No platform download credits remaining.', code: 'no_platform_credits', platformCredits });
+        return;
+      }
+      if (consume) {
+        const ok = consumeSessionCredit(sessionId, 'platform');
+        if (!ok) {
+          res.status(403).json({ error: 'No platform download credits remaining.', code: 'no_platform_credits' });
+          return;
+        }
+        res.json({ success: true, consumed: 1, remaining: platformCredits - 1, type: 'platform' });
+      } else {
+        res.json({ canDownload: true, platformCredits });
+      }
+    } else {
+      if (hdCredits <= 0) {
+        res.status(403).json({ error: 'No HD download credits remaining.', code: 'no_hd_credits', hdCredits });
+        return;
+      }
+      if (consume) {
+        const ok = consumeSessionCredit(sessionId, 'hd');
+        if (!ok) {
+          res.status(403).json({ error: 'No HD download credits remaining.', code: 'no_hd_credits' });
+          return;
+        }
+        res.json({ success: true, consumed: 1, remaining: hdCredits - 1, type: 'hd' });
+      } else {
+        res.json({ canDownload: true, hdCredits });
+      }
+    }
+    return;
+  }
+
+  // Firebase user path
+  const uid = req.auth.uid!;
   const doc = await getUserDoc(uid);
   if (!doc) {
     res.status(404).json({ error: 'User not found.' });

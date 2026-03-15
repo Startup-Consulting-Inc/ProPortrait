@@ -22,15 +22,15 @@ export async function authMiddleware(req: Request, res: Response, next: NextFunc
       // Token is valid — fetch Firestore profile (best-effort, never blocks auth)
       let isPro = false;
       let isAdmin = false;
-      let tier: 'free' | 'creator' | 'pro' | 'max' = 'free';
+      let tier: 'free' | 'basic' | 'plus' = 'free';
       try {
         const snap = await adminFirestore().collection('users').doc(uid).get();
         const doc = snap.exists ? (snap.data() as { isPro?: boolean; isAdmin?: boolean; tier?: string }) : {};
         // Derive tier: explicit field takes precedence, fall back from isPro
         const rawTier = doc.tier as string | undefined;
-        tier = (rawTier === 'creator' || rawTier === 'pro' || rawTier === 'max')
+        tier = (rawTier === 'basic' || rawTier === 'plus')
           ? rawTier
-          : (doc.isPro ? 'pro' : 'free');
+          : (doc.isPro ? 'basic' : 'free');
         isPro = tier !== 'free';
         isAdmin = doc.isAdmin ?? false;
       } catch {
@@ -55,7 +55,9 @@ export async function authMiddleware(req: Request, res: Response, next: NextFunc
     sessionId,
     isPro: session.isPro,
     isAdmin: false,
-    tier: session.isPro ? 'pro' : 'free',
+    tier: session.isPro ? 'basic' : 'free',
+    hdCredits: session.hdCredits,
+    platformCredits: session.platformCredits,
   };
   next();
 }

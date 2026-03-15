@@ -26,7 +26,7 @@ import type { PortraitDefaults } from './types/onboarding';
 
 function AppContent() {
   const path = window.location.pathname;
-  const { user, loading, isPro, refreshProfile, profile } = useAuthContext();
+  const { user, loading, isPro, hdCredits, platformCredits, refreshProfile, profile } = useAuthContext();
 
   // Profile modal
   const [showProfile, setShowProfile] = useState(false);
@@ -46,10 +46,12 @@ function AppContent() {
   const [onboardingDefaults, setOnboardingDefaults] = useState<PortraitDefaults | null>(null);
   const [pendingOnboarding, setPendingOnboarding] = useState(false);
 
-  // After Stripe redirect with ?payment=success, poll until Firestore reflects isPro=true
+  // After Stripe redirect with ?payment=success, poll until credits/pro status is reflected
   useEffect(() => {
     if (!paymentPending || loading) return;
-    if (isPro) {
+    // For Firebase users: wait for isPro; for anonymous: wait for any credits
+    const hasCredits = user ? isPro : (hdCredits > 0 || platformCredits > 0);
+    if (hasCredits) {
       setPaymentPending(false);
       setProActivated(true);
       // Clean URL
@@ -67,7 +69,7 @@ function AppContent() {
       }
     }, 2000);
     return () => clearInterval(interval);
-  }, [paymentPending, loading, isPro]);
+  }, [paymentPending, loading, isPro, hdCredits, platformCredits, user]);
 
   // Deferred sign-in: /create is now public, only /admin requires auth upfront
   useEffect(() => {
