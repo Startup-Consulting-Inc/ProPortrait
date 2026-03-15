@@ -178,6 +178,12 @@ export default function PortraitGenerator({
   const [buyCreditsReason, setBuyCreditsReason] = useState<'hd' | 'platform'>('hd');
   const [pendingDownload, setPendingDownload] = useState<'export' | 'platform' | 'all' | null>(null);
   const [pendingPlatformId, setPendingPlatformId] = useState<string | null>(null);
+  const pendingDownloadRef = useRef<'export' | 'platform' | 'all' | null>(null);
+  const pendingPlatformIdRef = useRef<string | null>(null);
+  
+  // Keep refs in sync with state
+  useEffect(() => { pendingDownloadRef.current = pendingDownload; }, [pendingDownload]);
+  useEffect(() => { pendingPlatformIdRef.current = pendingPlatformId; }, [pendingPlatformId]);
   const [showEmailCapture, setShowEmailCapture] = useState(false);
   const [showLibrary, setShowLibrary] = useState(false);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
@@ -262,16 +268,54 @@ export default function PortraitGenerator({
   useEffect(() => {
     const comm = getPaymentCommunicator();
     
+    // Check localStorage immediately on mount (for page refresh scenario)
+    const pendingStatus = comm.checkPendingStatus();
+    if (pendingStatus?.status === 'completed') {
+      console.log('[PortraitGenerator] Found completed payment on mount:', pendingStatus);
+      comm.clearStatus();
+      void refreshProfile();
+    }
+    
+    // Poll localStorage every 2 seconds as fallback
+    const pollInterval = setInterval(() => {
+      const status = comm.checkPendingStatus();
+      if (status?.status === 'completed') {
+        console.log('[PortraitGenerator] Payment detected via localStorage poll:', status);
+        comm.clearStatus();
+        void refreshProfile();
+        
+        // Use refs to get current pending state
+        const type = pendingDownloadRef.current;
+        const platformId = pendingPlatformIdRef.current;
+        
+        if (type) {
+          setPendingDownload(null);
+          setPendingPlatformId(null);
+          
+          setTimeout(() => {
+            if (type === 'export') {
+              handleExport();
+            } else if (type === 'platform' && platformId) {
+              handlePlatformDownload(platformId);
+            } else if (type === 'all') {
+              handleDownloadAll();
+            }
+          }, 1000);
+        }
+      }
+    }, 2000);
+    
     const unsubscribe = comm.onMessage((message) => {
       if (message.type === 'PAYMENT_COMPLETED') {
+        console.log('[PortraitGenerator] Payment detected via BroadcastChannel:', message);
         // Payment completed in another tab, refresh credits
         void refreshProfile();
         
-        // If there's a pending download, trigger it after credits are refreshed
-        if (pendingDownload) {
-          const type = pendingDownload;
-          const platformId = pendingPlatformId;
-          
+        // Use refs to get current pending state (avoid stale closure)
+        const type = pendingDownloadRef.current;
+        const platformId = pendingPlatformIdRef.current;
+        
+        if (type) {
           setPendingDownload(null);
           setPendingPlatformId(null);
           
@@ -289,8 +333,11 @@ export default function PortraitGenerator({
       }
     });
     
-    return unsubscribe;
-  }, [refreshProfile, pendingDownload, pendingPlatformId]);
+    return () => {
+      unsubscribe();
+      clearInterval(pollInterval);
+    };
+  }, [refreshProfile]);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -404,14 +451,16 @@ export default function PortraitGenerator({
       setHistoryStep(initialSteps);
       setSelectedResultIndex(0);
       setStep(3);
-      if (!localStorage.getItem('pp_tour_done')) setShowTour(true);
+      // DISABLED: Feature tour removed
+      // if (!localStorage.getItem('pp_tour_done')) setShowTour(true);
       capture('generation_completed', {
         durationMs: Date.now() - generationStartRef.current,
         style: selectedStyle,
         success: true,
       });
+      // DISABLED: Email capture removed
       // Show email capture once per browser session
-      if (!sessionStorage.getItem('pp_email_captured')) setShowEmailCapture(true);
+      // if (!sessionStorage.getItem('pp_email_captured')) setShowEmailCapture(true);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'unknown';
       capture('generation_failed', { error: message, durationMs: Date.now() - generationStartRef.current });

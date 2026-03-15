@@ -62,6 +62,12 @@ export default function BuyCreditsModal({ open, onClose, reason, onPaymentDetect
   const [stripeUnavailable, setStripeUnavailable] = useState(false);
   const [waitingForPayment, setWaitingForPayment] = useState(false);
   const [paymentConfirmed, setPaymentConfirmed] = useState(false);
+  const waitingForPaymentRef = useRef(false);
+  const paymentConfirmedRef = useRef(false);
+  
+  // Keep refs in sync with state
+  useEffect(() => { waitingForPaymentRef.current = waitingForPayment; }, [waitingForPayment]);
+  useEffect(() => { paymentConfirmedRef.current = paymentConfirmed; }, [paymentConfirmed]);
   const [checkingManually, setCheckingManually] = useState(false);
   const [notDetectedYet, setNotDetectedYet] = useState(false);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -121,12 +127,24 @@ export default function BuyCreditsModal({ open, onClose, reason, onPaymentDetect
     prevCreditsRef.current = initial;
 
     pollRef.current = setInterval(async () => {
+      // Check localStorage first (fast path for cross-tab communication)
+      const comm = getPaymentCommunicator();
+      const pendingStatus = comm.checkPendingStatus();
+      if (pendingStatus?.status === 'completed') {
+        console.log('[BuyCreditsModal] Payment detected via localStorage:', pendingStatus);
+        comm.clearStatus();
+        handlePaymentSuccess();
+        return;
+      }
+      
+      // Fallback: poll server for credits
       const current = await fetchSessionCredits();
       const prev = prevCreditsRef.current!;
       if (current.hd > prev.hd || current.platform > prev.platform) {
+        console.log('[BuyCreditsModal] Payment detected via polling:', current, 'was:', prev);
         handlePaymentSuccess();
       }
-    }, 2000); // Poll every 2 seconds for faster detection
+    }, 1500); // Poll every 1.5 seconds for faster detection
   }
 
   function handlePaymentSuccess() {
@@ -153,8 +171,8 @@ export default function BuyCreditsModal({ open, onClose, reason, onPaymentDetect
     // Subscribe to cross-tab payment messages
     unsubscribeRef.current = comm.onMessage((message) => {
       if (message.type === 'PAYMENT_COMPLETED') {
-        // Verify this is for our plan (or accept any completion during waiting state)
-        if (waitingForPayment && !paymentConfirmed) {
+        // Use refs to get current state (avoid stale closure)
+        if (waitingForPaymentRef.current && !paymentConfirmedRef.current) {
           console.log('[BuyCreditsModal] Payment detected from other tab:', message);
           handlePaymentSuccess();
         }
