@@ -19,6 +19,8 @@ interface AdminUser {
   editCount: number;
   exportCount: number;
   loginCount: number;
+  hdCredits: number;
+  platformCredits: number;
   lastActiveAt: { seconds: number } | null;
   lastLoginAt: { seconds: number } | null;
   totalCostUsd: number;
@@ -35,7 +37,7 @@ interface DailyStat {
   proGenerations?: number;
 }
 
-type TierFilter = 'all' | 'free' | 'creator' | 'pro' | 'max';
+type TierFilter = 'all' | 'free' | 'basic' | 'plus';
 type StatusFilter = 'all' | 'active' | 'suspended';
 
 function relativeTime(seconds: number): string {
@@ -207,9 +209,8 @@ export default function AdminPage() {
   const statsByTier = useMemo(() => {
     return {
       free: users.filter(u => u.tier === 'free').length,
-      creator: users.filter(u => u.tier === 'creator').length,
-      pro: users.filter(u => u.tier === 'pro').length,
-      max: users.filter(u => u.tier === 'max').length,
+      basic: users.filter(u => u.tier === 'basic').length,
+      plus: users.filter(u => u.tier === 'plus').length,
       suspended: users.filter(u => u.isSuspended).length,
     };
   }, [users]);
@@ -271,9 +272,9 @@ export default function AdminPage() {
             />
             <StatCard
               icon={Crown}
-              label="Pro Users"
-              value={statsByTier.pro + statsByTier.max + statsByTier.creator}
-              subtext={`${statsByTier.pro} Pro · ${statsByTier.max} Max`}
+              label="Paid Users"
+              value={statsByTier.basic + statsByTier.plus}
+              subtext={`${statsByTier.basic} Basic · ${statsByTier.plus} Plus`}
               color="indigo"
             />
             <StatCard
@@ -340,9 +341,8 @@ export default function AdminPage() {
                   >
                     <option value="all">All Tiers</option>
                     <option value="free">Free</option>
-                    <option value="creator">Creator</option>
-                    <option value="pro">Pro</option>
-                    <option value="max">Max</option>
+                    <option value="basic">Basic</option>
+                    <option value="plus">Plus</option>
                   </select>
                   <select
                     value={statusFilter}
@@ -363,12 +363,11 @@ export default function AdminPage() {
                       <th className="text-left px-4 py-3 font-semibold text-slate-600">User</th>
                       <th className="text-left px-4 py-3 font-semibold text-slate-600">Tier</th>
                       <th className="text-left px-4 py-3 font-semibold text-slate-600">Joined</th>
-                      <th className="text-right px-4 py-3 font-semibold text-slate-600">Logins</th>
+                      <th className="text-right px-4 py-3 font-semibold text-slate-600">HD</th>
+                      <th className="text-right px-4 py-3 font-semibold text-slate-600">Plat</th>
                       <th className="text-right px-4 py-3 font-semibold text-slate-600">Gen</th>
-                      <th className="text-right px-4 py-3 font-semibold text-slate-600">Edits</th>
                       <th className="text-left px-4 py-3 font-semibold text-slate-600">Last Active</th>
                       <th className="text-right px-4 py-3 font-semibold text-slate-600">Est. Cost</th>
-                      <th className="text-left px-4 py-3 font-semibold text-slate-600">Top Style</th>
                       <th className="text-center px-4 py-3 font-semibold text-slate-600">Actions</th>
                     </tr>
                   </thead>
@@ -392,10 +391,10 @@ export default function AdminPage() {
                         </td>
                         <td className="px-4 py-3">
                           <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                            u.tier === 'free' ? 'bg-slate-100 text-slate-600' :
-                            u.tier === 'creator' ? 'bg-blue-100 text-blue-700' :
-                            u.tier === 'pro' ? 'bg-indigo-100 text-indigo-700' :
-                            'bg-purple-100 text-purple-700'
+                            u.tier === 'free'  ? 'bg-slate-100 text-slate-600' :
+                            u.tier === 'basic' ? 'bg-blue-100 text-blue-700' :
+                            u.tier === 'plus'  ? 'bg-indigo-100 text-indigo-700' :
+                            'bg-slate-100 text-slate-600'
                           }`}>
                             {u.tier?.toUpperCase() || 'FREE'}
                           </span>
@@ -405,23 +404,32 @@ export default function AdminPage() {
                             </span>
                           )}
                         </td>
-                        <td className="px-4 py-3 text-slate-500 text-xs">{fmtDate(u.createdAt)}</td>
-                        <td className="px-4 py-3 text-right text-slate-500">{u.loginCount}</td>
+                        <td className="px-4 py-3 text-right">
+                          <span className={`text-sm font-semibold ${u.hdCredits > 0 ? 'text-indigo-600' : 'text-slate-300'}`}>
+                            {u.hdCredits}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          <span className={`text-sm font-semibold ${u.platformCredits > 0 ? 'text-emerald-600' : 'text-slate-300'}`}>
+                            {u.platformCredits}
+                          </span>
+                        </td>
                         <td className="px-4 py-3 text-right text-slate-700 font-medium">{u.generationCount}</td>
-                        <td className="px-4 py-3 text-right text-slate-500">{u.editCount}</td>
                         <td className="px-4 py-3 text-slate-500 text-xs">{fmtActive(u.lastActiveAt)}</td>
                         <td className="px-4 py-3 text-right text-slate-500 font-mono text-xs">${u.totalCostUsd.toFixed(2)}</td>
-                        <td className="px-4 py-3 text-slate-500 text-xs capitalize">{u.topStyle?.replace(/_/g, ' ') ?? '—'}</td>
-                        <td className="px-4 py-3 text-center" onClick={e => { e.stopPropagation(); togglePro(u.uid, u.isPro); }}>
-                          <button className="text-xs text-indigo-600 hover:text-indigo-800 font-medium">
-                            {u.isPro ? 'Remove Pro' : 'Make Pro'}
+                        <td className="px-4 py-3 text-center" onClick={e => e.stopPropagation()}>
+                          <button
+                            onClick={() => setSelectedUserId(u.uid)}
+                            className="text-xs text-indigo-600 hover:text-indigo-800 font-medium"
+                          >
+                            Manage
                           </button>
                         </td>
                       </tr>
                     ))}
                     {!fetching && filteredUsers.length === 0 && (
                       <tr>
-                        <td colSpan={10} className="px-4 py-8 text-center text-slate-400">
+                        <td colSpan={8} className="px-4 py-8 text-center text-slate-400">
                           {searchQuery || tierFilter !== 'all' || statusFilter !== 'all'
                             ? 'No users match your filters.'
                             : 'No users yet.'}

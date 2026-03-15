@@ -429,54 +429,40 @@ export default function AdminUserDetailModal({
                   </div>
 
                   {/* Credits */}
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="bg-slate-50 rounded-xl p-4 border border-slate-200">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wide">HD Credits</h3>
-                          <p className="text-2xl font-bold text-slate-800 mt-1">{user.hdCredits ?? 0}</p>
-                        </div>
-                        <button
-                          onClick={async () => {
-                            const token = await getIdToken();
-                            await fetch(`${API_BASE}/api/admin/users/${user.uid}/subscription`, {
-                              method: 'PATCH',
-                              headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-                              credentials: 'include',
-                              body: JSON.stringify({ hdCredits: 1 }),
-                            });
-                            setUser({ ...user, hdCredits: (user.hdCredits ?? 0) + 1 });
-                          }}
-                          className="px-2 py-1 bg-indigo-600 text-white rounded-lg text-xs font-medium hover:bg-indigo-700"
-                        >
-                          +1
-                        </button>
-                      </div>
-                    </div>
-                    <div className="bg-slate-50 rounded-xl p-4 border border-slate-200">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Platform Credits</h3>
-                          <p className="text-2xl font-bold text-slate-800 mt-1">{user.platformCredits ?? 0}</p>
-                        </div>
-                        <button
-                          onClick={async () => {
-                            const token = await getIdToken();
-                            await fetch(`${API_BASE}/api/admin/users/${user.uid}/subscription`, {
-                              method: 'PATCH',
-                              headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-                              credentials: 'include',
-                              body: JSON.stringify({ platformCredits: 1 }),
-                            });
-                            setUser({ ...user, platformCredits: (user.platformCredits ?? 0) + 1 });
-                          }}
-                          className="px-2 py-1 bg-indigo-600 text-white rounded-lg text-xs font-medium hover:bg-indigo-700"
-                        >
-                          +1
-                        </button>
-                      </div>
-                    </div>
-                  </div>
+                  <CreditControl
+                    label="HD Credits"
+                    description="Used for HD portrait downloads"
+                    value={user.hdCredits ?? 0}
+                    onAdjust={async (delta) => {
+                      const token = await getIdToken();
+                      const res = await fetch(`${API_BASE}/api/admin/users/${user.uid}/subscription`, {
+                        method: 'PATCH',
+                        headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+                        credentials: 'include',
+                        body: JSON.stringify({ hdCredits: delta }),
+                      });
+                      if (!res.ok) throw new Error('Failed to update HD credits');
+                      setUser({ ...user, hdCredits: Math.max(0, (user.hdCredits ?? 0) + delta) });
+                      onUpdate();
+                    }}
+                  />
+                  <CreditControl
+                    label="Platform Credits"
+                    description="Used for platform/ZIP downloads"
+                    value={user.platformCredits ?? 0}
+                    onAdjust={async (delta) => {
+                      const token = await getIdToken();
+                      const res = await fetch(`${API_BASE}/api/admin/users/${user.uid}/subscription`, {
+                        method: 'PATCH',
+                        headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+                        credentials: 'include',
+                        body: JSON.stringify({ platformCredits: delta }),
+                      });
+                      if (!res.ok) throw new Error('Failed to update platform credits');
+                      setUser({ ...user, platformCredits: Math.max(0, (user.platformCredits ?? 0) + delta) });
+                      onUpdate();
+                    }}
+                  />
 
                   {/* Admin Actions */}
                   <div className="space-y-3">
@@ -641,6 +627,82 @@ function InfoCard({ label, value }: { label: string; value: string }) {
       <div className="text-sm font-medium text-slate-900 truncate" title={value}>
         {value}
       </div>
+    </div>
+  );
+}
+
+function CreditControl({
+  label,
+  description,
+  value,
+  onAdjust,
+}: {
+  label: string;
+  description: string;
+  value: number;
+  onAdjust: (delta: number) => Promise<void>;
+}) {
+  const [saving, setSaving] = useState(false);
+  const [customAmount, setCustomAmount] = useState('1');
+  const [saveError, setSaveError] = useState('');
+
+  const adjust = async (delta: number) => {
+    if (saving) return;
+    setSaving(true);
+    setSaveError('');
+    try {
+      await onAdjust(delta);
+    } catch (err) {
+      setSaveError(err instanceof Error ? err.message : 'Failed to save');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const amount = Math.max(1, parseInt(customAmount, 10) || 1);
+
+  return (
+    <div className="bg-slate-50 rounded-xl p-4 border border-slate-200">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wide">{label}</h3>
+          <p className="text-3xl font-bold text-slate-800 mt-1">{value}</p>
+          <p className="text-xs text-slate-400 mt-0.5">{description}</p>
+        </div>
+        <div className="flex flex-col gap-2 items-end">
+          <div className="flex items-center gap-1">
+            <input
+              type="number"
+              min="1"
+              value={customAmount}
+              onChange={(e) => setCustomAmount(e.target.value)}
+              className="w-12 text-center border border-slate-300 rounded-md text-sm py-1 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+            />
+          </div>
+          <div className="flex gap-1">
+            <button
+              onClick={() => adjust(-amount)}
+              disabled={saving || value <= 0}
+              className="px-2 py-1 bg-red-100 text-red-700 rounded-md text-xs font-semibold hover:bg-red-200 disabled:opacity-40 transition-colors"
+            >
+              −{amount}
+            </button>
+            <button
+              onClick={() => adjust(amount)}
+              disabled={saving}
+              className="px-2 py-1 bg-indigo-600 text-white rounded-md text-xs font-semibold hover:bg-indigo-700 disabled:opacity-40 transition-colors"
+            >
+              +{amount}
+            </button>
+          </div>
+        </div>
+      </div>
+      {saveError && (
+        <p className="text-xs text-red-600 mt-2">{saveError}</p>
+      )}
+      {saving && (
+        <p className="text-xs text-slate-400 mt-2">Saving…</p>
+      )}
     </div>
   );
 }

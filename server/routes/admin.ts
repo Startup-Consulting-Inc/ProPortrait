@@ -238,22 +238,26 @@ router.patch('/users/:uid/subscription', requireAdmin, async (req: Request, res:
 
     await upsertUserDoc(uid, update);
 
-    // Grant credits based on explicit override or tier activation
-    if (hdCreditsOverride !== undefined && hdCreditsOverride > 0) {
+    // Explicit credit adjustments (can be positive or negative for reduction)
+    const hasExplicitCredits = hdCreditsOverride !== undefined || creditsOverride !== undefined || platformCreditsOverride !== undefined;
+
+    if (hdCreditsOverride !== undefined) {
       await addHdCredits(uid, hdCreditsOverride);
-    } else if (creditsOverride !== undefined && creditsOverride > 0) {
-      // Legacy: creditsOverride maps to hdCredits
+    } else if (creditsOverride !== undefined) {
+      // Legacy downloadCredits field → maps to hdCredits
       await addHdCredits(uid, creditsOverride);
-    } else if (tier && tier !== 'free') {
-      // Auto-grant on tier change: basic→1 HD, plus→1 HD + 1 platform
+    }
+
+    if (platformCreditsOverride !== undefined) {
+      await addPlatformCredits(uid, platformCreditsOverride);
+    }
+
+    // Auto-grant on tier change only when no explicit credits were provided
+    if (!hasExplicitCredits && tier && tier !== 'free') {
       await addHdCredits(uid, 1);
       if (tier === 'plus') {
         await addPlatformCredits(uid, 1);
       }
-    }
-
-    if (platformCreditsOverride !== undefined && platformCreditsOverride > 0) {
-      await addPlatformCredits(uid, platformCreditsOverride);
     }
 
     console.log(`[admin] Subscription updated by ${req.auth.email}: ${uid}`, { tier, isPro, hdCreditsOverride, platformCreditsOverride });
