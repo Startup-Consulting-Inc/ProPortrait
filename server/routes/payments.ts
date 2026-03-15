@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express';
 import Stripe from 'stripe';
-import { getOrCreateSession, setProStatus, addSessionCredits, SESSION_COOKIE, COOKIE_OPTIONS } from '../lib/session.js';
+import { setProStatus, addSessionCredits } from '../lib/session.js';
 import { firestoreSetProStatus, firestoreSetTier, addDownloadCredits, addHdCredits, addPlatformCredits, getUserByStripeCustomerId, getUserDoc } from '../lib/firestore.js';
 import type { Tier } from '../lib/firestore.js';
 
@@ -44,13 +44,10 @@ router.post('/checkout', async (req: Request, res: Response) => {
   if (firebaseUid) {
     metadata.firebaseUid = firebaseUid;
   } else if (sessionId) {
-    // Anonymous fallback — ensure cookie is set
-    const cookieId = req.cookies?.[SESSION_COOKIE];
-    const [newSessionId] = getOrCreateSession(cookieId);
-    if (!cookieId || cookieId !== newSessionId) {
-      res.cookie(SESSION_COOKIE, newSessionId, COOKIE_OPTIONS);
-    }
-    metadata.sessionId = newSessionId;
+    // sessionId is from req.auth (set by authMiddleware from the cookie) — use directly
+    // DO NOT call getOrCreateSession here: on a different Cloud Run instance it creates
+    // a new UUID that won't match the user's cookie, causing credits to go to the wrong doc
+    metadata.sessionId = sessionId;
   }
 
   const priceId = (PRICE_IDS as Record<string, string | undefined>)[plan];
