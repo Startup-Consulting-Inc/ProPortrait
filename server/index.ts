@@ -200,7 +200,12 @@ app.use(express.json({ limit: '25mb' }));
 
 const allowedOrigins = process.env.CORS_ORIGIN
   ? process.env.CORS_ORIGIN.split(',')
-  : ['http://localhost:3000', 'http://127.0.0.1:3000'];
+  : [
+      'http://localhost:3000',
+      'http://127.0.0.1:3000',
+      'https://portrait.ai-biz.app',
+      'https://proportrait.ai',
+    ];
 
 app.use(cors({
   origin: allowedOrigins,
