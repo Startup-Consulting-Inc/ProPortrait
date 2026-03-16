@@ -227,6 +227,14 @@ export default function PortraitGenerator({
     }
   }, [externalLibraryOpen]);
 
+  // Refresh credits when user returns to this tab after completing Stripe payment
+  useEffect(() => {
+    if (!isFirebaseUser) return;
+    const handleFocus = () => { void refreshProfile(); };
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
+  }, [isFirebaseUser, refreshProfile]);
+
   // Handle library close - notify parent if needed
   const handleLibraryClose = () => {
     setShowLibrary(false);
@@ -1818,7 +1826,7 @@ export default function PortraitGenerator({
                     </div>
                   </>)}
 
-                  {/* Download Status / Upgrade Banner */}
+                  {/* Download Status / Credits Panel */}
                   {!isFirebaseUser ? (
                     <div className="p-4 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-xl text-white shadow-lg">
                       <div className="flex items-center gap-2 mb-2">
@@ -1826,7 +1834,7 @@ export default function PortraitGenerator({
                         <h3 className="font-bold text-sm">Ready to Download?</h3>
                       </div>
                       <p className="text-xs opacity-90 mb-3">
-                        Sign in to download your portrait. One account, unlimited generations.
+                        Sign in to buy credits and download your portrait.
                       </p>
                       <button
                         onClick={() => onRequiresAuth?.()}
@@ -1835,35 +1843,56 @@ export default function PortraitGenerator({
                         Sign In to Download
                       </button>
                     </div>
-                  ) : hdCredits > 0 ? (
-                    <div className="p-3 bg-green-50 border border-green-200 rounded-xl">
-                      <div className="flex items-center gap-3 mb-2">
-                        <Star className="w-5 h-5 fill-green-500 text-green-500" />
-                        <div>
-                          <div className="font-bold text-sm text-green-800">HD Download Ready</div>
-                          <div className="text-xs text-green-600">Credit will be used on download</div>
-                        </div>
-                      </div>
-                      <div className="flex items-center justify-between text-xs">
-                        <span className="text-green-700">HD credits:</span>
-                        <span className="font-bold text-green-800 bg-green-100 px-2 py-0.5 rounded-full">
-                          {hdCredits}
-                        </span>
-                      </div>
-                    </div>
                   ) : (
-                    <div className="p-4 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-xl text-white shadow-lg">
-                      <div className="flex items-center gap-2 mb-2">
-                        <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
-                        <h3 className="font-bold text-sm">Ready to Download?</h3>
+                    <div className="rounded-xl border border-slate-200 overflow-hidden divide-y divide-slate-200">
+                      {/* HD Credits row */}
+                      <div className={cn(
+                        'flex items-center justify-between px-3 py-2.5 text-xs',
+                        hdCredits > 0 ? 'bg-green-50' : 'bg-white',
+                      )}>
+                        <div className="flex items-center gap-2">
+                          <Download className={cn('w-3.5 h-3.5', hdCredits > 0 ? 'text-green-600' : 'text-slate-400')} />
+                          <span className={cn('font-semibold', hdCredits > 0 ? 'text-green-800' : 'text-slate-600')}>
+                            HD Download
+                          </span>
+                        </div>
+                        {hdCredits > 0 ? (
+                          <span className="font-bold text-green-800 bg-green-100 px-2 py-0.5 rounded-full">
+                            {hdCredits} credit{hdCredits !== 1 ? 's' : ''}
+                          </span>
+                        ) : (
+                          <button
+                            onClick={() => { setBuyCreditsReason('hd'); setShowBuyCreditsModal(true); }}
+                            className="text-indigo-600 font-semibold hover:underline"
+                          >
+                            Buy credits
+                          </button>
+                        )}
                       </div>
-                      <p className="text-xs opacity-90 mb-3">
-                        Generate and edit free forever. Pay only when you're ready to download.
-                      </p>
-                      <ul className="text-xs space-y-1 mb-3 opacity-90">
-                        <li className="flex items-center gap-1"><Check className="w-3 h-3" /> $4.99 — HD Download</li>
-                        <li className="flex items-center gap-1"><Check className="w-3 h-3" /> $9.99 — All Platforms (ZIP)</li>
-                      </ul>
+                      {/* Platform Credits row */}
+                      <div className={cn(
+                        'flex items-center justify-between px-3 py-2.5 text-xs',
+                        platformCredits > 0 ? 'bg-green-50' : 'bg-white',
+                      )}>
+                        <div className="flex items-center gap-2">
+                          <Package className={cn('w-3.5 h-3.5', platformCredits > 0 ? 'text-green-600' : 'text-slate-400')} />
+                          <span className={cn('font-semibold', platformCredits > 0 ? 'text-green-800' : 'text-slate-600')}>
+                            Platform Exports
+                          </span>
+                        </div>
+                        {platformCredits > 0 ? (
+                          <span className="font-bold text-green-800 bg-green-100 px-2 py-0.5 rounded-full">
+                            {platformCredits} credit{platformCredits !== 1 ? 's' : ''}
+                          </span>
+                        ) : (
+                          <button
+                            onClick={() => { setBuyCreditsReason('platform'); setShowBuyCreditsModal(true); }}
+                            className="text-indigo-600 font-semibold hover:underline"
+                          >
+                            Buy credits
+                          </button>
+                        )}
+                      </div>
                     </div>
                   )}
 
@@ -2016,36 +2045,10 @@ export default function PortraitGenerator({
         open={showBuyCreditsModal}
         onClose={() => {
           setShowBuyCreditsModal(false);
-          // Clear pending download if modal is closed without payment
           setPendingDownload(null);
           setPendingPlatformId(null);
         }}
         reason={buyCreditsReason}
-        onPaymentDetected={() => {
-          void refreshProfile();
-          setShowBuyCreditsModal(false);
-          
-          // Auto-trigger the download that was pending
-          if (pendingDownload) {
-            const type = pendingDownload;
-            const platformId = pendingPlatformId;
-            
-            // Clear pending state
-            setPendingDownload(null);
-            setPendingPlatformId(null);
-            
-            // Small delay to allow credits to be available
-            setTimeout(() => {
-              if (type === 'export') {
-                handleExport();
-              } else if (type === 'platform' && platformId) {
-                handlePlatformDownload(platformId);
-              } else if (type === 'all') {
-                handleDownloadAll();
-              }
-            }, 800);
-          }
-        }}
       />
       <EmailCapture
         open={showEmailCapture}

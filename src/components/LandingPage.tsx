@@ -164,7 +164,7 @@ export default function LandingPage({ onSignIn }: LandingPageProps) {
               <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                 <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
               </svg>
-              No sign-up required
+              Free to generate &amp; edit
             </div>
 
             <h1 className="text-4xl sm:text-5xl lg:text-5xl font-extrabold leading-tight tracking-tight">
@@ -191,10 +191,10 @@ export default function LandingPage({ onSignIn }: LandingPageProps) {
 
             <div className="flex flex-wrap items-center gap-5 pt-2 text-sm text-slate-500">
               {[
-                { icon: '✓', text: 'No sign-up required' },
-                { icon: '✓', text: 'Photos deleted after 24h' },
                 { icon: '✓', text: 'Free to generate & edit' },
+                { icon: '✓', text: 'Photos deleted after 24h' },
                 { icon: '✓', text: 'Pay only to download' },
+                { icon: '✓', text: 'Sign in to buy & download' },
               ].map((t) => (
                 <span key={t.text} className="flex items-center gap-1.5">
                   <span className="text-emerald-500 font-bold">{t.icon}</span>
@@ -349,7 +349,7 @@ export default function LandingPage({ onSignIn }: LandingPageProps) {
             {[
               { 
                 q: 'Do I need to create an account?', 
-                a: 'No! You can generate and edit portraits without signing up. We only ask you to sign in when you\'re ready to download, so we can deliver your purchase.' 
+                a: 'Generating and editing is free with no account required. To buy credits or download your portrait, a quick sign-in is required so we can securely deliver your purchase.'
               },
               { 
                 q: 'What can I do for free?', 
