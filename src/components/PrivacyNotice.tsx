@@ -24,7 +24,7 @@ export default function PrivacyNotice({ onDismiss }: PrivacyNoticeProps) {
             </li>
             <li className="flex items-center gap-1.5">
               <Check className="w-3 h-3 shrink-0 text-emerald-500" />
-              No account, no sign-up, no face database — your identity stays yours
+              No face database, no data selling — your identity stays yours
             </li>
           </ul>
         </div>

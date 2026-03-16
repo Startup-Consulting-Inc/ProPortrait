@@ -1819,29 +1819,21 @@ export default function PortraitGenerator({
                   </>)}
 
                   {/* Download Status / Upgrade Banner */}
-                  {!isFirebaseUser && hdCredits <= 0 && platformCredits <= 0 ? (
+                  {!isFirebaseUser ? (
                     <div className="p-4 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-xl text-white shadow-lg">
                       <div className="flex items-center gap-2 mb-2">
                         <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
                         <h3 className="font-bold text-sm">Ready to Download?</h3>
                       </div>
                       <p className="text-xs opacity-90 mb-3">
-                        Sign in to save portraits, or buy once and download now.
+                        Sign in to download your portrait. One account, unlimited generations.
                       </p>
-                      <div className="flex flex-col gap-2">
-                        <button
-                          onClick={() => onRequiresAuth?.()}
-                          className="w-full py-2 bg-white/20 hover:bg-white/30 border border-white/40 rounded-lg text-xs font-semibold transition-colors"
-                        >
-                          Sign In / Sign Up — save portraits
-                        </button>
-                        <button
-                          onClick={() => { setBuyCreditsReason('hd'); setShowBuyCreditsModal(true); }}
-                          className="w-full py-2 bg-white text-indigo-700 hover:bg-white/90 rounded-lg text-xs font-bold transition-colors"
-                        >
-                          Buy &amp; Download — no account needed
-                        </button>
-                      </div>
+                      <button
+                        onClick={() => onRequiresAuth?.()}
+                        className="w-full py-2.5 bg-white text-indigo-700 hover:bg-white/90 rounded-lg text-sm font-bold transition-colors"
+                      >
+                        Sign In to Download
+                      </button>
                     </div>
                   ) : hdCredits > 0 ? (
                     <div className="p-3 bg-green-50 border border-green-200 rounded-xl">
@@ -1879,7 +1871,7 @@ export default function PortraitGenerator({
                   <button onClick={handleExport}
                     className="w-full py-3.5 rounded-xl font-bold text-sm shadow-lg flex items-center justify-center gap-2 transition-all bg-indigo-600 text-white hover:bg-indigo-700">
                     <Download className="w-4 h-4" />
-                    {hdCredits > 0 ? 'Download HD Portrait' : 'Buy & Download'}
+                    {!isFirebaseUser ? 'Sign In to Download' : hdCredits > 0 ? 'Download HD Portrait' : 'Buy & Download'}
                   </button>
 
                   {/* Save to Library */}
