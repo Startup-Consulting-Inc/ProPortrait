@@ -116,6 +116,7 @@ interface PortraitGeneratorProps {
   externalLibraryOpen?: boolean;
   onExternalLibraryClose?: () => void;
   onRequiresAuth?: () => void; // Called when auth is needed for download
+  user?: { uid: string; email: string | null } | null; // Firebase user
 }
 
 export default function PortraitGenerator({ 
@@ -123,6 +124,7 @@ export default function PortraitGenerator({
   externalLibraryOpen, 
   onExternalLibraryClose,
   onRequiresAuth,
+  user,
 }: PortraitGeneratorProps) {
   const { hdCredits, platformCredits, refreshProfile, profile, isFirebaseUser } = useAuthContext();
   const [step, setStep] = useState<Step>(1);
@@ -258,103 +260,43 @@ export default function PortraitGenerator({
   }, [profile, onboardingDefaults]);
 
   // Handle deferred sign-in: continue pending download after auth
+  // NEW FLOW: Check credits first - if no credits, show BuyCreditsModal
   useEffect(() => {
     if (isFirebaseUser && pendingDownload) {
-      // User just signed in, continue the download flow
-      const type = pendingDownload;
-      const platformId = pendingPlatformId;
+      // Check if user has credits for the pending download
+      const hasCredits = pendingDownload === 'export' 
+        ? hdCredits > 0 
+        : platformCredits > 0;
       
-      // Clear pending state
-      setPendingDownload(null);
-      setPendingPlatformId(null);
-      
-      // Small delay to allow profile to load
-      setTimeout(() => {
-        if (type === 'export') {
-          handleExport();
-        } else if (type === 'platform' && platformId) {
-          handlePlatformDownload(platformId);
-        } else if (type === 'all') {
-          handleDownloadAll();
-        }
-      }, 500);
+      if (hasCredits) {
+        // User has credits, proceed with download
+        const type = pendingDownload;
+        const platformId = pendingPlatformId;
+        
+        // Clear pending state
+        setPendingDownload(null);
+        setPendingPlatformId(null);
+        
+        // Small delay to allow profile to load
+        setTimeout(() => {
+          if (type === 'export') {
+            handleExport();
+          } else if (type === 'platform' && platformId) {
+            handlePlatformDownload(platformId);
+          } else if (type === 'all') {
+            handleDownloadAll();
+          }
+        }, 500);
+      } else {
+        // User authenticated but no credits - show BuyCreditsModal
+        setBuyCreditsReason(pendingDownload === 'export' ? 'hd' : 'platform');
+        setShowBuyCreditsModal(true);
+        // Don't clear pendingDownload - we'll use it after payment
+      }
     }
-  }, [isFirebaseUser, pendingDownload, pendingPlatformId]);
+  }, [isFirebaseUser, pendingDownload, pendingPlatformId, hdCredits, platformCredits]);
 
-  // Listen for payment completion from other tabs (payment flow)
-  useEffect(() => {
-    const comm = getPaymentCommunicator();
-    
-    // Check localStorage immediately on mount (for page refresh scenario)
-    const pendingStatus = comm.checkPendingStatus();
-    if (pendingStatus?.status === 'completed') {
-      console.log('[PortraitGenerator] Found completed payment on mount:', pendingStatus);
-      comm.clearStatus();
-      void refreshProfile();
-    }
-    
-    // Poll localStorage every 2 seconds as fallback
-    const pollInterval = setInterval(() => {
-      const status = comm.checkPendingStatus();
-      if (status?.status === 'completed') {
-        console.log('[PortraitGenerator] Payment detected via localStorage poll:', status);
-        comm.clearStatus();
-        void refreshProfile();
-        
-        // Use refs to get current pending state
-        const type = pendingDownloadRef.current;
-        const platformId = pendingPlatformIdRef.current;
-        
-        if (type) {
-          setPendingDownload(null);
-          setPendingPlatformId(null);
-          
-          setTimeout(() => {
-            if (type === 'export') {
-              handleExport();
-            } else if (type === 'platform' && platformId) {
-              handlePlatformDownload(platformId);
-            } else if (type === 'all') {
-              handleDownloadAll();
-            }
-          }, 1000);
-        }
-      }
-    }, 2000);
-    
-    const unsubscribe = comm.onMessage((message) => {
-      if (message.type === 'PAYMENT_COMPLETED') {
-        console.log('[PortraitGenerator] Payment detected via BroadcastChannel:', message);
-        // Payment completed in another tab, refresh credits
-        void refreshProfile();
-        
-        // Use refs to get current pending state (avoid stale closure)
-        const type = pendingDownloadRef.current;
-        const platformId = pendingPlatformIdRef.current;
-        
-        if (type) {
-          setPendingDownload(null);
-          setPendingPlatformId(null);
-          
-          // Small delay to allow credits to be available
-          setTimeout(() => {
-            if (type === 'export') {
-              handleExport();
-            } else if (type === 'platform' && platformId) {
-              handlePlatformDownload(platformId);
-            } else if (type === 'all') {
-              handleDownloadAll();
-            }
-          }, 1000);
-        }
-      }
-    });
-    
-    return () => {
-      unsubscribe();
-      clearInterval(pollInterval);
-    };
-  }, [refreshProfile]);
+  // Simplified: Payment happens in same tab after auth, no cross-tab needed
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -663,18 +605,16 @@ export default function PortraitGenerator({
     const currentImage = getCurrentImage();
     if (!currentImage || !canvasRef.current) return;
     
-    // Get FRESH credits from server (not stale React state)
-    const freshCredits = await getFreshSessionCredits();
-    
-    // Deferred sign-in: Check if user is authenticated first (only if no session credits)
-    if (!isFirebaseUser && freshCredits.hdCredits <= 0) {
+    // NEW FLOW: Anonymous users MUST sign in first
+    if (!isFirebaseUser) {
       setPendingDownload('export');
       onRequiresAuth?.();
       capture('download_auth_required', { type: 'export' });
       return;
     }
 
-    if (freshCredits.hdCredits <= 0) {
+    // Authenticated users: Check credits
+    if (hdCredits <= 0) {
       setBuyCreditsReason('hd');
       setPendingDownload('export'); // Track for auto-download after payment
       setShowBuyCreditsModal(true);
@@ -722,11 +662,8 @@ export default function PortraitGenerator({
   };
 
   const handlePlatformDownload = async (presetId: string) => {
-    // Get FRESH credits from server (not stale React state)
-    const freshCredits = await getFreshSessionCredits();
-    
-    // Deferred sign-in: Check if user is authenticated first (only if no session credits)
-    if (!isFirebaseUser && freshCredits.platformCredits <= 0) {
+    // NEW FLOW: Anonymous users MUST sign in first
+    if (!isFirebaseUser) {
       setPendingDownload('platform');
       setPendingPlatformId(presetId);
       onRequiresAuth?.();
@@ -734,7 +671,8 @@ export default function PortraitGenerator({
       return;
     }
 
-    if (freshCredits.platformCredits <= 0) {
+    // Authenticated users: Check credits
+    if (platformCredits <= 0) {
       setBuyCreditsReason('platform');
       setPendingDownload('platform');
       setPendingPlatformId(presetId);
@@ -778,18 +716,16 @@ export default function PortraitGenerator({
   };
 
   const handleDownloadAll = async () => {
-    // Get FRESH credits from server (not stale React state)
-    const freshCredits = await getFreshSessionCredits();
-    
-    // Deferred sign-in: Check if user is authenticated first (only if no session credits)
-    if (!isFirebaseUser && freshCredits.platformCredits <= 0) {
+    // NEW FLOW: Anonymous users MUST sign in first
+    if (!isFirebaseUser) {
       setPendingDownload('all');
       onRequiresAuth?.();
       capture('download_auth_required', { type: 'all' });
       return;
     }
 
-    if (freshCredits.platformCredits <= 0) {
+    // Authenticated users: Check credits
+    if (platformCredits <= 0) {
       setBuyCreditsReason('platform');
       setPendingDownload('all');
       setShowBuyCreditsModal(true);

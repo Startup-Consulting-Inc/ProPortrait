@@ -2,7 +2,6 @@ import { useState, useEffect, useRef } from 'react';
 import { X, Download, Package, Layers, Loader2, Star, CheckCircle2, ExternalLink } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { getIdToken } from '../services/auth';
-import { getPaymentCommunicator } from '../services/paymentComm';
 
 const API_BASE = (import.meta.env.VITE_API_URL as string | undefined) ?? '';
 
@@ -57,23 +56,31 @@ const ADDONS: Array<{
   },
 ];
 
+// Get fresh credits from server
+async function fetchSessionCredits(): Promise<{ hd: number; platform: number }> {
+  try {
+    const token = await getIdToken();
+    const res = await fetch(`${API_BASE}/api/auth/me`, {
+      credentials: 'include',
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    });
+    if (res.ok) {
+      const data = await res.json() as { hdCredits?: number; platformCredits?: number };
+      return { hd: data.hdCredits ?? 0, platform: data.platformCredits ?? 0 };
+    }
+  } catch { /* ignore */ }
+  return { hd: 0, platform: 0 };
+}
+
 export default function BuyCreditsModal({ open, onClose, reason, onPaymentDetected }: BuyCreditsModalProps) {
   const [loading, setLoading] = useState<AddOnPlan | null>(null);
   const [stripeUnavailable, setStripeUnavailable] = useState(false);
   const [waitingForPayment, setWaitingForPayment] = useState(false);
   const [paymentConfirmed, setPaymentConfirmed] = useState(false);
-  const waitingForPaymentRef = useRef(false);
-  const paymentConfirmedRef = useRef(false);
-  
-  // Keep refs in sync with state
-  useEffect(() => { waitingForPaymentRef.current = waitingForPayment; }, [waitingForPayment]);
-  useEffect(() => { paymentConfirmedRef.current = paymentConfirmed; }, [paymentConfirmed]);
   const [checkingManually, setCheckingManually] = useState(false);
   const [notDetectedYet, setNotDetectedYet] = useState(false);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const prevCreditsRef = useRef<{ hd: number; platform: number } | null>(null);
-  const currentPlanRef = useRef<AddOnPlan | null>(null);
-  const unsubscribeRef = useRef<(() => void) | null>(null);
 
   // Stop polling when modal closes
   useEffect(() => {
@@ -83,21 +90,11 @@ export default function BuyCreditsModal({ open, onClose, reason, onPaymentDetect
       setPaymentConfirmed(false);
       setLoading(null);
       setStripeUnavailable(false);
-      // Clean up cross-tab listener
-      if (unsubscribeRef.current) {
-        unsubscribeRef.current();
-        unsubscribeRef.current = null;
-      }
     }
   }, [open]);
 
   // Cleanup on unmount
-  useEffect(() => () => {
-    stopPolling();
-    if (unsubscribeRef.current) {
-      unsubscribeRef.current();
-    }
-  }, []);
+  useEffect(() => () => stopPolling(), []);
 
   function stopPolling() {
     if (pollRef.current) {
@@ -106,92 +103,31 @@ export default function BuyCreditsModal({ open, onClose, reason, onPaymentDetect
     }
   }
 
-  async function fetchSessionCredits(): Promise<{ hd: number; platform: number }> {
-    try {
-      const token = await getIdToken();
-      const res = await fetch(`${API_BASE}/api/auth/me`, {
-        credentials: 'include',
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-      });
-      if (res.ok) {
-        const data = await res.json() as { hdCredits?: number; platformCredits?: number };
-        return { hd: data.hdCredits ?? 0, platform: data.platformCredits ?? 0 };
-      }
-    } catch { /* ignore */ }
-    return { hd: 0, platform: 0 };
-  }
-
   async function startPolling() {
     // Snapshot current credits so we can detect an increase
     const initial = await fetchSessionCredits();
     prevCreditsRef.current = initial;
 
     pollRef.current = setInterval(async () => {
-      // Check localStorage first (fast path for cross-tab communication)
-      const comm = getPaymentCommunicator();
-      const pendingStatus = comm.checkPendingStatus();
-      if (pendingStatus?.status === 'completed') {
-        console.log('[BuyCreditsModal] Payment detected via localStorage:', pendingStatus);
-        comm.clearStatus();
-        handlePaymentSuccess();
-        return;
-      }
-      
-      // Fallback: poll server for credits
       const current = await fetchSessionCredits();
       const prev = prevCreditsRef.current!;
       if (current.hd > prev.hd || current.platform > prev.platform) {
-        console.log('[BuyCreditsModal] Payment detected via polling:', current, 'was:', prev);
         handlePaymentSuccess();
       }
-    }, 1500); // Poll every 1.5 seconds for faster detection
+    }, 1500); // Poll every 1.5 seconds
   }
 
   function handlePaymentSuccess() {
     stopPolling();
     setPaymentConfirmed(true);
-    
-    // Clear any pending status from localStorage
-    getPaymentCommunicator().clearStatus();
-    
     setTimeout(() => {
       onPaymentDetected?.();
       onClose();
     }, 1500);
   }
 
-  function setupCrossTabListener(plan: AddOnPlan) {
-    const comm = getPaymentCommunicator();
-    
-    // Unsubscribe any existing listener
-    if (unsubscribeRef.current) {
-      unsubscribeRef.current();
-    }
-    
-    // Subscribe to cross-tab payment messages
-    unsubscribeRef.current = comm.onMessage((message) => {
-      if (message.type === 'PAYMENT_COMPLETED') {
-        // Use refs to get current state (avoid stale closure)
-        if (waitingForPaymentRef.current && !paymentConfirmedRef.current) {
-          console.log('[BuyCreditsModal] Payment detected from other tab:', message);
-          handlePaymentSuccess();
-        }
-      }
-    });
-
-    // Also check if payment already completed (page refresh scenario)
-    const pendingStatus = comm.checkPendingStatus();
-    if (pendingStatus && pendingStatus.status === 'completed') {
-      console.log('[BuyCreditsModal] Found pending completed payment:', pendingStatus);
-      // Clear it so we don't re-trigger on next load
-      comm.clearStatus();
-      handlePaymentSuccess();
-    }
-  }
-
   const handleSelect = async (plan: AddOnPlan) => {
     setLoading(plan);
-    currentPlanRef.current = plan;
     try {
       const token = await getIdToken();
       const res = await fetch(`${API_BASE}/api/payments/checkout`, {
@@ -203,7 +139,7 @@ export default function BuyCreditsModal({ open, onClose, reason, onPaymentDetect
         body: JSON.stringify({ plan }),
         credentials: 'include',
       });
-      const data = await res.json() as { url?: string; error?: string; mock?: boolean; sessionId?: string };
+      const data = await res.json() as { url?: string; error?: string; mock?: boolean };
 
       if (data.mock || !data.url) {
         setStripeUnavailable(true);
@@ -211,22 +147,10 @@ export default function BuyCreditsModal({ open, onClose, reason, onPaymentDetect
         return;
       }
 
-      // Get session ID for cross-tab communication
-      // Try to get it from response, or use a generated one
-      const sessionId = data.sessionId || `plan_${plan}_${Date.now()}`;
-      
-      // Broadcast that payment is starting
-      getPaymentCommunicator().notifyPaymentStarted(sessionId, plan);
-
-      // Open Stripe in a new tab — do NOT navigate away (portrait would be lost)
+      // Open Stripe in a new tab
       window.open(data.url, '_blank');
       setLoading(null);
       setWaitingForPayment(true);
-      
-      // Set up cross-tab listener for payment completion
-      setupCrossTabListener(plan);
-      
-      // Also start polling as fallback
       void startPolling();
     } catch {
       setStripeUnavailable(true);
@@ -242,11 +166,7 @@ export default function BuyCreditsModal({ open, onClose, reason, onPaymentDetect
     const prev = prevCreditsRef.current ?? { hd: 0, platform: 0 };
     setCheckingManually(false);
     if (current.hd > prev.hd || current.platform > prev.platform) {
-      setPaymentConfirmed(true);
-      setTimeout(() => {
-        onPaymentDetected?.();
-        onClose();
-      }, 1200);
+      handlePaymentSuccess();
     } else {
       // Credits not yet reflected — show message and keep polling
       setNotDetectedYet(true);

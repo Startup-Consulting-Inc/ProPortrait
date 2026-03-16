@@ -303,6 +303,7 @@ function AppContent() {
             externalLibraryOpen={showLibrary}
             onExternalLibraryClose={() => setShowLibrary(false)}
             onRequiresAuth={() => setShowAuth(true)}
+            user={user}
           />
         </div>
 
