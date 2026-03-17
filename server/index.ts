@@ -215,7 +215,7 @@ app.use(cors({
 
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 10,
+  max: 20,
   message: { error: 'Too many requests. Please wait before generating more portraits.' },
   standardHeaders: true,
   legacyHeaders: false,

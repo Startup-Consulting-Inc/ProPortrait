@@ -432,7 +432,9 @@ export default function PortraitGenerator({
       const message = err instanceof Error ? err.message : 'unknown';
       capture('generation_failed', { error: message, durationMs: Date.now() - generationStartRef.current });
       console.error(err);
-      if (message.includes('generation_limit') || message.includes('limit reached')) {
+      if (message.startsWith('rate_limit:')) {
+        setError(`Generation limit reached. ${message.slice('rate_limit:'.length)}`);
+      } else if (message.includes('generation_limit') || message.includes('limit reached')) {
         setError('Generation limit reached. Please contact support.');
       } else {
         setError('Failed to generate portrait. Please try again.');

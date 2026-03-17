@@ -67,6 +67,22 @@ export async function generateProfessionalPortrait(
   });
 
   if (!response.ok) {
+    if (response.status === 429) {
+      const resetHeader = response.headers.get('RateLimit-Reset');
+      let retryMsg = 'Please try again in a few minutes.';
+      if (resetHeader) {
+        const secsRemaining = parseInt(resetHeader, 10) - Math.floor(Date.now() / 1000);
+        if (secsRemaining > 0) {
+          if (secsRemaining < 90) {
+            retryMsg = `Try again in ${secsRemaining} second${secsRemaining !== 1 ? 's' : ''}.`;
+          } else {
+            const mins = Math.ceil(secsRemaining / 60);
+            retryMsg = `Try again in ${mins} minute${mins !== 1 ? 's' : ''}.`;
+          }
+        }
+      }
+      throw new Error(`rate_limit:${retryMsg}`);
+    }
     const err = await response.json().catch(() => ({ error: 'Request failed' }));
     throw new Error(err.error || `Server error: ${response.status}`);
   }
@@ -94,6 +110,22 @@ export async function editProfessionalPortrait(
   });
 
   if (!response.ok) {
+    if (response.status === 429) {
+      const resetHeader = response.headers.get('RateLimit-Reset');
+      let retryMsg = 'Please try again in a few minutes.';
+      if (resetHeader) {
+        const secsRemaining = parseInt(resetHeader, 10) - Math.floor(Date.now() / 1000);
+        if (secsRemaining > 0) {
+          if (secsRemaining < 90) {
+            retryMsg = `Try again in ${secsRemaining} second${secsRemaining !== 1 ? 's' : ''}.`;
+          } else {
+            const mins = Math.ceil(secsRemaining / 60);
+            retryMsg = `Try again in ${mins} minute${mins !== 1 ? 's' : ''}.`;
+          }
+        }
+      }
+      throw new Error(`rate_limit:${retryMsg}`);
+    }
     const err = await response.json().catch(() => ({ error: 'Request failed' }));
     throw new Error(err.error || `Server error: ${response.status}`);
   }
