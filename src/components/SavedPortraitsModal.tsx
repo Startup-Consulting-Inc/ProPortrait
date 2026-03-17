@@ -4,6 +4,13 @@ import { getSavedPortraits, deleteSavedPortrait } from '../services/portraits';
 import type { SavedPortrait } from '../services/portraits';
 import { cn } from '../lib/utils';
 
+const API_BASE = (import.meta.env.VITE_API_URL as string | undefined) ?? '';
+
+function proxyUrl(url: string): string {
+  if (!url) return '';
+  return `${API_BASE}/api/users/me/portrait-proxy?url=${encodeURIComponent(url)}`;
+}
+
 interface SavedPortraitsModalProps {
   open: boolean;
   onClose: () => void;
@@ -126,7 +133,7 @@ export default function SavedPortraitsModal({ open, onClose, onLoad }: SavedPort
                   <div className="aspect-[3/4] bg-slate-100 relative overflow-hidden">
                     {portrait.imageUrl && !failedImages.has(portrait.id) ? (
                       <img
-                        src={portrait.imageUrl}
+                        src={proxyUrl(portrait.imageUrl)}
                         alt={portrait.title}
                         className="w-full h-full object-cover"
                         onError={() => setFailedImages((prev) => new Set(prev).add(portrait.id))}
