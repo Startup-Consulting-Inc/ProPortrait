@@ -75,7 +75,7 @@ async function getFreshSessionCredits(): Promise<{ hdCredits: number; platformCr
 }
 
 // Consume a download credit (type: 'hd' | 'platform')
-async function consumeDownloadCredit(type: 'hd' | 'platform'): Promise<{ success: boolean; remaining?: number; error?: string }> {
+async function consumeDownloadCredit(type: 'hd' | 'platform', count = 1): Promise<{ success: boolean; remaining?: number; error?: string }> {
   try {
     const token = await getIdToken();
     if (!token) return { success: false, error: 'Not authenticated' };
@@ -83,7 +83,7 @@ async function consumeDownloadCredit(type: 'hd' | 'platform'): Promise<{ success
     const res = await fetch(`${API_BASE}/api/users/me/consume-download`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ consume: true, type }),
+      body: JSON.stringify({ consume: true, type, count }),
       credentials: 'include',
     });
 
@@ -732,17 +732,17 @@ export default function PortraitGenerator({
       return;
     }
 
-    // Authenticated users: Check credits
-    if (platformCredits <= 0) {
+    // Authenticated users: Check credits — Download All requires 5 (one per platform)
+    if (platformCredits < PLATFORM_PRESETS.length) {
       setBuyCreditsReason('platform');
       setPendingDownload('all');
       setShowBuyCreditsModal(true);
-      capture('download_blocked', { reason: 'no_platform_credits', platform: 'all' });
+      capture('download_blocked', { reason: 'insufficient_platform_credits', platform: 'all', have: platformCredits, need: PLATFORM_PRESETS.length });
       return;
     }
 
-    // Consume credit before download
-    const consumeResult = await consumeDownloadCredit('platform');
+    // Consume all 5 credits before download
+    const consumeResult = await consumeDownloadCredit('platform', PLATFORM_PRESETS.length);
     if (!consumeResult.success) {
       alert(consumeResult.error || 'Failed to process download. Please try again.');
       return;
@@ -1881,9 +1881,14 @@ export default function PortraitGenerator({
                           </span>
                         </div>
                         {platformCredits > 0 ? (
-                          <span className="font-bold text-green-800 bg-green-100 px-2 py-0.5 rounded-full">
-                            {platformCredits} credit{platformCredits !== 1 ? 's' : ''}
-                          </span>
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-bold text-green-800 bg-green-100 px-2 py-0.5 rounded-full">
+                              {platformCredits} credit{platformCredits !== 1 ? 's' : ''}
+                            </span>
+                            {platformCredits < PLATFORM_PRESETS.length && (
+                              <span className="text-[10px] text-slate-400">(need 5 for Download All)</span>
+                            )}
+                          </div>
                         ) : (
                           <button
                             onClick={() => { setBuyCreditsReason('platform'); setShowBuyCreditsModal(true); }}
@@ -2021,12 +2026,19 @@ export default function PortraitGenerator({
                               );
                             })}
                           </div>
-                          <button onClick={handleDownloadAll} disabled={!!downloadingPlatform}
-                            className="w-full mt-2 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold flex items-center justify-center gap-2 transition-all disabled:opacity-50">
+                          <button onClick={handleDownloadAll}
+                            disabled={!!downloadingPlatform || platformCredits < PLATFORM_PRESETS.length}
+                            title={platformCredits < PLATFORM_PRESETS.length ? `Requires ${PLATFORM_PRESETS.length} platform credits` : undefined}
+                            className="w-full mt-2 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold flex items-center justify-center gap-2 transition-all disabled:opacity-40 disabled:cursor-not-allowed">
                             {downloadingPlatform === 'all'
                               ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Building ZIP&hellip;</>
                               : <><Package className="w-3.5 h-3.5" /> Download All Platforms</>}
                           </button>
+                          {isFirebaseUser && platformCredits > 0 && platformCredits < PLATFORM_PRESETS.length && (
+                            <p className="text-[10px] text-center text-slate-400 mt-1">
+                              {PLATFORM_PRESETS.length - platformCredits} more credit{PLATFORM_PRESETS.length - platformCredits !== 1 ? 's' : ''} needed to unlock Download All
+                            </p>
+                          )}
                         </>
                       )}
                     </div>

@@ -209,10 +209,11 @@ router.get('/me/download-credits', async (req: Request, res: Response) => {
   });
 });
 
-// POST /api/users/me/consume-download — consume a download credit (called before actual download)
+// POST /api/users/me/consume-download — consume one or more download credits
 router.post('/me/consume-download', async (req: Request, res: Response) => {
-  const { consume, type } = req.body as { consume?: boolean; type?: 'hd' | 'platform' };
+  const { consume, type, count } = req.body as { consume?: boolean; type?: 'hd' | 'platform'; count?: number };
   const creditType: 'hd' | 'platform' = type === 'platform' ? 'platform' : 'hd';
+  const n = (typeof count === 'number' && count > 1) ? count : 1;
 
   // Anonymous session path — read from Firestore for cross-instance accuracy
   if (req.auth.mode === 'anonymous') {
@@ -220,17 +221,19 @@ router.post('/me/consume-download', async (req: Request, res: Response) => {
     const { hdCredits, platformCredits } = await getSessionCredits(sessionId);
 
     if (creditType === 'platform') {
-      if (platformCredits <= 0) {
-        res.status(403).json({ error: 'No platform download credits remaining.', code: 'no_platform_credits', platformCredits });
+      if (platformCredits < n) {
+        res.status(403).json({ error: `Need ${n} platform credits (have ${platformCredits}).`, code: 'no_platform_credits', platformCredits });
         return;
       }
       if (consume) {
-        const ok = consumeSessionCredit(sessionId, 'platform');
-        if (!ok) {
-          res.status(403).json({ error: 'No platform download credits remaining.', code: 'no_platform_credits' });
-          return;
+        for (let i = 0; i < n; i++) {
+          const ok = consumeSessionCredit(sessionId, 'platform');
+          if (!ok) {
+            res.status(403).json({ error: 'No platform download credits remaining.', code: 'no_platform_credits' });
+            return;
+          }
         }
-        res.json({ success: true, consumed: 1, remaining: platformCredits - 1, type: 'platform' });
+        res.json({ success: true, consumed: n, remaining: platformCredits - n, type: 'platform' });
       } else {
         res.json({ canDownload: true, platformCredits });
       }
@@ -265,11 +268,11 @@ router.post('/me/consume-download', async (req: Request, res: Response) => {
     const platformCredits = doc.platformCredits ?? 0;
     const legacyCredits = doc.downloadCredits ?? 0;
     const effective = platformCredits || legacyCredits;
-    if (effective <= 0) {
+    if (effective < n) {
       res.status(403).json({
-        error: 'No platform download credits remaining.',
+        error: `Need ${n} platform credits (have ${effective}).`,
         code: 'no_platform_credits',
-        platformCredits,
+        platformCredits: effective,
       });
       return;
     }
@@ -277,15 +280,15 @@ router.post('/me/consume-download', async (req: Request, res: Response) => {
       // Prefer decrementing the new field; fall back to legacy
       const field = platformCredits > 0 ? 'platformCredits' : 'downloadCredits';
       await adminFirestore().collection('users').doc(uid).set(
-        { [field]: FieldValue.increment(-1), updatedAt: FieldValue.serverTimestamp() },
+        { [field]: FieldValue.increment(-n), updatedAt: FieldValue.serverTimestamp() },
         { merge: true },
       );
-      res.json({ success: true, consumed: 1, remaining: effective - 1, type: 'platform' });
+      res.json({ success: true, consumed: n, remaining: effective - n, type: 'platform' });
     } else {
       res.json({ canDownload: true, platformCredits: effective });
     }
   } else {
-    // HD credit
+    // HD credit — always consumes 1
     const hdCredits = doc.hdCredits ?? 0;
     const legacyCredits = doc.downloadCredits ?? 0;
     const effective = hdCredits || legacyCredits;
