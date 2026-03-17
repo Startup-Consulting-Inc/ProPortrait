@@ -396,6 +396,6 @@ User data collected:
 - Email, display name, profile photo (Firebase Auth)
 - Usage statistics (generation count, style preferences)
 - Onboarding preferences (purpose, industry, vibe) — used to personalize portrait settings
-- Saved portraits (stored in Cloudflare R2 with 7-day expiration)
+- Saved portraits (stored permanently in Cloudflare R2; access links are fresh 7-day signed URLs regenerated on each request)
 
 Users can delete their account and all associated data from the Profile → Account settings.
