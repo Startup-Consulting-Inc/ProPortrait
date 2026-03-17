@@ -553,7 +553,7 @@ export default function PortraitGenerator({
     return () => window.removeEventListener('keydown', handler);
   }, [step, selectedResultIndex, historyStep, history]);
 
-  const renderToCanvas = (img: HTMLImageElement, width: number, height: number): string => {
+  const renderToCanvas = (img: HTMLImageElement, width: number, height: number, forceContain = false): string => {
     const canvas = canvasRef.current!;
     canvas.width = width;
     canvas.height = height;
@@ -561,13 +561,19 @@ export default function PortraitGenerator({
     ctx.fillStyle = '#ffffff';
     ctx.fillRect(0, 0, width, height);
 
-    if (exportMode === 'fill') {
+    if (!forceContain && exportMode === 'fill') {
       const scale = Math.max(width / img.width, height / img.height);
       const sw = img.width * scale;
       const sh = img.height * scale;
       const x = (width - sw) * (cropPosition.x / 100);
       const y = (height - sh) * (cropPosition.y / 100);
       ctx.drawImage(img, x, y, sw, sh);
+    } else if (forceContain) {
+      // Platform exports: scale to fit so the entire face is visible
+      const scale = Math.min(width / img.width, height / img.height);
+      const sw = img.width * scale;
+      const sh = img.height * scale;
+      ctx.drawImage(img, (width - sw) / 2, (height - sh) / 2, sw, sh);
     } else {
       const fillScale = Math.max(width / img.width, height / img.height);
       ctx.filter = 'blur(20px) brightness(0.8)';
@@ -707,7 +713,7 @@ export default function PortraitGenerator({
     img.src = getProxiedImageUrl(currentImage);
     img.crossOrigin = 'anonymous';
     img.onload = () => {
-      const dataUrl = renderToCanvas(img, preset.width, preset.height);
+      const dataUrl = renderToCanvas(img, preset.width, preset.height, true);
       const a = document.createElement('a');
       a.href = dataUrl;
       a.download = preset.filename;
@@ -760,7 +766,7 @@ export default function PortraitGenerator({
     img.crossOrigin = 'anonymous';
     await new Promise<void>(r => { img.onload = () => r(); });
     for (const preset of PLATFORM_PRESETS) {
-      const dataUrl = renderToCanvas(img, preset.width, preset.height);
+      const dataUrl = renderToCanvas(img, preset.width, preset.height, true);
       const base64 = dataUrl.split(',')[1];
       zip.file(preset.filename, base64, { base64: true });
     }
