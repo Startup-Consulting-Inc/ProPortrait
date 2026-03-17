@@ -192,7 +192,7 @@ export default function LandingPage({ onSignIn }: LandingPageProps) {
             <div className="flex flex-wrap items-center gap-5 pt-2 text-sm text-slate-500">
               {[
                 { icon: '✓', text: 'Free to generate & edit' },
-                { icon: '✓', text: 'Photos deleted after 24h' },
+                { icon: '✓', text: 'Photos not saved unless you do' },
                 { icon: '✓', text: 'Pay only to download' },
                 { icon: '✓', text: 'Sign in to buy & download' },
               ].map((t) => (
@@ -305,8 +305,8 @@ export default function LandingPage({ onSignIn }: LandingPageProps) {
                       <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                     </svg>
                     <div>
-                      <p className="font-medium text-slate-800 text-sm">Auto-deleted in 24 hours</p>
-                      <p className="text-slate-500 text-sm">Your photos are automatically deleted from our servers after 24 hours.</p>
+                      <p className="font-medium text-slate-800 text-sm">Not saved unless you choose to</p>
+                      <p className="text-slate-500 text-sm">Your photos are not stored on our servers unless you explicitly save them to your library.</p>
                     </div>
                   </div>
                   <div className="flex items-start gap-3">
@@ -361,7 +361,7 @@ export default function LandingPage({ onSignIn }: LandingPageProps) {
               },
               { 
                 q: 'What happens to my photos?', 
-                a: 'They\'re automatically deleted from our servers after 24 hours. We don\'t store, share, or use your photos for any other purpose. Your privacy is our priority.' 
+                a: 'Your photos are not saved on our servers unless you explicitly save them to your library. We don\'t share or use your photos for any other purpose. Your privacy is our priority.'
               },
               { 
                 q: 'What styles are available?', 
