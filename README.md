@@ -60,9 +60,9 @@ Browser (React SPA) → Firebase Hosting
               │
               ├─→ Google Gemini API   (image generation & editing)
               ├─→ Firebase Auth       (email/password + Google OAuth)
-              ├─→ Firestore           (user profiles, tier, saved portraits)
-              ├─→ Cloudflare R2       (portrait storage, 24h signed URLs)
-              ├─→ Stripe              (checkout, webhooks, billing portal)
+              ├─→ Firestore           (user profiles, saved portraits, credits)
+              ├─→ Cloudflare R2       (portrait storage, 7-day signed URLs)
+              ├─→ Stripe              (one-time checkout, webhooks)
               └─→ Resend              (email capture)
 ```
 
@@ -86,25 +86,18 @@ Unauthenticated users hitting `/app` or `/admin` are shown the **AuthModal** (Go
 
 ## Pricing Model
 
-**Pay only when you're ready to download.** Generate and edit unlimited portraits for free.
+**Generate and edit for free. Pay only when you download.**
 
-| Feature | Free | Basic | Plus |
-|---|---|---|---|
-| Portrait generation | Unlimited | Unlimited | Unlimited |
-| Editing | Unlimited | Unlimited | Unlimited |
-| Watermarked preview | ✅ | — | — |
-| HD download (2048px) | — | ✅ | ✅ |
-| All platform sizes (ZIP) | — | — | ✅ |
-| Save to Library | 10 saves | 50 saves | 200 saves |
-| Download credits | 0 | 1 | 1 |
-
-| Plan | Price | Best For |
+| Add-on | Price | Credits granted |
 |---|---|---|
-| Free | $0 | Exploring, testing styles |
-| Basic | $4.99 one-time | Single HD download |
-| Plus | $9.99 one-time | All platform sizes |
+| 1 HD Download | $4.99 one-time | +1 HD credit |
+| 5 Platforms + 1 HD | $9.99 one-time | +1 HD credit + 5 platform credits |
+| 1 Platform Export | $2.99 one-time | +1 platform credit |
 
-**Download credits never expire.** Purchase once, use anytime.
+**Credit rules:**
+- HD credits: 1 credit per HD download (2048px)
+- Platform credits: 1 credit per individual platform export; 5 credits for Download All Platforms (ZIP)
+- Credits are tied to your account and never expire
 
 ---
 
@@ -134,6 +127,10 @@ For security, users are automatically logged out after **15 minutes of inactivit
 - Works correctly when tab is in background (checks elapsed time on return)
 - Disabled during portrait generation to avoid interrupting long processes
 
+### Rate Limiting
+
+Portrait generation is rate-limited to **20 requests per 15 minutes** per IP. When the limit is reached, the UI displays a clear message with the exact time remaining until the limit resets (e.g., "Generation limit reached. Try again in 8 minutes.").
+
 ### Quick / Advanced Mode
 
 A persistent mode toggle at the top of the wizard keeps the default experience simple:
@@ -144,7 +141,7 @@ A persistent mode toggle at the top of the wizard keeps the default experience s
 | One-click Generate | Expression presets, identity locks, likeness/naturalness sliders, blemish toggle, group photo selector, variations picker, copy settings |
 | "Edit Portrait" button reveals AI editor on demand | Full AI editor panel open by default |
 | Aspect ratio + Download only | Full export options visible |
-| "More Export Options" expands layout, format, platform presets, share | All export controls always visible |
+| "More Export Options" expands layout, format, platform presets | All export controls always visible |
 
 ### Step 1 — Upload
 
@@ -173,7 +170,7 @@ A persistent mode toggle at the top of the wizard keeps the default experience s
 - **Expression presets** — Confident, Warm Smile, Serious, Natural
 - **Identity Locks** — per-feature toggles (eye color, skin tone, hair length ON by default; hair texture, glasses OFF)
 - **Likeness strength** 0–100 (default 75)
-- **Skin smoothness / Naturalness** 0–100 with presets: Natural (15), Polished (50), Studio (85 — paid)
+- **Skin smoothness / Naturalness** 0–100 with presets: Natural (15), Polished (50), Studio (85)
 - **Blemish removal** toggle (ON by default)
 - **Variations** — 2 or 4 images per generation
 - **Identity Confidence Score** — color-coded meter based on current settings
@@ -185,14 +182,14 @@ A persistent mode toggle at the top of the wizard keeps the default experience s
 - **Before/After comparison slider** — drag to compare original vs. AI portrait
 - **AI Editor** (expand via "Edit Portrait" in Quick mode):
   - **Clothes wizard** — 3-step (style → color → pattern) with visual swatches
-  - **Background wizard** — 8 categories, 6–8 options each; Transparent requires paid tier
+  - **Background wizard** — 8 categories, 6–8 options each
   - **Color grading** — 7 presets (B&W, Warm, Cool, Cinematic, Sepia, Pastel, High Contrast)
   - **Regional edit** — lock edits to background / clothing / lighting / hair / color grading only
   - **Custom prompt** — free-text instruction input
   - **Prompt history** — last 15 prompts, click to reuse
 - **Undo / Redo** with step counter (Cmd/Ctrl+Z / Cmd/Ctrl+Shift+Z)
 - **Edit history strip** — thumbnail timeline; click any state to jump back
-- **Save to Library** — save portrait to Firestore + R2 (paid tiers)
+- **Save to Library** — save portrait to Firestore + R2
 - **Feature Tour** — interactive guided tour for first-time users
 
 ### Step 4 — Export
@@ -200,8 +197,8 @@ A persistent mode toggle at the top of the wizard keeps the default experience s
 - **Aspect ratio** — 1:1 (square) or 3:4 (portrait)
 - **Layout mode** — Fill (crop) or Fit (letterbox with blurred background)
 - **Crop position** — X/Y percentage sliders (Fill mode)
-- **Format** — JPG (free) or PNG (paid; required for transparent background)
-- **Platform presets:**
+- **Format** — JPG or PNG
+- **Platform presets** (contain scaling — full face always visible):
 
 | Platform | Size |
 |---|---|
@@ -211,8 +208,8 @@ A persistent mode toggle at the top of the wizard keeps the default experience s
 | Instagram | 320×320 |
 | Resume / CV | 600×800 |
 
-- **Download All Platforms** — ZIP of all five presets (JSZip, dynamic import)
-- **Share** — LinkedIn / Twitter / copy link
+- **Download All Platforms** — ZIP of all five presets; requires 5 platform credits (JSZip, dynamic import)
+- Credit balance displayed inline; "Buy credits" link opens purchase modal
 
 ### Admin Dashboard
 
@@ -220,12 +217,11 @@ Admin users (`/admin`) have access to user management features:
 
 **User List:**
 - Search users by name, email, or UID
-- Filter by tier (Free/Creator/Pro/Max) and status (Active/Suspended)
-- Stats cards: Total users, Pro users, Suspended, Daily generations, Cost
+- Stats cards: Total users, Daily generations
 
 **User Detail Modal:**
 - **Overview** — Profile info, onboarding answers, usage stats (generations, edits, exports), account timeline
-- **Subscription** — Change tier, suspend/unsuspend user, delete user permanently
+- **Account** — Suspend/unsuspend user, delete user permanently
 - **Activity** — Recent saved portraits
 
 **Admin API Endpoints:**
@@ -233,7 +229,6 @@ Admin users (`/admin`) have access to user management features:
 - `GET /api/admin/users/:uid` — Get detailed user info
 - `DELETE /api/admin/users/:uid` — Delete user and all data
 - `POST /api/admin/users/:uid/suspend` — Suspend/unsuspend user
-- `PATCH /api/admin/users/:uid/subscription` — Manage subscription tier
 - `GET /api/admin/stats` — Daily usage statistics
 
 ---
@@ -244,12 +239,12 @@ Admin users (`/admin`) have access to user management features:
 src/
 ├── components/
 │   ├── PortraitGenerator.tsx      # Main 4-step wizard
+│   ├── BuyCreditsModal.tsx        # Credit purchase modal (Stripe redirect)
 │   ├── OnboardingModal.tsx        # User onboarding flow (ICP-based defaults)
 │   ├── AuthModal.tsx              # Sign in / create account (Google + email)
 │   ├── UserMenu.tsx               # Avatar dropdown (Profile, Admin, Sign Out)
 │   ├── UserProfileModal.tsx       # 4-tab: Profile, Preferences, Account, Billing
 │   ├── AdminUserDetailModal.tsx   # Admin user management (view, edit, delete)
-│   ├── PricingModal.tsx           # 4-tier pricing modal + Stripe redirect
 │   ├── SavedPortraitsModal.tsx    # Library of saved portraits
 │   ├── SessionWarningModal.tsx    # Session timeout warning
 │   ├── ComparisonSlider.tsx       # Before/after drag comparison
@@ -288,8 +283,8 @@ server/
 ├── index.ts                       # Express app (port 3001 / 8080 in prod)
 ├── routes/
 │   ├── portraits.ts               # POST /api/portraits/generate & /edit
-│   ├── users.ts                   # GET|PATCH|DELETE /api/users/me
-│   ├── payments.ts                # Stripe checkout, webhook, billing portal
+│   ├── users.ts                   # GET|PATCH|DELETE /api/users/me + download credits
+│   ├── payments.ts                # Stripe one-time checkout, webhook
 │   ├── admin.ts                   # Admin endpoints (users, stats, suspend, delete)
 │   ├── auth.ts                    # GET /api/auth/me
 │   ├── contact.ts                 # POST /api/contact
@@ -298,10 +293,10 @@ server/
 │   └── authMiddleware.ts          # Firebase JWT → Firestore; anonymous cookie fallback
 ├── lib/
 │   ├── firebase.ts                # Admin SDK singleton (ADC)
-│   ├── firestore.ts               # UserDoc CRUD, tier/pro status, generation limits, onboarding
+│   ├── firestore.ts               # UserDoc CRUD, credits, generation limits, onboarding
 │   ├── session.ts                 # In-memory session store + UUID cookie
 │   └── storage.ts                 # Cloudflare R2 portrait storage
-└── types.d.ts                     # req.auth type: { mode, uid?, email?, isPro, isAdmin }
+└── types.d.ts                     # req.auth type: { mode, uid?, email?, isAdmin, sessionId? }
 ```
 
 ---
@@ -317,16 +312,16 @@ server/
 | `APP_URL` | Yes | Base app URL (for Stripe redirects) |
 | `STRIPE_SECRET_KEY` | For payments | Stripe secret key |
 | `STRIPE_WEBHOOK_SECRET` | For payments | Stripe webhook signing secret |
-| `STRIPE_CREATOR_PRICE_ID` | For payments | $24.99 one-time Creator Pass price ID |
-| `STRIPE_PRO_PRICE_ID` | For payments | $29.99/month Pro price ID |
-| `STRIPE_MAX_PRICE_ID` | For payments | $49.99/month Max price ID |
+| `STRIPE_HD_ADDON_PRICE_ID` | For payments | $4.99 — 1 HD download credit |
+| `STRIPE_PLATFORM_SINGLE_PRICE_ID` | For payments | $2.99 — 1 platform export credit |
+| `STRIPE_PLATFORM_BUNDLE_PRICE_ID` | For payments | $9.99 — 1 HD + 5 platform credits |
 | `R2_ACCOUNT_ID` | For storage | Cloudflare R2 account ID |
 | `R2_ACCESS_KEY_ID` | For storage | Cloudflare R2 access key |
 | `R2_SECRET_ACCESS_KEY` | For storage | Cloudflare R2 secret key |
 | `R2_BUCKET_NAME` | For storage | Cloudflare R2 bucket name |
 | `RESEND_API_KEY` | For email | Resend API key |
 | `RESEND_FROM_EMAIL` | For email | Sender email address |
-| `CORS_ORIGIN` | Prod | Allowed frontend origin |
+| `CORS_ORIGIN` | Prod | Allowed frontend origin(s), comma-separated |
 | `PORT` | Prod | Server port (default: 3001; Cloud Run: 8080) |
 
 ### Frontend (Vite build-time)
@@ -382,7 +377,7 @@ For local Firebase Admin SDK: run `gcloud auth application-default login` (ADC).
 | Auth | Firebase Auth (email/password + Google OAuth) |
 | Database | Firestore |
 | Storage | Cloudflare R2 (S3-compatible) |
-| Payments | Stripe (checkout, webhooks, billing portal) |
+| Payments | Stripe (one-time checkout, webhooks) |
 | Email | Resend |
 | Analytics | PostHog |
 | Error tracking | Sentry |
@@ -395,12 +390,12 @@ For local Firebase Admin SDK: run `gcloud auth application-default login` (ADC).
 
 ## Privacy
 
-Photos are processed by Google Gemini via the backend. Portraits are stored temporarily in Cloudflare R2 as 24-hour signed URLs and are not retained beyond that window. No images are stored permanently. Users see a dismissible privacy notice on the upload screen before any photo is submitted.
+Photos are processed by Google Gemini via the backend. Portraits are stored in Cloudflare R2 with 7-day signed URLs. No images are retained beyond that window. Users see a dismissible privacy notice on the upload screen before any photo is submitted.
 
 User data collected:
 - Email, display name, profile photo (Firebase Auth)
 - Usage statistics (generation count, style preferences)
 - Onboarding preferences (purpose, industry, vibe) — used to personalize portrait settings
-- Saved portraits (paid tiers only, stored in Cloudflare R2 with 24h expiration)
+- Saved portraits (stored in Cloudflare R2 with 7-day expiration)
 
 Users can delete their account and all associated data from the Profile → Account settings.
