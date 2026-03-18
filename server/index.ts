@@ -12,6 +12,7 @@ import emailRouter from './routes/email.js';
 import contactRouter from './routes/contact.js';
 import usersRouter from './routes/users.js';
 import adminRouter from './routes/admin.js';
+import { eventsRouter, settingsRouter } from './routes/events.js';
 import { authMiddleware, requireFirebaseAuth } from './middleware/authMiddleware.js';
 import { storePortrait, storePermanentPortrait, getSignedUrlForKey, deleteR2Object } from './lib/storage.js';
 import { trackCost, getDailySpend } from './lib/costTracker.js';
@@ -248,6 +249,8 @@ app.use('/api/email', emailRouter);
 app.use('/api/contact', contactRouter);
 app.use('/api/users', usersRouter);
 app.use('/api/admin', adminRouter);
+app.use('/api/events', eventsRouter);
+app.use('/api/settings', settingsRouter);
 
 // POST /api/portraits/save — save a portrait to the user's library
 app.post('/api/portraits/save', requireFirebaseAuth, async (req, res) => {
@@ -458,7 +461,19 @@ app.post('/api/portraits/generate', async (req, res) => {
     );
 
     res.json({ images });
-    if (req.auth.uid) void trackGeneration(req.auth.uid, style as string);
+    if (req.auth.uid) {
+      void trackGeneration(req.auth.uid, style as string);
+    } else if (req.auth.sessionId) {
+      // Anonymous user — track in anonymous_sessions
+      const { FieldValue } = await import('firebase-admin/firestore');
+      const { adminFirestore } = await import('./lib/firebase.js');
+      const sid = req.auth.sessionId;
+      const today = new Date().toISOString().slice(0, 10);
+      void adminFirestore().collection('anonymous_sessions').doc(sid).set(
+        { sessionId: sid, totalGenerations: FieldValue.increment(1), lastActiveAt: FieldValue.serverTimestamp(), [`styleUsage.${style as string}`]: FieldValue.increment(1), date: today },
+        { merge: true },
+      );
+    }
   } catch (error) {
     console.error('[server] Error generating portrait:', error);
     res.status(502).json({ error: 'Failed to generate portrait. Please try again.' });

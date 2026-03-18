@@ -20,7 +20,7 @@ import ExportSuccessToast from './ExportSuccessToast';
 
 import { useAuthContext } from '../contexts/AuthContext';
 import { savePortrait } from '../services/portraits';
-import { capture } from '../services/analytics';
+import { capture, captureStepEntered, captureStepCompleted, captureStepAbandoned, saveSettingsSnapshot } from '../services/analytics';
 import { getIdToken } from '../services/auth';
 import type { PortraitDefaults } from '../types/onboarding';
 
@@ -328,11 +328,46 @@ export default function PortraitGenerator({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const generationStartRef = useRef<number>(0);
+  const editStartRef = useRef<number>(0);
+  const prevStepRef = useRef<Step>(1);
 
   const getCurrentImage = (index: number = selectedResultIndex): string | undefined => {
     if (!history[index] || history[index].length === 0) return generatedImages[index];
     return history[index][historyStep[index]];
   };
+
+  // ── Step tracking ────────────────────────────────────────────────────────────
+
+  // Navigate between steps, firing step_completed + step_viewed events
+  const goToStep = (next: Step) => {
+    captureStepCompleted(step, next);
+    setStep(next);
+  };
+
+  // Fire step_viewed on every step change (includes automated transitions)
+  useEffect(() => {
+    captureStepEntered(step, prevStepRef.current !== step ? prevStepRef.current : undefined);
+    prevStepRef.current = step;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step]);
+
+  // Fire step_abandoned when user closes/navigates away
+  useEffect(() => {
+    const handleUnload = () => captureStepAbandoned(step);
+    window.addEventListener('beforeunload', handleUnload);
+    return () => window.removeEventListener('beforeunload', handleUnload);
+  }, [step]);
+
+  // Save settings snapshot when leaving Step 2 without generating
+  useEffect(() => {
+    if (prevStepRef.current === 2 && step !== 2 && generatedImages.length === 0) {
+      saveSettingsSnapshot(
+        { selectedStyle, expressionPreset, likenessStrength, naturalness, naturalnessPreset, numVariations, removeBlemishes, identityLocks },
+        'step_exited',
+      );
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step]);
 
   useEffect(() => { setCropPosition({ x: 50, y: 50 }); }, [exportRatio]);
 
@@ -407,7 +442,9 @@ export default function PortraitGenerator({
     setHasTransparentBackground(false);
     setCompareMode(false);
     generationStartRef.current = Date.now();
-    capture('generation_started', { style: selectedStyle, numVariations });
+    const settingsSnap = { style: selectedStyle, expressionPreset, likenessStrength, naturalness, naturalnessPreset, numVariations, removeBlemishes, identityLocks };
+    saveSettingsSnapshot(settingsSnap, 'generate');
+    capture('generation_started', { style: selectedStyle, numVariations, expressionPreset, likenessStrength, naturalness, identityLocksEnabled: Object.values(identityLocks).filter(Boolean).length });
 
     try {
       const [header, base64Data] = selectedImage.split(',');
@@ -442,6 +479,8 @@ export default function PortraitGenerator({
       capture('generation_completed', {
         durationMs: Date.now() - generationStartRef.current,
         style: selectedStyle,
+        numVariations,
+        identityLocksEnabled: Object.values(identityLocks).filter(Boolean).length,
         success: true,
       });
       // DISABLED: Email capture removed
@@ -505,7 +544,9 @@ export default function PortraitGenerator({
     if (generatedImages.length === 0) return;
     setIsEditing(true);
     setError(null);
+    editStartRef.current = Date.now();
     const isTransparent = instruction.toLowerCase().includes('transparent');
+    capture('edit_submitted', { instruction, hasRegionTarget: !!regionTarget, regionTarget });
 
     try {
       const currentImage = getCurrentImage();
@@ -533,11 +574,13 @@ export default function PortraitGenerator({
       if (isTransparent) { setHasTransparentBackground(true); setExportFormat('png'); }
       else if (instruction.toLowerCase().includes('background')) setHasTransparentBackground(false);
 
+      capture('edit_completed', { instruction, durationMs: Date.now() - editStartRef.current, success: true });
       setPromptHistory(prev => [instruction, ...prev.filter(p => p !== instruction)].slice(0, 15));
       setCustomEditPrompt('');
       setEditMode(null);
       setRegionTarget(null);
     } catch (err) {
+      capture('edit_failed', { instruction, durationMs: Date.now() - editStartRef.current, error: err instanceof Error ? err.message : 'unknown' });
       console.error(err);
       setError('Failed to edit portrait. Please try again.');
     } finally {
@@ -547,13 +590,19 @@ export default function PortraitGenerator({
 
   const handleUndo = () => {
     const cur = historyStep[selectedResultIndex] || 0;
-    if (cur > 0) setHistoryStep(prev => ({ ...prev, [selectedResultIndex]: cur - 1 }));
+    if (cur > 0) {
+      capture('edit_undo', { fromIndex: cur, toIndex: cur - 1 });
+      setHistoryStep(prev => ({ ...prev, [selectedResultIndex]: cur - 1 }));
+    }
   };
 
   const handleRedo = () => {
     const cur = historyStep[selectedResultIndex] || 0;
     const hist = history[selectedResultIndex];
-    if (hist && cur < hist.length - 1) setHistoryStep(prev => ({ ...prev, [selectedResultIndex]: cur + 1 }));
+    if (hist && cur < hist.length - 1) {
+      capture('edit_redo', { fromIndex: cur, toIndex: cur + 1 });
+      setHistoryStep(prev => ({ ...prev, [selectedResultIndex]: cur + 1 }));
+    }
   };
 
   // Keyboard shortcuts: Cmd/Ctrl+Z → undo, Cmd/Ctrl+Shift+Z → redo (Step 3 only)
@@ -639,7 +688,8 @@ export default function PortraitGenerator({
   const handleExport = async () => {
     const currentImage = getCurrentImage();
     if (!currentImage || !canvasRef.current) return;
-    
+    capture('export_initiated', { type: 'hd', hasCredits: hdCredits > 0 });
+
     // NEW FLOW: Anonymous users MUST sign in first
     if (!isFirebaseUser) {
       setPendingDownload('export');
@@ -823,10 +873,15 @@ export default function PortraitGenerator({
   };
 
   const toggleLock = (key: keyof IdentityLocks) => {
-    setIdentityLocks(prev => ({ ...prev, [key]: !prev[key] }));
+    setIdentityLocks(prev => {
+      const next = { ...prev, [key]: !prev[key] };
+      capture('identity_lock_toggled', { lock: key, enabled: next[key], allLocks: next });
+      return next;
+    });
   };
 
   const setNaturalnessFromPreset = (preset: NaturalnessPreset) => {
+    capture('naturalness_changed', { preset, value: NATURALNESS_MAP[preset], previousPreset: naturalnessPreset });
     setNaturalnessPreset(preset);
     setNaturalness(NATURALNESS_MAP[preset]);
   };
@@ -1117,7 +1172,7 @@ export default function PortraitGenerator({
             <motion.div key="step2" {...slideAnim}
               className="p-8 h-full overflow-y-auto">
               <div className="flex items-center justify-between mb-4">
-                <button onClick={() => setStep(1)} className="flex items-center gap-2 text-slate-500 hover:text-slate-900 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 rounded">
+                <button onClick={() => goToStep(1)} className="flex items-center gap-2 text-slate-500 hover:text-slate-900 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 rounded">
                   <ArrowLeft className="w-4 h-4" /> Back
                 </button>
                 <h2 className="text-2xl font-bold">{showAdvanced ? 'Style & Settings' : 'Choose Your Style'}</h2>
@@ -1127,12 +1182,12 @@ export default function PortraitGenerator({
               {/* Quick / Advanced mode toggle */}
               <div className="flex justify-center mb-5">
                 <div className="flex bg-slate-100 p-1 rounded-xl">
-                  <button onClick={() => setShowAdvanced(false)}
+                  <button onClick={() => { if (showAdvanced) capture('mode_switched', { mode: 'quick', previousMode: 'advanced' }); setShowAdvanced(false); }}
                     className={cn('px-5 py-2 rounded-lg text-sm font-semibold transition-all flex items-center gap-2',
                       !showAdvanced ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-500 hover:text-slate-700')}>
                     <Zap className="w-3.5 h-3.5" /> Quick
                   </button>
-                  <button onClick={() => setShowAdvanced(true)}
+                  <button onClick={() => { if (!showAdvanced) capture('mode_switched', { mode: 'advanced', previousMode: 'quick' }); setShowAdvanced(true); }}
                     className={cn('px-5 py-2 rounded-lg text-sm font-semibold transition-all flex items-center gap-2',
                       showAdvanced ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-500 hover:text-slate-700')}>
                     <SlidersHorizontal className="w-3.5 h-3.5" /> Advanced
@@ -1181,7 +1236,7 @@ export default function PortraitGenerator({
               {/* Style Grid */}
               <div className={cn('gap-2.5 mb-6', showAdvanced ? 'grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8' : 'grid grid-cols-4')}>
                 {(showAdvanced ? STYLES : STYLES.filter(s => QUICK_STYLE_IDS.includes(s.id))).map((style) => (
-                  <button key={style.id} onClick={() => setSelectedStyle(style.id)}
+                  <button key={style.id} onClick={() => { capture('style_selected', { style: style.id, previousStyle: selectedStyle, isQuickMode: !showAdvanced }); setSelectedStyle(style.id); }}
                     className={cn('flex flex-col items-center p-3 rounded-xl border-2 transition-all text-center relative',
                       selectedStyle === style.id ? 'border-indigo-600 bg-indigo-50 text-indigo-900' : 'border-slate-100 bg-white text-slate-600 hover:border-indigo-200 hover:bg-slate-50')}>
                     {false && (
@@ -1202,7 +1257,7 @@ export default function PortraitGenerator({
                 </h3>
                 <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
                   {EXPRESSIONS.map((expr) => (
-                    <button key={expr.id} onClick={() => setExpressionPreset(expr.id)}
+                    <button key={expr.id} onClick={() => { capture('expression_selected', { expression: expr.id, previousExpression: expressionPreset }); setExpressionPreset(expr.id); }}
                       className={cn('p-2.5 rounded-xl border-2 text-center transition-all',
                         expressionPreset === expr.id ? 'border-amber-500 bg-amber-100 text-amber-900' : 'border-slate-200 bg-white text-slate-600 hover:border-amber-300')}>
                       <div className="text-2xl mb-1">{expr.emoji}</div>
@@ -1252,6 +1307,8 @@ export default function PortraitGenerator({
                     </div>
                     <input type="range" min="0" max="100" step="10" value={likenessStrength}
                       onChange={(e) => setLikenessStrength(parseInt(e.target.value))}
+                      onMouseUp={(e) => capture('likeness_changed', { value: parseInt((e.target as HTMLInputElement).value) })}
+                      onTouchEnd={(e) => capture('likeness_changed', { value: parseInt((e.currentTarget as HTMLInputElement).value) })}
                       aria-label="Likeness Strength"
                       aria-valuemin={0} aria-valuemax={100} aria-valuenow={likenessStrength}
                       aria-valuetext={`${likenessStrength}%`}
@@ -1268,7 +1325,7 @@ export default function PortraitGenerator({
                     </div>
                     <div className="flex gap-2">
                       {[1, 2, 4].map(num => (
-                        <button key={num} onClick={() => setNumVariations(num)}
+                        <button key={num} onClick={() => { capture('variations_changed', { count: num, previousCount: numVariations }); setNumVariations(num); }}
                           className={cn('flex-1 py-2 rounded-lg border text-sm font-medium transition-all',
                             numVariations === num ? 'border-indigo-600 bg-indigo-50 text-indigo-900' : 'border-slate-200 bg-white dark:bg-slate-700 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:border-indigo-200')}>
                           {num === 1 ? '1 Image' : `${num} Images`}
@@ -1387,11 +1444,11 @@ export default function PortraitGenerator({
             <motion.div key="step3" {...slideAnim}
               className="p-8 h-full flex flex-col">
               <div className="flex items-center justify-between mb-5">
-                <button onClick={() => setStep(2)} className="flex items-center gap-2 text-slate-500 hover:text-slate-900 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 rounded">
+                <button onClick={() => goToStep(2)} className="flex items-center gap-2 text-slate-500 hover:text-slate-900 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 rounded">
                   <ArrowLeft className="w-4 h-4" /> Back
                 </button>
                 <h2 className="text-2xl font-bold">Review & Edit</h2>
-                <button onClick={() => setStep(4)}
+                <button onClick={() => goToStep(4)}
                   className="flex items-center gap-2 px-5 py-2 bg-slate-900 text-white rounded-xl hover:bg-slate-800 transition-colors text-sm">
                   Export <ChevronRight className="w-4 h-4" />
                 </button>
@@ -1419,7 +1476,7 @@ export default function PortraitGenerator({
 
                   {/* Compare Toggle */}
                   <button
-                    onClick={() => setCompareMode(c => !c)}
+                    onClick={() => { capture('compare_mode_toggled', { enabled: !compareMode }); setCompareMode(c => !c); }}
                     className={cn('absolute top-4 right-4 flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium border transition-all shadow-sm',
                       compareMode ? 'bg-indigo-600 border-indigo-600 text-white' : 'bg-white border-slate-200 text-slate-600 hover:border-indigo-300')}
                   >
@@ -1742,7 +1799,7 @@ export default function PortraitGenerator({
             <motion.div key="step4" {...slideAnim}
               className="p-8 h-full flex flex-col">
               <div className="flex items-center justify-between mb-6">
-                <button onClick={() => setStep(3)} className="flex items-center gap-2 text-slate-500 hover:text-slate-900 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 rounded">
+                <button onClick={() => goToStep(3)} className="flex items-center gap-2 text-slate-500 hover:text-slate-900 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 rounded">
                   <ArrowLeft className="w-4 h-4" /> Back
                 </button>
                 <h2 className="text-2xl font-bold">Export Portrait</h2>

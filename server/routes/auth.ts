@@ -1,5 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { getSessionCredits } from '../lib/session.js';
+import { FieldValue } from 'firebase-admin/firestore';
+import { adminFirestore } from '../lib/firebase.js';
 
 const router = Router();
 
@@ -30,6 +32,25 @@ router.get('/me', async (req: Request, res: Response) => {
     hdCredits,
     platformCredits,
   });
+});
+
+// POST /api/auth/link-session — link an anonymous session to a registered user on sign-in
+router.post('/link-session', async (req: Request, res: Response) => {
+  const sessionId = (req.cookies as Record<string, string>)?.pp_session;
+  const uid = req.auth?.uid;
+  if (!uid || !sessionId) {
+    res.json({ ok: false });
+    return;
+  }
+  try {
+    await adminFirestore().collection('anonymous_sessions').doc(sessionId).set(
+      { convertedToUser: true, convertedUserId: uid, convertedAt: FieldValue.serverTimestamp() },
+      { merge: true },
+    );
+    res.json({ ok: true });
+  } catch {
+    res.json({ ok: false });
+  }
 });
 
 export default router;

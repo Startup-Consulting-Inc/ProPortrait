@@ -56,6 +56,8 @@ export function useAuth(): AuthState {
             firebaseUser.photoURL ?? undefined,
           );
           await loadProfile();
+          // Link any pre-login anonymous session to this user (fire-and-forget)
+          void fetch('/api/auth/link-session', { method: 'POST', credentials: 'include' });
         } catch {
           setProfile(null);
         }
