@@ -71,6 +71,8 @@ export default function ComparisonSlider({
         alt={beforeLabel}
         className="absolute inset-0 w-full h-full object-contain"
         draggable={false}
+        onContextMenu={e => e.preventDefault()}
+        onDragStart={e => e.preventDefault()}
         referrerPolicy="no-referrer"
       />
 
@@ -84,6 +86,8 @@ export default function ComparisonSlider({
           alt={afterLabel}
           className="absolute inset-0 w-full h-full object-contain"
           draggable={false}
+          onContextMenu={e => e.preventDefault()}
+          onDragStart={e => e.preventDefault()}
           referrerPolicy="no-referrer"
         />
       </div>

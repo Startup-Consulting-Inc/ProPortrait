@@ -26,6 +26,25 @@ import type { PortraitDefaults } from '../types/onboarding';
 
 const API_BASE = (import.meta.env.VITE_API_URL as string | undefined) ?? '';
 
+/** Tiled watermark overlay — prevents casual screenshot use of previews */
+function WatermarkOverlay() {
+  return (
+    <div
+      aria-hidden="true"
+      className="absolute inset-0 pointer-events-none select-none overflow-hidden"
+      style={{ zIndex: 5, opacity: 0.16,
+        display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gridTemplateRows: 'repeat(4, 1fr)' }}
+    >
+      {Array.from({ length: 12 }).map((_, i) => (
+        <span key={i} className="flex items-center justify-center text-slate-800 font-semibold whitespace-nowrap"
+          style={{ fontSize: '13px', transform: 'rotate(-30deg)', fontFamily: 'sans-serif' }}>
+          ProPortrait.ai
+        </span>
+      ))}
+    </div>
+  );
+}
+
 async function trackExportClient(platform: string) {
   try {
     const token = await getIdToken();
@@ -1392,9 +1411,11 @@ export default function PortraitGenerator({
                         />
                       </div>
                     ) : (
-                      <img src={getCurrentImage()} alt={`AI-generated ${selectedStyle} portrait, variation ${selectedResultIndex + 1} of ${generatedImages.length}`} className="max-h-full max-w-full object-contain shadow-lg rounded-lg" referrerPolicy="no-referrer" />
+                      <img src={getCurrentImage()} alt={`AI-generated ${selectedStyle} portrait, variation ${selectedResultIndex + 1} of ${generatedImages.length}`} className="max-h-full max-w-full object-contain shadow-lg rounded-lg" referrerPolicy="no-referrer"
+                        draggable={false} onContextMenu={e => e.preventDefault()} onDragStart={e => e.preventDefault()} />
                     )
                   )}
+                  {generatedImages.length > 0 && !compareMode && <WatermarkOverlay />}
 
                   {/* Compare Toggle */}
                   <button
@@ -1444,7 +1465,8 @@ export default function PortraitGenerator({
                         <button key={idx} onClick={() => { setSelectedResultIndex(idx); setCompareMode(false); capture('portrait_selected', { variantIndex: idx, style: selectedStyle }); }}
                           className={cn('aspect-[3/4] rounded-lg overflow-hidden border-2 transition-all',
                             selectedResultIndex === idx ? 'border-indigo-600 ring-2 ring-indigo-200' : 'border-slate-200 opacity-60 hover:opacity-100')}>
-                          <img src={img} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                          <img src={img} className="w-full h-full object-cover" referrerPolicy="no-referrer"
+                            draggable={false} onContextMenu={e => e.preventDefault()} onDragStart={e => e.preventDefault()} />
                         </button>
                       ))}
                     </div>
@@ -1460,7 +1482,8 @@ export default function PortraitGenerator({
                             title={`Step ${idx + 1}`}
                             className={cn('shrink-0 w-16 aspect-[3/4] rounded-md overflow-hidden border-2 transition-all',
                               historyStep[selectedResultIndex] === idx ? 'border-indigo-500 ring-1 ring-indigo-300' : 'border-slate-200 opacity-50 hover:opacity-80')}>
-                            <img src={img} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                            <img src={img} className="w-full h-full object-cover" referrerPolicy="no-referrer"
+                              draggable={false} onContextMenu={e => e.preventDefault()} onDragStart={e => e.preventDefault()} />
                           </button>
                         ))}
                       </div>
@@ -1736,19 +1759,9 @@ export default function PortraitGenerator({
                     )}
                     <img src={getCurrentImage()} alt="Export Preview" className="w-full h-full"
                       style={{ objectFit: exportMode === 'fill' ? 'cover' : 'contain', objectPosition: `${cropPosition.x}% ${cropPosition.y}%` }}
-                      referrerPolicy="no-referrer" />
-                    {/* No watermark — credit-based model */}
-                    {false && (
-                      <div className="absolute inset-0 pointer-events-none flex items-center justify-center overflow-hidden">
-                        <div className="transform -rotate-12 text-white/40 text-4xl font-bold select-none"
-                          style={{ 
-                            textShadow: '0 2px 4px rgba(0,0,0,0.3)',
-                            fontSize: 'clamp(2rem, 8vw, 4rem)'
-                          }}>
-                          ProPortrait.ai
-                        </div>
-                      </div>
-                    )}
+                      referrerPolicy="no-referrer"
+                      draggable={false} onContextMenu={e => e.preventDefault()} onDragStart={e => e.preventDefault()} />
+                    <WatermarkOverlay />
                   </div>
                 </div>
 
