@@ -30,6 +30,12 @@ jobs:
       - name: Build
         run: npm run build
 
+      - name: Install Playwright browsers
+        run: npx playwright install chromium --with-deps
+
+      - name: Prerender static HTML for SEO
+        run: npm run prerender
+
   secret-scan:
     name: Secret Scan
     runs-on: ubuntu-latest

@@ -8,7 +8,7 @@
     "dev:server": "tsx watch server/index.ts",
     "dev:all": "concurrently \"npm run dev\" \"npm run dev:server\"",
     "build": "vite build",
-    "postbuild": "tsx scripts/prerender.ts",
+    "prerender": "tsx scripts/prerender.ts",
     "preview": "vite preview",
     "clean": "rm -rf dist",
     "lint": "tsc --noEmit",
