@@ -90,26 +90,36 @@ async function prerender() {
       userAgent: 'Googlebot/2.1 (+http://www.google.com/bot.html)',
     });
 
+    // Block all external requests — Firebase, analytics, CDNs, etc. all make
+    // persistent connections that prevent the page from finishing. Only allow
+    // requests to localhost (our preview server).
+    await context.route('**/*', (route, request) => {
+      const url = request.url();
+      if (url.startsWith('http://localhost') || url.startsWith('http://127.0.0.1')) {
+        return route.continue();
+      }
+      return route.abort();
+    });
+
     for (const route of ROUTES) {
       const page = await context.newPage();
       const url = `${BASE_URL}${route}`;
       console.log(`  Rendering ${route}...`);
 
-      // Use 'domcontentloaded' — 'networkidle' hangs forever because Firebase
-      // keeps WebSocket connections open indefinitely.
-      await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 15000 });
-      // Give React a moment to render after DOM is ready
-      await page.waitForTimeout(1500);
+      try {
+        await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 15000 });
+        // Give React time to render now that external calls are blocked
+        await page.waitForTimeout(2000);
 
-      const html = await page.content();
-
-      const outputDir =
-        route === '/' ? DIST_DIR : path.join(DIST_DIR, route.slice(1));
-
-      fs.mkdirSync(outputDir, { recursive: true });
-      const outputPath = path.join(outputDir, 'index.html');
-      fs.writeFileSync(outputPath, html, 'utf8');
-      console.log(`  ✅ Saved ${outputPath}`);
+        const html = await page.content();
+        const outputDir = route === '/' ? DIST_DIR : path.join(DIST_DIR, route.slice(1));
+        fs.mkdirSync(outputDir, { recursive: true });
+        const outputPath = path.join(outputDir, 'index.html');
+        fs.writeFileSync(outputPath, html, 'utf8');
+        console.log(`  ✅ Saved ${outputPath}`);
+      } catch (err) {
+        console.warn(`  ⚠️  Skipped ${route}: ${(err as Error).message}`);
+      }
 
       await page.close();
     }
