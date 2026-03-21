@@ -70,10 +70,12 @@ async function prerender() {
   const root = path.resolve(__dirname, '..');
 
   // Start vite preview server in background
+  // detached: true creates a new process group so we can SIGKILL the whole
+  // tree (npx → node → vite) with process.kill(-pid) at the end.
   const server = spawn('npx', ['vite', 'preview', '--port', String(PORT), '--strictPort'], {
     cwd: root,
     stdio: 'pipe',
-    detached: false,
+    detached: true,
   });
 
   server.stderr?.on('data', (d: Buffer) => {
@@ -127,8 +129,13 @@ async function prerender() {
     await browser.close();
     console.log('✅ Prerender complete.');
   } finally {
-    server.kill();
+    // SIGKILL the preview server and its children; SIGTERM alone leaves the
+    // vite process running and keeps the Node event loop alive indefinitely.
+    try { process.kill(-server.pid!, 'SIGKILL'); } catch { server.kill('SIGKILL'); }
   }
+
+  // Force exit — child process handles would otherwise keep the process alive.
+  process.exit(0);
 }
 
 prerender().catch((err) => {
