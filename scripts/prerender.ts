@@ -95,8 +95,11 @@ async function prerender() {
       const url = `${BASE_URL}${route}`;
       console.log(`  Rendering ${route}...`);
 
-      await page.goto(url, { waitUntil: 'networkidle', timeout: 30000 });
-      await page.waitForTimeout(500);
+      // Use 'domcontentloaded' — 'networkidle' hangs forever because Firebase
+      // keeps WebSocket connections open indefinitely.
+      await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 15000 });
+      // Give React a moment to render after DOM is ready
+      await page.waitForTimeout(1500);
 
       const html = await page.content();
 
