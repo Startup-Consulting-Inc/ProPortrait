@@ -1,4 +1,6 @@
+import { useState } from 'react';
 import { Helmet } from 'react-helmet-async';
+import { ChevronDown, Check, X, Minus } from 'lucide-react';
 import AppFooter from './AppFooter';
 
 const pricingJsonLd = {
@@ -141,7 +143,64 @@ const faqs = [
   },
 ];
 
+type CellIcon = 'check' | 'x' | 'warn';
+type TableCell = { icon: CellIcon; label?: string };
+
+const tableRows: [string, TableCell, TableCell, TableCell][] = [
+  ['Free to generate',      { icon: 'check', label: 'Unlimited' }, { icon: 'x', label: 'No' },       { icon: 'x', label: 'No' }],
+  ['Subscription required', { icon: 'x', label: 'None' },          { icon: 'check', label: '~$29/mo' }, { icon: 'check', label: '~$35/mo' }],
+  ['Pay per download',      { icon: 'check', label: '$4.99–$9.99' },{ icon: 'x' },                   { icon: 'x' }],
+  ['Identity preservation', { icon: 'check', label: 'Granular locks' }, { icon: 'warn', label: 'Limited' }, { icon: 'warn', label: 'Limited' }],
+  ['Privacy (no training)', { icon: 'check' },                     { icon: 'warn', label: 'Unclear' }, { icon: 'warn', label: 'Unclear' }],
+  ['Platform-sized exports',{ icon: 'check', label: 'All platforms' }, { icon: 'check' },             { icon: 'warn', label: 'Limited' }],
+];
+
+function CellIcon({ icon, label }: TableCell) {
+  if (icon === 'check') {
+    return (
+      <span className="inline-flex items-center gap-1.5">
+        <Check className="w-4 h-4 text-emerald-600 shrink-0" />
+        {label && <span className="text-slate-700 font-medium">{label}</span>}
+      </span>
+    );
+  }
+  if (icon === 'x') {
+    return (
+      <span className="inline-flex items-center gap-1.5">
+        <X className="w-4 h-4 text-red-400 shrink-0" />
+        {label && <span className="text-slate-500">{label}</span>}
+      </span>
+    );
+  }
+  return (
+    <span className="inline-flex items-center gap-1.5">
+      <Minus className="w-4 h-4 text-slate-300 shrink-0" />
+      {label && <span className="text-slate-500">{label}</span>}
+    </span>
+  );
+}
+
+const socialProof = [
+  {
+    name: 'Sarah K.',
+    role: 'Software Engineer',
+    quote: 'Updated my LinkedIn headshot in 5 minutes. The identity lock actually worked — my skin tone and eye color are exactly right. Worth every cent.',
+  },
+  {
+    name: 'David C.',
+    role: 'Job Seeker',
+    quote: 'I was on a tight budget during my job search. Getting a quality headshot for $4.99 instead of $300 made a real difference.',
+  },
+  {
+    name: 'James R.',
+    role: 'Startup Founder',
+    quote: 'Used it for my entire founding team\'s headshots in an afternoon. Way more practical than booking a studio for 6 people.',
+  },
+];
+
 export default function PricingPage() {
+  const [openFaq, setOpenFaq] = useState<number | null>(null);
+
   return (
     <>
       <Helmet>
@@ -189,7 +248,7 @@ export default function PricingPage() {
           </div>
 
           {/* Pricing tiers */}
-          <div className="grid md:grid-cols-3 gap-6 mb-16">
+          <div className="grid md:grid-cols-3 gap-6 mb-12">
             {tiers.map((tier) => (
               <div
                 key={tier.name}
@@ -241,6 +300,19 @@ export default function PricingPage() {
             ))}
           </div>
 
+          {/* Social proof strip */}
+          <div className="grid sm:grid-cols-3 gap-4 mb-16">
+            {socialProof.map((t) => (
+              <div key={t.name} className="rounded-xl border border-slate-200 p-4">
+                <p className="text-sm italic text-slate-600 leading-relaxed mb-3">"{t.quote}"</p>
+                <div>
+                  <span className="font-semibold text-slate-800 text-sm">{t.name}</span>
+                  <span className="text-slate-400 text-xs ml-1.5">— {t.role}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+
           {/* Comparison table */}
           <div className="mb-16">
             <h2 className="text-2xl font-bold text-slate-900 mb-6 text-center">How we compare</h2>
@@ -255,19 +327,12 @@ export default function PricingPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {[
-                    ['Free to generate', '✅ Unlimited', '❌ No', '❌ No'],
-                    ['Subscription required', '❌ None', '✅ ~$29/mo', '✅ ~$35/mo'],
-                    ['Pay per download', '✅ $4.99–$9.99', '❌', '❌'],
-                    ['Identity preservation', '✅ Granular locks', '⚠️ Limited', '⚠️ Limited'],
-                    ['Privacy (no training)', '✅', '⚠️ Unclear', '⚠️ Unclear'],
-                    ['Platform-sized exports', '✅ All platforms', '✅', '⚠️ Limited'],
-                  ].map(([feature, pp, hp, aragon]) => (
+                  {tableRows.map(([feature, pp, hp, aragon]) => (
                     <tr key={feature} className="hover:bg-slate-50">
                       <td className="px-5 py-3.5 text-slate-700 font-medium">{feature}</td>
-                      <td className="px-5 py-3.5 text-center font-semibold text-slate-800">{pp}</td>
-                      <td className="px-5 py-3.5 text-center text-slate-500">{hp}</td>
-                      <td className="px-5 py-3.5 text-center text-slate-500">{aragon}</td>
+                      <td className="px-5 py-3.5 text-center"><CellIcon {...pp} /></td>
+                      <td className="px-5 py-3.5 text-center"><CellIcon {...hp} /></td>
+                      <td className="px-5 py-3.5 text-center"><CellIcon {...aragon} /></td>
                     </tr>
                   ))}
                 </tbody>
@@ -275,14 +340,29 @@ export default function PricingPage() {
             </div>
           </div>
 
-          {/* FAQ */}
+          {/* FAQ accordion */}
           <div className="mb-16">
             <h2 className="text-2xl font-bold text-slate-900 mb-8 text-center">Pricing FAQ</h2>
-            <div className="grid md:grid-cols-2 gap-5 max-w-3xl mx-auto">
-              {faqs.map((faq) => (
-                <div key={faq.q} className="rounded-xl border border-slate-200 p-5">
-                  <h3 className="font-semibold text-slate-900 mb-2">{faq.q}</h3>
-                  <p className="text-sm text-slate-600 leading-relaxed">{faq.a}</p>
+            <div className="max-w-3xl mx-auto rounded-2xl border border-slate-200 divide-y divide-slate-200">
+              {faqs.map((faq, i) => (
+                <div key={faq.q}>
+                  <button
+                    type="button"
+                    onClick={() => setOpenFaq(openFaq === i ? null : i)}
+                    className="w-full flex items-center justify-between px-6 py-5 text-left hover:bg-slate-50 transition-colors"
+                  >
+                    <span className="font-semibold text-slate-900 pr-4">{faq.q}</span>
+                    <ChevronDown
+                      className={`w-5 h-5 text-slate-400 shrink-0 transition-transform duration-200 ${
+                        openFaq === i ? 'rotate-180' : ''
+                      }`}
+                    />
+                  </button>
+                  {openFaq === i && (
+                    <div className="px-6 pb-5">
+                      <p className="text-sm text-slate-600 leading-relaxed">{faq.a}</p>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>

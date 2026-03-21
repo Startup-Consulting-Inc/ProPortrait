@@ -1,10 +1,20 @@
 import { Helmet } from 'react-helmet-async';
-import { getStylePage } from '../lib/styleData';
+import { getStylePage, stylePages } from '../lib/styleData';
 import AppFooter from './AppFooter';
 
 interface StylePageProps {
   styleId: string;
 }
+
+const heroBg: Record<string, string> = {
+  indigo:  'bg-gradient-to-br from-indigo-50 to-indigo-100 border-b border-indigo-200',
+  emerald: 'bg-gradient-to-br from-emerald-50 to-emerald-100 border-b border-emerald-200',
+  amber:   'bg-gradient-to-br from-amber-50 to-amber-100 border-b border-amber-200',
+  orange:  'bg-gradient-to-br from-orange-50 to-orange-100 border-b border-orange-200',
+  slate:   'bg-gradient-to-br from-slate-50 to-slate-100 border-b border-slate-200',
+  violet:  'bg-gradient-to-br from-violet-50 to-violet-100 border-b border-violet-200',
+  teal:    'bg-gradient-to-br from-teal-50 to-teal-100 border-b border-teal-200',
+};
 
 export default function StylePage({ styleId }: StylePageProps) {
   const style = getStylePage(styleId);
@@ -35,6 +45,9 @@ export default function StylePage({ styleId }: StylePageProps) {
     },
   };
 
+  const relatedStyles = stylePages.filter((s) => s.id !== style.id).slice(0, 3);
+  const heroBgClass = heroBg[style.color] ?? heroBg.indigo;
+
   return (
     <>
       <Helmet>
@@ -63,25 +76,25 @@ export default function StylePage({ styleId }: StylePageProps) {
           </a>
         </header>
 
-        <main className="flex-1 max-w-5xl mx-auto px-6 py-12 w-full">
-          {/* Breadcrumb */}
-          <nav aria-label="breadcrumb" className="text-sm text-slate-400 mb-8 flex items-center gap-2">
-            <a href="/" className="hover:text-slate-600">Home</a>
-            <span>›</span>
-            <span className="text-slate-600">Styles</span>
-            <span>›</span>
-            <span className="text-slate-800 font-medium">{style.name}</span>
-          </nav>
+        {/* Colored hero band */}
+        <div className={`${heroBgClass} px-6 py-14`}>
+          <div className="max-w-5xl mx-auto">
+            {/* Breadcrumb */}
+            <nav aria-label="breadcrumb" className="text-sm text-slate-400 mb-8 flex items-center gap-2">
+              <a href="/" className="hover:text-slate-600">Home</a>
+              <span>›</span>
+              <span className="text-slate-600">Styles</span>
+              <span>›</span>
+              <span className="text-slate-800 font-medium">{style.name}</span>
+            </nav>
 
-          {/* Hero */}
-          <div className="mb-14">
-            <span className="inline-block bg-indigo-50 text-indigo-600 text-sm font-semibold px-3 py-1 rounded-full mb-4">
+            <span className="inline-block bg-white/80 text-indigo-600 text-sm font-semibold px-3 py-1 rounded-full mb-4 border border-indigo-100">
               AI Portrait Style
             </span>
             <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight text-slate-900 mb-4 leading-tight">
               {style.heroHeading}
             </h1>
-            <p className="text-xl text-slate-500 max-w-2xl leading-relaxed mb-8">
+            <p className="text-xl text-slate-600 max-w-2xl leading-relaxed mb-8">
               {style.heroSubheading}
             </p>
 
@@ -100,7 +113,9 @@ export default function StylePage({ styleId }: StylePageProps) {
               </span>
             </div>
           </div>
+        </div>
 
+        <main className="flex-1 max-w-5xl mx-auto px-6 py-12 w-full">
           {/* Use cases + platforms */}
           <div className="grid sm:grid-cols-3 gap-6 mb-14">
             <div className="rounded-2xl border border-slate-200 p-5">
@@ -152,7 +167,7 @@ export default function StylePage({ styleId }: StylePageProps) {
           />
 
           {/* CTA */}
-          <div className="rounded-2xl bg-indigo-50 border border-indigo-100 p-8 text-center">
+          <div className="rounded-2xl bg-indigo-50 border border-indigo-100 p-8 text-center mb-14">
             <h2 className="text-xl font-bold text-slate-900 mb-2">
               Try the {style.name} style — free
             </h2>
@@ -165,6 +180,31 @@ export default function StylePage({ styleId }: StylePageProps) {
             >
               Create Your Portrait
             </a>
+          </div>
+
+          {/* Related styles */}
+          <div>
+            <h2 className="text-xl font-bold text-slate-900 mb-6">Explore Other Styles</h2>
+            <div className="grid sm:grid-cols-3 gap-4 overflow-x-auto">
+              {relatedStyles.map((s) => (
+                <a
+                  key={s.id}
+                  href={`/styles/${s.id}`}
+                  className="group block rounded-2xl border border-slate-200 bg-white hover:border-indigo-300 hover:shadow-md transition-all p-5"
+                >
+                  <span className="inline-block bg-indigo-50 text-indigo-600 text-xs font-bold px-2 py-0.5 rounded-full mb-3">
+                    AI Style
+                  </span>
+                  <h3 className="font-bold text-slate-900 mb-1 group-hover:text-indigo-700 transition-colors">
+                    {s.name}
+                  </h3>
+                  <p className="text-xs text-slate-500 leading-relaxed mb-3 line-clamp-2">{s.tagline}</p>
+                  <span className="text-xs font-semibold text-indigo-600 group-hover:underline">
+                    View Style →
+                  </span>
+                </a>
+              ))}
+            </div>
           </div>
         </main>
 

@@ -1,4 +1,5 @@
 import { Helmet } from 'react-helmet-async';
+import { ShieldCheck } from 'lucide-react';
 import AppFooter from './AppFooter';
 
 const jsonLd = {
@@ -189,7 +190,12 @@ export default function ComparisonPage() {
 
           {/* The identity accuracy section */}
           <div className="mb-14 rounded-2xl bg-amber-50 border border-amber-200 p-8">
-            <h2 className="text-xl font-bold text-slate-900 mb-3">The Hidden Issue: Identity Accuracy</h2>
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-9 h-9 rounded-xl bg-amber-100 border border-amber-200 flex items-center justify-center shrink-0">
+                <ShieldCheck className="w-5 h-5 text-amber-600" />
+              </div>
+              <h2 className="text-xl font-bold text-slate-900">The Hidden Issue: Identity Accuracy</h2>
+            </div>
             <p className="text-slate-700 leading-relaxed mb-4">
               The biggest quality variable in AI headshots isn't style or background — it's how accurately the AI preserves your face. Many tools subtly change your eye color, lighten or darken your skin tone, or smooth your features until the result looks like a more attractive stranger rather than you.
             </p>

@@ -252,7 +252,7 @@ export default function ContactPage() {
                 <form onSubmit={handleSubmit} className="space-y-5">
                   <div className="grid gap-5 sm:grid-cols-2">
                     <label className="block">
-                      <span className="text-sm font-medium text-slate-700">Full name</span>
+                      <span className="text-sm font-medium text-slate-700">Full name <span className="text-red-500">*</span></span>
                       <input
                         type="text"
                         name="name"
@@ -267,7 +267,7 @@ export default function ContactPage() {
                     </label>
 
                     <label className="block">
-                      <span className="text-sm font-medium text-slate-700">Email address</span>
+                      <span className="text-sm font-medium text-slate-700">Email address <span className="text-red-500">*</span></span>
                       <input
                         type="email"
                         name="email"
@@ -313,7 +313,7 @@ export default function ContactPage() {
                   </div>
 
                   <label className="block">
-                    <span className="text-sm font-medium text-slate-700">Message</span>
+                    <span className="text-sm font-medium text-slate-700">Message <span className="text-red-500">*</span></span>
                     <textarea
                       name="message"
                       value={form.message}
