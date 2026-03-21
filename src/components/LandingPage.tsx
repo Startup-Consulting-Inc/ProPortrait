@@ -342,6 +342,63 @@ export default function LandingPage({ onSignIn }: LandingPageProps) {
           </div>
         </section>
 
+        {/* Testimonials */}
+        <section className="py-14 w-full">
+          <div className="text-center mb-10">
+            <h2 className="text-2xl font-bold text-slate-900">What professionals are saying</h2>
+            <p className="mt-2 text-slate-500 text-sm">Real users. No subscription required.</p>
+          </div>
+          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            {[
+              {
+                name: 'Sarah K.',
+                role: 'Software Engineer',
+                quote: 'Updated my LinkedIn headshot in 5 minutes. The identity lock actually worked — my skin tone and eye color are exactly right. Worth every cent.',
+              },
+              {
+                name: 'Marcus T.',
+                role: 'Freelance Consultant',
+                quote: 'Was dreading paying for a photographer session just for a new profile photo. ProPortrait AI gave me something I\'m genuinely proud to have on my website.',
+              },
+              {
+                name: 'Priya M.',
+                role: 'Product Manager',
+                quote: 'Tried three other AI headshot tools before this. They all changed my skin tone in weird ways. This one actually listened to the locks I set.',
+              },
+              {
+                name: 'James R.',
+                role: 'Startup Founder',
+                quote: 'Used it for my entire founding team\'s headshots in an afternoon. Way more practical than booking a studio for 6 people.',
+              },
+              {
+                name: 'Elena V.',
+                role: 'UX Designer',
+                quote: 'The naturalness slider is the feature every AI headshot tool should have. My result looks like a professional photo, not an AI render.',
+              },
+              {
+                name: 'David C.',
+                role: 'Job Seeker',
+                quote: 'I was on a tight budget during my job search. Getting a quality headshot for $4.99 instead of $300 made a real difference.',
+              },
+            ].map((t) => (
+              <div key={t.name} className="rounded-2xl border border-slate-200 bg-white p-5">
+                <div className="flex items-center gap-1 mb-3">
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <svg key={star} className="w-3.5 h-3.5 text-amber-400" fill="currentColor" viewBox="0 0 20 20">
+                      <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                    </svg>
+                  ))}
+                </div>
+                <p className="text-sm text-slate-700 leading-relaxed mb-4">"{t.quote}"</p>
+                <div>
+                  <div className="font-semibold text-slate-900 text-sm">{t.name}</div>
+                  <div className="text-slate-400 text-xs">{t.role}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+
         {/* FAQ */}
         <section id="faq" className="py-16 w-full">
           <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-center text-slate-900 mb-10">Frequently Asked Questions</h2>

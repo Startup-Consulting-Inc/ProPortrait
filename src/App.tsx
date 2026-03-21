@@ -8,6 +8,11 @@ import PortraitGenerator from './components/PortraitGenerator';
 import ContactPage from './components/ContactPage';
 import PrivacyPage from './components/PrivacyPage';
 import TermsPage from './components/TermsPage';
+import BlogPage from './components/BlogPage';
+import BlogPostPage from './components/BlogPostPage';
+import StylePage from './components/StylePage';
+import PricingPage from './components/PricingPage';
+import ComparisonPage from './components/ComparisonPage';
 import CookieConsent from './components/CookieConsent';
 import ThemeToggle from './components/ThemeToggle';
 import LandingPage from './components/LandingPage';
@@ -174,6 +179,21 @@ function AppContent() {
   if (path === '/contact') return <ContactPage />;
   if (path === '/privacy') return <PrivacyPage />;
   if (path === '/terms') return <TermsPage />;
+  if (path === '/blog') return <BlogPage />;
+  if (path === '/pricing') return <PricingPage />;
+  if (path === '/comparison') return <ComparisonPage />;
+
+  // Blog posts: /blog/:slug
+  if (path.startsWith('/blog/')) {
+    const slug = path.slice('/blog/'.length);
+    return <BlogPostPage slug={slug} />;
+  }
+
+  // Style landing pages: /styles/:id
+  if (path.startsWith('/styles/')) {
+    const styleId = path.slice('/styles/'.length);
+    return <StylePage styleId={styleId} />;
+  }
 
   // Landing page — public
   if (path !== '/create' && path !== '/admin' && path !== '/app') {

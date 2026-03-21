@@ -1,9 +1,16 @@
+import { Helmet } from 'react-helmet-async';
 import { useAuthContext } from '../contexts/AuthContext';
 import AppFooter from './AppFooter';
 
 export default function PrivacyPage() {
   const { user } = useAuthContext();
   return (
+    <>
+    <Helmet>
+      <title>Privacy Policy — ProPortrait AI</title>
+      <meta name="description" content="ProPortrait AI is privacy-first. Learn how we handle your photos: processed and deleted immediately, never stored after your session ends." />
+      <link rel="canonical" href="https://portrait.ai-biz.app/privacy" />
+    </Helmet>
     <div className="min-h-screen bg-white font-sans text-slate-900 flex flex-col">
       <div className="flex-1 max-w-3xl mx-auto px-6 py-12 w-full">
         <a href={user ? '/create' : '/'} className="inline-flex items-center gap-2 text-indigo-600 hover:text-indigo-800 text-sm mb-8">
@@ -102,5 +109,6 @@ export default function PrivacyPage() {
       </div>
       <AppFooter />
     </div>
+    </>
   );
 }

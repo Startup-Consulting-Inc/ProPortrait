@@ -1,4 +1,5 @@
 import { useState, type ChangeEvent, type FormEvent } from 'react';
+import { Helmet } from 'react-helmet-async';
 import AppFooter from './AppFooter';
 import { CheckCircle2, Clock3, LifeBuoy, Mail, SendHorizonal } from 'lucide-react';
 import { useAuthContext } from '../contexts/AuthContext';
@@ -81,6 +82,12 @@ export default function ContactPage() {
   };
 
   return (
+    <>
+    <Helmet>
+      <title>Contact Us — ProPortrait AI</title>
+      <meta name="description" content="Get in touch with the ProPortrait AI team. We're here to help with product questions, billing, partnerships, and feature requests." />
+      <link rel="canonical" href="https://portrait.ai-biz.app/contact" />
+    </Helmet>
     <div className="min-h-screen bg-white font-sans text-slate-900 flex flex-col">
       <header className="flex items-center justify-between px-6 py-4 max-w-6xl mx-auto w-full">
         <a href={user ? '/create' : '/'} className="flex items-center gap-2">
@@ -357,5 +364,6 @@ export default function ContactPage() {
 
       <AppFooter />
     </div>
+    </>
   );
 }

@@ -1,0 +1,83 @@
+# ProPortrait AI
+
+> AI-powered professional headshot generator. Free to try; pay only when you download.
+
+## What We Do
+
+ProPortrait AI transforms any photo into a studio-quality professional portrait using
+identity-locked AI. We preserve your natural features — eye color, skin tone, facial
+structure, and hair — while upgrading quality to professional standards.
+
+## Key Differentiators
+
+- Free to generate: Try before you buy — no upfront payment required
+- No subscription: Pay per download, no recurring fees
+- Identity preservation: AI locks your core features (eye color, skin tone, hair), only enhances quality
+- Platform exports: LinkedIn (800×800), GitHub (500×500), Resume (600×800), Twitter, Instagram
+- Privacy-first: Photos are deleted after processing; no data retained after session ends
+
+## Target Use Cases
+
+- LinkedIn profile photos
+- Corporate team headshots
+- GitHub and social media avatars
+- Resume and portfolio portraits
+- Dating app photos
+- Speaker and conference bios
+
+## Styles Available
+
+1. Editorial Professional — LinkedIn, corporate bios, executive headshots
+2. Environmental Portrait — Tech founders, startup culture, creatives
+3. Candid & Real — Dating apps, social media, authentic feel
+4. Vintage 35mm — Creative portfolios, emotional storytelling
+5. Black & White — Timeless, authoritative presence
+6. Cyberpunk Neon — Gamers, Web3, tech-forward branding
+7. Watercolor — Wellness brands, soft personal avatars
+8. LinkedIn Optimized — Specifically tuned for LinkedIn profile standards
+9. Resume/CV — Professional, neutral background, document-ready
+10. Speaker — Stage-ready, commanding presence
+11. Dating — Natural, approachable, warm
+12. Academic — Clean, scholarly, professional
+
+## Identity Preservation Technology
+
+ProPortrait AI uses granular identity locks that prevent the AI from changing:
+- Eye color
+- Skin tone
+- Hair length and texture
+- Facial structure
+- Glasses (preserve or remove)
+
+A naturalness slider (0-100) prevents over-smoothing and the "botox look" that other AI
+headshot tools produce.
+
+## How It Works
+
+1. Upload your photo (JPG, PNG, or WebP, up to 10MB)
+2. Choose a style and set identity locks
+3. Generate — free preview in seconds
+4. Download in platform-optimized sizes when satisfied
+
+## Pricing
+
+- Free to generate and preview (no credit card required)
+- Pay only when downloading a final image
+- No subscription required
+- One-time session passes and Pro plans available
+
+## Comparison to Competitors
+
+Unlike HeadshotPro and Aragon AI:
+- No subscription required — pay per download
+- Free to try before purchasing
+- Stronger identity preservation (no unexpected hair/eye/skin changes)
+- Privacy-first architecture — images not stored after generation
+
+## Website
+
+https://portrait.ai-biz.app
+
+## Privacy Policy
+
+https://portrait.ai-biz.app/privacy
