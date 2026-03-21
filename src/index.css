@@ -2,3 +2,52 @@
 @plugin "@tailwindcss/typography";
 
 @custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+/* ─── Article / blog prose fallback ────────────────────────────────────────
+   These direct rules guarantee spacing even when the typography plugin's
+   :where() selectors are outrun by Tailwind's preflight reset in dev mode. */
+.prose p {
+  margin-top: 1.25em;
+  margin-bottom: 1.25em;
+  line-height: 1.75;
+}
+.prose h2 {
+  font-size: 1.5em;
+  font-weight: 700;
+  line-height: 1.333;
+  margin-top: 2em;
+  margin-bottom: 0.75em;
+}
+.prose h3 {
+  font-size: 1.25em;
+  font-weight: 600;
+  line-height: 1.5;
+  margin-top: 1.5em;
+  margin-bottom: 0.5em;
+}
+.prose ul {
+  list-style-type: disc;
+  padding-left: 1.625em;
+  margin-top: 1em;
+  margin-bottom: 1em;
+}
+.prose ol {
+  list-style-type: decimal;
+  padding-left: 1.625em;
+  margin-top: 1em;
+  margin-bottom: 1em;
+}
+.prose li {
+  margin-top: 0.375em;
+  margin-bottom: 0.375em;
+}
+.prose strong {
+  font-weight: 700;
+}
+.prose a {
+  color: #4f46e5;
+  text-decoration: none;
+}
+.prose a:hover {
+  text-decoration: underline;
+}
