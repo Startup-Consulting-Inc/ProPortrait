@@ -77,7 +77,7 @@ export default function BlogPostPage({ slug }: BlogPostPageProps) {
           </nav>
         </header>
 
-        <main className="flex-1 max-w-2xl mx-auto px-6 py-12 w-full">
+        <main className="flex-1 max-w-3xl mx-auto px-6 py-12 w-full">
           {/* Breadcrumb */}
           <nav aria-label="breadcrumb" className="text-sm text-slate-400 mb-8 flex items-center gap-2">
             <a href="/" className="hover:text-slate-600">Home</a>
@@ -88,7 +88,7 @@ export default function BlogPostPage({ slug }: BlogPostPageProps) {
           </nav>
 
           {/* Header */}
-          <div className="mb-8">
+          <div className="mb-8 border-b border-slate-100 pb-8">
             <div className="flex items-center gap-2 text-xs text-slate-400 mb-4">
               <span className="bg-indigo-50 text-indigo-600 font-semibold px-2 py-0.5 rounded-full">
                 {post.category}
@@ -107,7 +107,7 @@ export default function BlogPostPage({ slug }: BlogPostPageProps) {
           </div>
 
           {/* Tags */}
-          <div className="flex flex-wrap gap-2 mb-10">
+          <div className="flex flex-wrap gap-2 mb-10 border-b border-slate-100 pb-8">
             {post.tags.map((tag) => (
               <span key={tag} className="text-xs bg-slate-100 text-slate-600 px-2.5 py-1 rounded-full">
                 {tag}
@@ -117,16 +117,21 @@ export default function BlogPostPage({ slug }: BlogPostPageProps) {
 
           {/* Content */}
           <article
-            className="prose prose-slate prose-lg max-w-none
-              prose-headings:font-bold prose-headings:tracking-tight
-              prose-h2:text-2xl prose-h2:mt-10 prose-h2:mb-4
+            className="
+              prose prose-slate prose-lg max-w-none
+              prose-headings:font-bold prose-headings:tracking-tight prose-headings:text-slate-900
+              prose-h2:text-2xl prose-h2:mt-12 prose-h2:mb-4 prose-h2:pb-2 prose-h2:border-b prose-h2:border-slate-100
               prose-h3:text-xl prose-h3:mt-8 prose-h3:mb-3
-              prose-p:text-slate-700 prose-p:leading-relaxed
-              prose-ul:text-slate-700 prose-li:my-1
-              prose-a:text-indigo-600 prose-a:no-underline hover:prose-a:underline
-              prose-strong:text-slate-900
-              prose-table:text-sm prose-th:bg-slate-50 prose-th:text-slate-700
-              prose-td:text-slate-600"
+              prose-p:text-slate-700 prose-p:leading-relaxed prose-p:mb-5
+              prose-ul:my-4 prose-ul:text-slate-700 prose-li:my-2
+              prose-ol:my-4 prose-ol:text-slate-700
+              prose-a:text-indigo-600 prose-a:no-underline hover:prose-a:underline prose-a:font-medium
+              prose-strong:text-slate-900 prose-strong:font-bold
+              prose-blockquote:border-l-4 prose-blockquote:border-indigo-300 prose-blockquote:bg-indigo-50 prose-blockquote:rounded-r-xl prose-blockquote:py-1
+              prose-table:text-sm prose-th:bg-slate-50 prose-th:text-slate-700 prose-th:font-semibold
+              prose-td:text-slate-600 prose-td:align-top
+              prose-hr:border-slate-200 prose-hr:my-10
+            "
             dangerouslySetInnerHTML={{ __html: post.content }}
           />
 

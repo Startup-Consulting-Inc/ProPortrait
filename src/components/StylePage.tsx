@@ -155,14 +155,19 @@ export default function StylePage({ styleId }: StylePageProps) {
 
           {/* Article content */}
           <article
-            className="prose prose-slate prose-lg max-w-none mb-14
-              prose-headings:font-bold prose-headings:tracking-tight
-              prose-h2:text-2xl prose-h2:mt-10 prose-h2:mb-4
+            className="
+              prose prose-slate prose-lg max-w-none mb-14
+              prose-headings:font-bold prose-headings:tracking-tight prose-headings:text-slate-900
+              prose-h2:text-2xl prose-h2:mt-12 prose-h2:mb-4 prose-h2:pb-2 prose-h2:border-b prose-h2:border-slate-100
               prose-h3:text-xl prose-h3:mt-8 prose-h3:mb-3
-              prose-p:text-slate-700 prose-p:leading-relaxed
-              prose-ul:text-slate-700 prose-li:my-1
-              prose-a:text-indigo-600 prose-a:no-underline hover:prose-a:underline
-              prose-strong:text-slate-900"
+              prose-p:text-slate-700 prose-p:leading-relaxed prose-p:mb-5
+              prose-ul:my-4 prose-ul:text-slate-700 prose-li:my-2
+              prose-ol:my-4 prose-ol:text-slate-700
+              prose-a:text-indigo-600 prose-a:no-underline hover:prose-a:underline prose-a:font-medium
+              prose-strong:text-slate-900 prose-strong:font-bold
+              prose-table:text-sm prose-th:bg-slate-50 prose-th:text-slate-700 prose-th:font-semibold
+              prose-td:text-slate-600
+            "
             dangerouslySetInnerHTML={{ __html: style.content }}
           />
 
