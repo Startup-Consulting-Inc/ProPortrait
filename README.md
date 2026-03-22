@@ -60,11 +60,23 @@ Browser (React SPA) → Firebase Hosting
               │
               ├─→ Google Gemini API   (image generation & editing)
               ├─→ Firebase Auth       (email/password + Google OAuth)
-              ├─→ Firestore           (user profiles, saved portraits, credits)
-              ├─→ Cloudflare R2       (portrait storage, 7-day signed URLs)
+              ├─→ Firestore           (user profiles, saved portraits, credits,
+              │                        events, anonymous sessions, settings history)
+              ├─→ Cloudflare R2       (portrait storage, signed URLs)
               ├─→ Stripe              (one-time checkout, webhooks)
+              ├─→ PostHog             (client + server-side dual-fire analytics)
               └─→ Resend              (email capture)
 ```
+
+### Firestore Collections
+
+| Collection | Purpose |
+|---|---|
+| `users` | User profiles, credits, onboarding preferences, admin flag |
+| `portraits` | Saved portrait metadata + R2 keys |
+| `events` | Full event log — all users and anonymous sessions |
+| `anonymous_sessions` | Per-session aggregates for unauthenticated users (generations, exports, etc.) |
+| `settings_history` | Style settings snapshots per generation (for analytics + abandoned-session recovery) |
 
 In dev, Vite proxies `/api/*` to `localhost:3001`. In production, the frontend calls `VITE_API_URL` (Cloud Run) directly.
 
@@ -81,6 +93,8 @@ In dev, Vite proxies `/api/*` to `localhost:3001`. In production, the frontend c
 | `/privacy`, `/terms` | Public |
 
 Unauthenticated users hitting `/app` or `/admin` are shown the **AuthModal** (Google OAuth or email/password). The admin account (`jsong@koreatous.com`) is seeded as `isAdmin: true` on first login server-side.
+
+On sign-in, any pre-login anonymous session is automatically linked to the new user account via `POST /api/auth/link-session` (fire-and-forget). This marks the `anonymous_sessions` document as converted so usage history is preserved.
 
 ---
 
@@ -272,7 +286,7 @@ src/
 │   ├── user.ts                    # User API with Bearer token (profile, billing portal)
 │   ├── onboarding.ts              # Onboarding API (save preferences)
 │   ├── portraits.ts               # Saved portraits API
-│   └── analytics.ts               # PostHog analytics tracking
+│   └── analytics.ts               # Dual-fire analytics: PostHog + /api/events/track; step helpers
 ├── lib/
 │   ├── platformPresets.ts         # Platform export configs
 │   └── utils.ts                   # cn() Tailwind utility
@@ -286,7 +300,8 @@ server/
 │   ├── users.ts                   # GET|PATCH|DELETE /api/users/me + download credits
 │   ├── payments.ts                # Stripe one-time checkout, webhook
 │   ├── admin.ts                   # Admin endpoints (users, stats, suspend, delete)
-│   ├── auth.ts                    # GET /api/auth/me
+│   ├── auth.ts                    # GET /api/auth/me; POST /api/auth/link-session
+│   ├── events.ts                  # POST /api/events/track; POST|GET /api/settings/snapshot|last
 │   ├── contact.ts                 # POST /api/contact
 │   └── email.ts                   # POST /api/email/capture
 ├── middleware/
@@ -379,7 +394,7 @@ For local Firebase Admin SDK: run `gcloud auth application-default login` (ADC).
 | Storage | Cloudflare R2 (S3-compatible) |
 | Payments | Stripe (one-time checkout, webhooks) |
 | Email | Resend |
-| Analytics | PostHog |
+| Analytics | PostHog (client + server dual-fire; anonymous + registered) |
 | Error tracking | Sentry |
 | Image processing | Sharp (server-side compression) |
 | Canvas export | Native browser Canvas API |
@@ -390,12 +405,15 @@ For local Firebase Admin SDK: run `gcloud auth application-default login` (ADC).
 
 ## Privacy
 
-Photos are processed by Google Gemini via the backend. Portraits are stored in Cloudflare R2 with 7-day signed URLs. No images are retained beyond that window. Users see a dismissible privacy notice on the upload screen before any photo is submitted.
+Photos are processed by Google Gemini via the backend. Portraits are stored in Cloudflare R2 with permanent signed URLs (access links regenerated on each request). Users see a dismissible privacy notice on the upload screen before any photo is submitted.
 
 User data collected:
 - Email, display name, profile photo (Firebase Auth)
-- Usage statistics (generation count, style preferences)
+- Usage statistics (generation count, style preferences, step navigation)
 - Onboarding preferences (purpose, industry, vibe) — used to personalize portrait settings
-- Saved portraits (stored permanently in Cloudflare R2; access links are fresh 7-day signed URLs regenerated on each request)
+- Saved portraits (stored permanently in Cloudflare R2)
+- Style settings snapshots per generation (`settings_history` collection)
+
+**Anonymous user tracking:** Unauthenticated visitors are tracked via a UUID session cookie (`pp_session`). Usage aggregates (generations, edits, uploads, exports, steps reached) are stored in the `anonymous_sessions` Firestore collection. Individual events go to the `events` collection. When an anonymous user signs up, their session is linked to their new account (`convertedToUser: true`).
 
 Users can delete their account and all associated data from the Profile → Account settings.

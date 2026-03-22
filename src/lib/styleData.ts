@@ -137,13 +137,17 @@ export const stylePages: StylePageData[] = [
     platformsRecommended: ['Instagram', 'Twitter/X', 'Dating apps', 'Facebook', 'Community platforms'],
     industries: ['Any', 'Wellness', 'Education', 'Non-profit', 'Hospitality'],
     content: `
-<p>The most common complaint about AI portrait tools isn't bad quality — it's that the results look too perfect. Over-smoothed skin, impossibly even lighting, and a composed stillness that reads as artificial rather than professional. The Candid & Real style in ProPortrait AI is designed to counteract exactly this.</p>
+<p>The most common complaint about AI portrait tools isn't bad quality — it's that the results look too perfect. Over-smoothed skin, impossibly even lighting, and a composed stillness that reads as artificial rather than professional. The Candid &amp; Real style in ProPortrait AI is designed to counteract exactly this.</p>
 
 <h2>What "Candid" Means in an AI Portrait</h2>
 
 <p>Candid portraiture — in traditional photography — means capturing someone in a natural moment rather than a posed one. The AI version of this aesthetic uses slightly warmer, more naturalistic lighting, a slightly less formal framing, and skin rendering that preserves texture rather than smoothing it away. The result looks like a very good casual photo taken with good equipment by someone who knows what they're doing — not a studio portrait.</p>
 
 <p>This is specifically useful for contexts where looking too corporate or too polished would create distance. Dating apps. Social media profiles where you want to seem approachable. Community forums. Blog author photos where warmth matters more than authority.</p>
+
+<h2>Identity Preservation</h2>
+
+<p>One of the risks with "candid" AI portraits is that the naturalizing process subtly alters your features — softening a strong jawline, shifting your eye color toward a warmer tone, or changing your hair in small ways that add up to someone who looks almost but not quite like you. ProPortrait AI's identity lock controls prevent this. Lock your skin tone, eye color, hair length, and hair texture individually. The AI preserves what makes you recognizable while generating the warm, natural aesthetic around it.</p>
 
 <h2>The Naturalness Slider Matters Here</h2>
 
@@ -159,11 +163,28 @@ export const stylePages: StylePageData[] = [
   <li><strong>Non-profit and volunteer work:</strong> Human connection matters more than polished authority in most mission-driven contexts.</li>
 </ul>
 
-<h2>Expression and Framing</h2>
+<h2>Platform Sizes Included</h2>
 
-<p>The candid style supports the widest range of expressions. A genuine smile reads best here — not the composed slight smile of a corporate headshot, but an actual warm expression. Slightly off-center framing (your face not perfectly centered) can enhance the candid feel. A slight head tilt also works well.</p>
+<p>When you download with the "All Platforms" option ($9.99), your candid portrait is delivered at the sizes that matter most for social and casual-use contexts:</p>
+<ul>
+  <li><strong>Instagram profile:</strong> 320×320px (Instagram's display size) and 1080×1080px (upload quality)</li>
+  <li><strong>Twitter/X:</strong> 400×400px (the recommended profile photo size)</li>
+  <li><strong>Dating apps:</strong> 1000×1000px square (works across Hinge, Bumble, and Tinder)</li>
+  <li><strong>Facebook:</strong> 720×720px (Facebook's optimal profile size)</li>
+  <li><strong>Community / forum avatars:</strong> 256×256px (universal avatar size)</li>
+</ul>
 
-<p>Source photos for this style work best when they have natural light and a relaxed expression. The AI can generate the candid aesthetic from a formal photo, but starting from a relaxed source makes the output more convincing.</p>
+<h2>Tips for Best Results</h2>
+
+<p>The candid style produces its most natural-looking results when:</p>
+<ul>
+  <li>Your source photo is taken in natural light — window light, open shade, or golden hour</li>
+  <li>You have a relaxed, genuine expression rather than a composed professional pose</li>
+  <li>The photo is slightly casual in framing — a small head tilt or slight off-center crop works well</li>
+  <li>You avoid heavily filtered or color-graded source photos, which can confuse the AI's naturalistic rendering</li>
+</ul>
+
+<p>Set the naturalness slider to 75–80% for the best balance of warmth and quality. Going higher (85–100%) gives a more documentary feel — useful for dating app photos where raw authenticity is the goal. Going lower (below 60%) starts to add the polished quality that this style specifically avoids.</p>
     `.trim(),
   },
 
@@ -188,6 +209,10 @@ export const stylePages: StylePageData[] = [
 
 <p>ProPortrait AI's vintage style replicates this through its AI rendering — not by applying a filter to a digital photo, but by generating the image with these aesthetic qualities built in. The result is a cohesive vintage look rather than a filtered digital photo.</p>
 
+<h2>Identity Preservation</h2>
+
+<p>The warm amber grading that defines vintage photography is one of the places where skin tone drift happens most often in AI portraits — the AI can shift your skin tone to match the period palette in ways that feel subtle but make the portrait look less like you. ProPortrait AI's skin tone lock is specifically designed to prevent this. Lock your skin tone, hair color, and eye color before generating. The vintage color grade wraps around your real features rather than replacing them.</p>
+
 <h2>Who Benefits Most</h2>
 
 <ul>
@@ -202,9 +227,28 @@ export const stylePages: StylePageData[] = [
 
 <p>The vintage style excels on Instagram, personal websites, Substack headers, and creative portfolio sites. It generally doesn't work well for corporate LinkedIn use, formal executive bios, or any context where "professional" means "contemporary and polished." That's not a weakness — it's a feature. This style is for contexts where standing out matters more than fitting in.</p>
 
-<h2>Combining with Identity Locks</h2>
+<h2>Platform Sizes Included</h2>
 
-<p>The warm color grading in vintage portraits can sometimes affect the apparent skin tone — this is where ProPortrait AI's skin tone lock is particularly useful. Lock your skin tone before generating to ensure the vintage color grade enhances rather than alters your natural complexion.</p>
+<p>When you download with the "All Platforms" option ($9.99), your vintage portrait is delivered at the sizes that creative and social platforms require:</p>
+<ul>
+  <li><strong>Instagram profile:</strong> 320×320px (display) and 1080×1080px (upload quality)</li>
+  <li><strong>Personal website / portfolio:</strong> 800×800px and 1200×1200px for high-DPI displays</li>
+  <li><strong>Substack / blog header:</strong> 1500×500px (recommended Substack profile banner crop)</li>
+  <li><strong>Behance / Dribbble:</strong> 800×800px (standard portfolio avatar size)</li>
+  <li><strong>Print / press use:</strong> 2048×2048px HD for book jackets, editorial features, or print media</li>
+</ul>
+
+<h2>Tips for Best Results</h2>
+
+<p>The vintage style produces its richest film-like quality with:</p>
+<ul>
+  <li>A source photo with warm or neutral lighting — harsh cool-toned LED light can fight the warm grading</li>
+  <li>A front-facing or classic three-quarter angle (the same angles that 35mm portrait photographers favored)</li>
+  <li>A relaxed or naturally expressive look — slight smile, thoughtful expression, or looking slightly off-camera all work well</li>
+  <li>Avoid heavily color-graded source photos, which can create unpredictable interactions with the vintage rendering</li>
+</ul>
+
+<p>Set the naturalness slider to 65–75% for the ideal balance of vintage grain and portrait clarity. Higher settings (80+) increase the film grain and texture, leaning into a more documentary 35mm feel. Lower settings (below 55%) reduce grain and produce a cleaner vintage look closer to medium-format film than grainy 35mm.</p>
     `.trim(),
   },
 
