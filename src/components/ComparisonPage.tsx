@@ -20,7 +20,7 @@ const jsonLd = {
 const rows = [
   { feature: 'Cost', ai: '$0 to try, $4.99–$9.99 to download', photo: '$200–$600 per session' },
   { feature: 'Turnaround', ai: '30 seconds', photo: '1–2 weeks (booking + delivery)' },
-  { feature: 'Style options', ai: '12+ styles, switch instantly', photo: '1 session = 1–2 looks' },
+  { feature: 'Style options', ai: '16 styles, switch instantly', photo: '1 session = 1–2 looks' },
   { feature: 'Revisions', ai: 'Unlimited, free', photo: 'Reshoots cost extra' },
   { feature: 'Identity control', ai: 'Granular locks (skin tone, eyes, hair)', photo: 'Natural (photographer captures you)' },
   { feature: 'Privacy', ai: 'Photos deleted after session', photo: 'Stored by photographer' },

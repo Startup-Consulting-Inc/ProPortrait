@@ -75,7 +75,7 @@ const tiers = [
     ctaPrimary: false,
     features: [
       'Unlimited portrait generations',
-      'All 12+ styles available',
+      'All 16 styles available',
       'Full editing suite (background, lighting, expression)',
       'Identity locks (eye color, skin tone, hair)',
       'Naturalness slider',

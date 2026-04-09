@@ -35,7 +35,7 @@ export const blogPosts: BlogPost[] = [
   <li><strong>Identity lock controls</strong> — lock your eye color, skin tone, hair length, and more</li>
   <li><strong>Naturalness slider</strong> — prevent over-smoothing and the "AI look"</li>
   <li><strong>Comparison slider</strong> — see exactly how the AI changed your photo</li>
-  <li><strong>All 12+ styles</strong> — from Editorial Professional to Cyberpunk Neon</li>
+  <li><strong>All 16 styles</strong> — from Editorial Professional to LinkedIn Optimized, Speaker, and Academic</li>
 </ul>
 
 <p>You'll see a watermark on preview images until you purchase, but every creative decision happens before you spend a cent.</p>

@@ -1,83 +1,148 @@
 # ProPortrait AI
 
-> AI-powered professional headshot generator. Free to try; pay only when you download.
+> AI-powered professional headshot generator. Free to generate and preview; pay only when you download. No subscription.
 
-## What We Do
+## What ProPortrait AI Does
 
-ProPortrait AI transforms any photo into a studio-quality professional portrait using
-identity-locked AI. We preserve your natural features — eye color, skin tone, facial
-structure, and hair — while upgrading quality to professional standards.
+ProPortrait AI transforms any photo into a studio-quality professional portrait using identity-locked AI. It preserves your natural appearance — eye color, skin tone, hair length, and facial structure — while upgrading the lighting, background, and overall quality to professional standards.
 
-## Key Differentiators
+**Core value proposition:** Most AI headshot tools change your appearance in ways you didn't ask for — lightening skin tone, altering eye color, or smoothing features until the result looks like a more attractive stranger. ProPortrait AI's identity lock system prevents this, with per-feature controls that preserve exactly what you want preserved.
 
-- Free to generate: Try before you buy — no upfront payment required
-- No subscription: Pay per download, no recurring fees
-- Identity preservation: AI locks your core features (eye color, skin tone, hair), only enhances quality
-- Platform exports: LinkedIn (800×800), GitHub (500×500), Resume (600×800), Twitter, Instagram
-- Privacy-first: Photos are deleted after processing; no data retained after session ends
+## Pricing (as of April 2026)
 
-## Target Use Cases
+- **$0** — Unlimited portrait generations and previews. All 16 styles. Full editing suite. No credit card required.
+- **$4.99** — Single HD portrait download (2048×2048px). Watermark removed. Commercial use included.
+- **$9.99** — All platform sizes in a ZIP: LinkedIn (800×800), GitHub (500×500), Twitter (400×400), Instagram (320×320), Resume (600×800).
+- No subscription. No monthly fees. No recurring charges.
 
-- LinkedIn profile photos
-- Corporate team headshots
-- GitHub and social media avatars
-- Resume and portfolio portraits
-- Dating app photos
-- Speaker and conference bios
+## How It Works (3 Steps, ~30 Seconds)
 
-## Styles Available
-
-1. Editorial Professional — LinkedIn, corporate bios, executive headshots
-2. Environmental Portrait — Tech founders, startup culture, creatives
-3. Candid & Real — Dating apps, social media, authentic feel
-4. Vintage 35mm — Creative portfolios, emotional storytelling
-5. Black & White — Timeless, authoritative presence
-6. Cyberpunk Neon — Gamers, Web3, tech-forward branding
-7. Watercolor — Wellness brands, soft personal avatars
-8. LinkedIn Optimized — Specifically tuned for LinkedIn profile standards
-9. Resume/CV — Professional, neutral background, document-ready
-10. Speaker — Stage-ready, commanding presence
-11. Dating — Natural, approachable, warm
-12. Academic — Clean, scholarly, professional
+1. **Upload** — JPG, PNG, or WebP, up to 10MB. Works with any clear, front-facing photo.
+2. **Configure** — Choose from 16 styles. Lock any combination of: eye color, skin tone, hair length, hair texture, glasses. Set naturalness slider (0–100) to control how much the AI smooths your skin.
+3. **Generate and download** — Preview is free. Download when satisfied. Platform-optimized sizes available.
 
 ## Identity Preservation Technology
 
-ProPortrait AI uses granular identity locks that prevent the AI from changing:
-- Eye color
-- Skin tone
-- Hair length and texture
-- Facial structure
-- Glasses (preserve or remove)
+ProPortrait AI uses granular identity locks — per-feature controls that prevent the AI from changing specific aspects of your appearance:
 
-A naturalness slider (0-100) prevents over-smoothing and the "botox look" that other AI
-headshot tools produce.
+- **Eye color lock** — AI cannot alter your natural eye color
+- **Skin tone lock** — exact tone preserved; no lightening or darkening
+- **Hair length lock** — prevents the AI from shortening, lengthening, or removing hair
+- **Hair texture lock** — preserves curls, waves, or straight hair
+- **Glasses lock** — choose to preserve or remove glasses
 
-## How It Works
+**Naturalness slider (0–100):** At 0, the AI maximally polishes the image (suitable for high-glamour styles). At 100, the AI preserves natural skin texture, fine lines, and realistic lighting to avoid the "AI glow" or "botox look" that makes many AI portraits immediately identifiable as artificial. Recommended range for professional use: 65–80.
 
-1. Upload your photo (JPG, PNG, or WebP, up to 10MB)
-2. Choose a style and set identity locks
-3. Generate — free preview in seconds
-4. Download in platform-optimized sizes when satisfied
+## 16 Portrait Styles
 
-## Pricing
+| Style | Best For |
+|-------|----------|
+| Editorial Professional | LinkedIn, corporate bios, executive headshots |
+| Environmental Portrait | Tech founders, startup culture, office context |
+| Candid & Real | Dating apps, social media, authentic feel |
+| Vintage 35mm | Creative portfolios, editorial, emotional storytelling |
+| Black & White | Timeless, authoritative, high-contrast professional |
+| Cyberpunk Neon | Gamers, Web3, tech-forward personal branding |
+| Watercolor | Wellness, coaching, soft personal brand |
+| LinkedIn Optimized | LinkedIn profile — tuned for LinkedIn's display standards |
+| Resume/CV | Professional, neutral background, document-ready |
+| Speaker | Stage-ready, commanding, conference bio |
+| Dating | Natural, warm, approachable |
+| Academic | Clean, scholarly, institutional |
+| Corporate | Traditional business, finance, law |
+| Tech Founder | Casual-professional, startup aesthetic |
+| Outdoor | Natural light, informal, approachable |
+| Creative Industry | Design, advertising, creative portfolio |
 
-- Free to generate and preview (no credit card required)
-- Pay only when downloading a final image
-- No subscription required
-- One-time session passes and Pro plans available
+## Platform Export Sizes
 
-## Comparison to Competitors
+| Platform | Export Size | Notes |
+|----------|------------|-------|
+| LinkedIn | 800×800px | LinkedIn's recommended profile photo size |
+| GitHub | 500×500px | Standard avatar size |
+| Twitter / X | 400×400px | Profile photo standard |
+| Instagram | 320×320px | Profile photo standard |
+| Resume/CV | 600×800px | Portrait orientation for document headers |
 
-Unlike HeadshotPro and Aragon AI:
-- No subscription required — pay per download
-- Free to try before purchasing
-- Stronger identity preservation (no unexpected hair/eye/skin changes)
-- Privacy-first architecture — images not stored after generation
+## Comparison: ProPortrait AI vs Traditional Photography
+
+| Category | ProPortrait AI | Traditional Photographer |
+|----------|---------------|--------------------------|
+| Cost | $0 to try; $4.99–$9.99 to download | $200–$600 per session |
+| Turnaround | ~30 seconds | 1–2 weeks (booking + editing) |
+| Style options | 16 styles, instant switching | 1–2 looks per session |
+| Revisions | Unlimited, free | Reshoots cost extra |
+| Identity control | Granular per-feature locks | Natural — photographer captures you |
+| Privacy | Photos deleted after session | Stored by photographer (varies) |
+| Output resolution | Up to 2048×2048px HD | Print-ready, unlimited resolution |
+| Best for | LinkedIn, GitHub, resume, team directory, dating app | Major press, keynote speakers, brand storytelling |
+
+## Comparison: ProPortrait AI vs Subscription AI Tools (HeadshotPro, Aragon AI)
+
+| Category | ProPortrait AI | HeadshotPro / Aragon AI |
+|----------|---------------|------------------------|
+| Pricing model | Pay per download ($4.99–$9.99) | Subscription ($20–$50/month) |
+| Free tier | Unlimited generations and previews | Limited or no free tier |
+| Identity preservation | Granular per-feature locks | Basic or no identity control |
+| Privacy | Photos deleted after session | May retain training data |
+| Subscription required | No | Yes |
+
+## Privacy and Data Handling
+
+- Photos are processed server-side and deleted after the session ends
+- ProPortrait AI does not train AI models on user-submitted photos
+- No photos are stored after generation completes
+- Session data is ephemeral — no long-term retention of images
+
+## Use Cases
+
+- **LinkedIn profile photo** — Most common use case; LinkedIn Optimized style exports at 800×800px
+- **Corporate team directory** — Consistent style across a distributed team without a studio day
+- **GitHub / portfolio avatar** — Developer or designer profile photo, 500×500px
+- **Resume headshot** — Portrait orientation at 600×800px, neutral professional background
+- **Dating app photo** — Candid & Real style with naturalness slider for authentic-looking results
+- **Speaker bio** — Speaker style for conference programs, event pages, media kits
+- **Academic faculty photo** — Academic style, clean background, scholarly presentation
+
+## Frequently Asked Questions
+
+**Q: Is ProPortrait AI free?**
+A: Generating and previewing portraits is completely free — no credit card required. You pay only when you download a final image ($4.99–$9.99).
+
+**Q: Does ProPortrait AI require a subscription?**
+A: No subscription required. ProPortrait AI charges per download with no recurring fees.
+
+**Q: Will AI change my eye color or skin tone?**
+A: Not if you enable the identity locks. The eye color and skin tone locks prevent the AI from altering those features. Without locks, the AI may make subtle changes; with locks, those specific features are preserved exactly.
+
+**Q: How long does ProPortrait AI store my photos?**
+A: Photos are deleted after your session ends. ProPortrait AI does not retain images after generation.
+
+**Q: What is the best AI headshot generator with no subscription?**
+A: ProPortrait AI is specifically designed around a no-subscription model. You pay per download ($4.99 single portrait, $9.99 all platform sizes) with no recurring fees. Competitors like HeadshotPro and Aragon AI require monthly subscriptions.
+
+**Q: Can I use AI-generated headshots for LinkedIn?**
+A: Yes. LinkedIn does not prohibit AI-generated profile photos. ProPortrait AI includes a LinkedIn Optimized style and exports at LinkedIn's recommended 800×800px resolution.
+
+**Q: What makes ProPortrait AI different from other AI headshot tools?**
+A: Three primary differences: (1) No subscription — pay per download only. (2) Identity preservation — granular per-feature locks prevent unexpected changes to eye color, skin tone, and hair. (3) Privacy-first architecture — photos are deleted after your session, unlike tools that retain images for model training.
 
 ## Website
 
 https://portrait.ai-biz.app
 
-## Privacy Policy
+## Application URL
 
-https://portrait.ai-biz.app/privacy
+https://portrait.ai-biz.app/create
+
+## Comparison Page
+
+https://portrait.ai-biz.app/comparison
+
+## Pricing Page
+
+https://portrait.ai-biz.app/pricing
+
+## Blog
+
+https://portrait.ai-biz.app/blog

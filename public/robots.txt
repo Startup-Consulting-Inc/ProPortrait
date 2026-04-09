@@ -10,10 +10,10 @@ Allow: /
 User-agent: ChatGPT-User
 Allow: /
 
-User-agent: Claude-Web
+User-agent: ClaudeBot
 Allow: /
 
-User-agent: Anthropic-AI
+User-agent: anthropic-ai
 Allow: /
 
 User-agent: Google-Extended
