@@ -1,7 +1,5 @@
 import express from 'express';
 import rateLimit from 'express-rate-limit';
-import cors from 'cors';
-import cookieParser from 'cookie-parser';
 import { GoogleGenAI } from '@google/genai';
 import { config } from 'dotenv';
 import sharp from 'sharp';
@@ -14,6 +12,7 @@ import usersRouter from './routes/users.js';
 import adminRouter from './routes/admin.js';
 import { eventsRouter, settingsRouter } from './routes/events.js';
 import { authMiddleware, requireFirebaseAuth } from './middleware/authMiddleware.js';
+import { configureRequestMiddleware } from './middleware/requestMiddleware.js';
 import { storePortrait, storePermanentPortrait, getSignedUrlForKey, deleteR2Object } from './lib/storage.js';
 import { trackCost, getDailySpend } from './lib/costTracker.js';
 import { trackGeneration, trackEdit, trackExport, getUserDoc, checkSaveLimit, savePortraitDoc, getSavedPortraits, deleteSavedPortrait } from './lib/firestore.js';
@@ -193,26 +192,7 @@ function buildCorePrompt(options: {
 
 // ── Middleware ───────────────────────────────────────────────────────────────
 
-// Stripe webhook must receive raw body — register BEFORE express.json()
-app.use('/api/payments/webhook', express.raw({ type: 'application/json' }));
-
-app.use(cookieParser());
-app.use(express.json({ limit: '25mb' }));
-
-const allowedOrigins = process.env.CORS_ORIGIN
-  ? process.env.CORS_ORIGIN.split(',')
-  : [
-      'http://localhost:3000',
-      'http://127.0.0.1:3000',
-      'https://portrait.ai-biz.app',
-      'https://proportrait.ai',
-    ];
-
-app.use(cors({
-  origin: allowedOrigins,
-  methods: ['GET', 'POST', 'PATCH', 'DELETE'],
-  credentials: true,
-}));
+configureRequestMiddleware(app);
 
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,

@@ -336,7 +336,7 @@ server/
 | `R2_BUCKET_NAME` | For storage | Cloudflare R2 bucket name |
 | `RESEND_API_KEY` | For email | Resend API key |
 | `RESEND_FROM_EMAIL` | For email | Sender email address |
-| `CORS_ORIGIN` | Prod | Allowed frontend origin(s), comma-separated |
+| `CORS_ORIGIN` | Optional | Overrides the default local, custom-domain, and Firebase Hosting allowlist; comma-separated origins |
 | `PORT` | Prod | Server port (default: 3001; Cloud Run: 8080) |
 
 ### Frontend (Vite build-time)
@@ -371,6 +371,8 @@ CI/CD runs on push to `main` via `.github/workflows/deploy.yml`:
 1. **Lint** — `tsc --noEmit` + `npm audit`
 2. **Deploy backend** — Cloud Build → Artifact Registry → Cloud Run
 3. **Deploy frontend** — `npm run build` (with `VITE_*` env vars) → Firebase Hosting
+
+The Cloud Run API uses its attached service account as Firebase Admin application default credentials. Because the API runs in `ai-biz-6b7ec` while Firebase is in `portrait-7b01d`, that service account needs `roles/datastore.user` and `roles/firebaseauth.editor` on `portrait-7b01d`. Do not add a `FIREBASE_ADMIN_JSON` secret reference to Cloud Run.
 
 Firebase client env vars (`VITE_FIREBASE_*`) are stored as GitHub secrets and injected at build time.
 
